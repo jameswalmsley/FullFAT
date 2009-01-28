@@ -167,3 +167,90 @@ void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 		pIoman->pBuffers->pBuffer		= ((pIoman->pCacheMem) + 512 * i);
 	}
 }
+
+/**
+ *	@private
+ *	@brief	Tests the Mode for validity.
+ *
+ *	@param	Mode	Mode of buffer to check. 
+ *
+ *	@return	FF_TRUE when valid, else FF_FALSE.
+ **/
+FF_T_BOOL FF_IOMAN_ModeValid(FF_T_INT8 Mode) {
+	if(Mode != FF_MODE_READ || Mode != FF_MODE_WRITE) {
+		return FF_FALSE;
+	}
+	return FF_TRUE;
+}
+
+
+/**
+ *	@private
+ *	@brief	Fills a buffer with the appropriate sector via the device driver.
+ *
+ *	@param	pIoman	FF_IOMAN object.
+ *	@param	Sector	LBA address of the sector to fetch.
+ *	@param	pBuffer	Pointer to a byte-wise buffer to store the fetched data.
+ *
+ *	@return	FF_TRUE when valid, else FF_FALSE.
+ **/
+void FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 *pBuffer) {
+	if(pIoman->pBlkDevice->fnReadBlocks) {	// Make sure we don't execute a NULL.
+		pIoman->pBlkDevice->fnReadBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
+	}
+}
+
+
+
+/**
+ *	@private
+ *	@brief	Return's a pointer to a valid buffer resource
+ *
+ *	@param	pIoman	FF_IOMAN object.
+ *	@param	Sector	LBA address of the sector to fetch.
+ *	@param	Mode	FF_READ or FF_WRITE access modes.
+ *
+ *	@return	Pointer to the Buffer description.
+ **/
+FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
+
+	int i;
+
+	if(!pIoman) {
+		return NULL;	// No NULL pointer modification.
+	}
+
+	if(!FF_IOMAN_ModeValid(Mode)) {
+		return NULL;	// Make sure mode is correctly set.
+	}
+
+	// Search for an appropriate buffer.
+	if(Mode == FF_MODE_READ) {
+		for(i = 0; i < pIoman->CacheSize; i++) {
+			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
+				// Buffer is suitable, ensure we don't overflow its handle count.
+				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {
+					(pIoman->pBuffers + i)->NumHandles ++;
+					//(pIoman->pBuffers + i)->Persistance ++;
+					return (pIoman->pBuffers + i);
+				}
+			}
+		}
+	}
+
+	for(i = 0; i < pIoman->CacheSize; i++) {
+		if((pIoman->pBuffers + i)->NumHandles == 0) {
+			(pIoman->pBuffers + i)->Mode = Mode;
+			(pIoman->pBuffers + i)->NumHandles = 1;
+			// Fill the buffer with data from the device.
+			FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer); 
+			return (pIoman->pBuffers + i);
+		}
+	}
+
+	// TODO: Think of a better way to deal with this situation.
+	return NULL;	// No buffer available.
+}
+
+// Adding ReleaseBuffer soon, its already written, by I need to rewrite it for release.
+// I'm also thinking about how to handle Critical Sections, and Semaphores.
