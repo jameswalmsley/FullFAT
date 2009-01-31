@@ -35,6 +35,9 @@
  *	@brief		Handles memory access in a portable way.
  *
  *	Provides simple, fast, and portable access to memory routines.
+ *	These are only used to read data from buffers. That are LITTLE ENDIAN
+ *	due to the FAT specification.
+ *
  **/
 
 #include "ff_memory.h"
@@ -56,7 +59,9 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 #endif
 
 #ifdef _FF_BIG_ENDIAN_
-
+/*
+	TODO: These need converting to BIG ENDIAN!!!
+*/
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT8) (pBuffer[offset]);
 }
