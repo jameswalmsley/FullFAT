@@ -27,33 +27,24 @@
  *****************************************************************************/
 
 /**
- *	This file defines some portable types.
- *	You should change these as appropriate for your platform, as necessary.
- *
+ *	@file		ff_memory.c
+ *	@author		James Walmsley
+ *	@ingroup	MEMORY
  **/
 
-#ifndef _FF_TYPES_H_
-#define _FF_TYPES_H_
+#ifndef _FF_MEMORY_H_
+#define _FF_MEMORY_H_
 
-//---------------- BOOLEAN TYPES
-typedef	char			FF_T_BOOL;		///< This can be a char if your compiler isn't C99
+#include "ff_config.h"
+#include "ff_types.h"
 
-#define FF_TRUE		1;	///< 1 if bool not supported.
-#define FF_FALSE	0;	///< 0 if bool not supported.
+//---------- PROTOTYPES (in order of appearance)
 
-//---------------- 8 BIT INTEGERS
-typedef	char			FF_T_INT8;
-typedef	unsigned char	FF_T_UINT8;
-typedef signed char		FF_T_SINT8;
+// PUBLIC:
 
-//---------------- 16 BIT INTEGERS
-typedef	short			FF_T_INT16;
-typedef	unsigned short	FF_T_UINT16;
-typedef	signed short	FF_T_SINT16;
-
-//---------------- 32 BIT INTEGERS
-typedef	int				FF_T_INT32;
-typedef	unsigned int	FF_T_UINT32;
-typedef	signed int		FF_T_SINT32;
+// PRIVATE:
+FF_T_UINT8		FF_getChar	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
+FF_T_UINT16		FF_getShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
+FF_T_UINT32		FF_getLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
 
 #endif

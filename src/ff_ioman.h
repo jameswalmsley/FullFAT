@@ -1,4 +1,4 @@
-/**
+/******************************************************************************
  *   FullFAT - Embedded FAT File-System
  *
  *   Provides a full, thread-safe, implementation of the FAT file-system
@@ -24,23 +24,27 @@
  *   please contact the author, james@worm.me.uk
  *
  *   Removing the above notice is illegal and will invalidate this license.
- **/
+ *****************************************************************************/
 
 /**
- *	ff_ioman - IO Management Module
- *	Handles buffers for FullFAT safely.
- *
- *	Provides a simple, static interface to manage buffers.
+ *	@file		ff_ioman.h
+ *	@author		James Walmsley
+ *	@ingroup	IOMAN
  **/
 
 #ifndef _FF_IOMAN_H_
 #define _FF_IOMAN_H_
 
+#include <stdlib.h>		// Use of malloc()
 #include "ff_types.h"
+#include "ff_safety.h"	// Provide critical regions
+
 
 #define	FF_MAX_PARTITION_NAME	5	///< Partition name length.
 
-#define FF_IOMAN_NULL_POINTER	-10	///< Null Pointer return error code.
+
+#define FF_ERR_IOMAN_NULL_POINTER		-10	///< Null Pointer return error code.
+#define FF_ERR_IOMAN_DEV_ALREADY_REGD	-11 ///< Device was already registered.
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -135,6 +139,6 @@ FF_IOMAN	*FF_CreateIOMAN		(FF_T_INT8	*pCacheMem,	FF_T_UINT32 Size);
 FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN	*pIoman);
 
 // PRIVATE:
-void		FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
+void		FF_IOMAN_InitBufferDescriptors	(FF_IOMAN *pIoman);
 
 #endif

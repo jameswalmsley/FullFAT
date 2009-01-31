@@ -26,34 +26,11 @@
  *   Removing the above notice is illegal and will invalidate this license.
  *****************************************************************************/
 
-/**
- *	This file defines some portable types.
- *	You should change these as appropriate for your platform, as necessary.
- *
- **/
+/*
+	Here you can change the configuration of FullFAT as appropriate to your
+	platform.
+*/
 
-#ifndef _FF_TYPES_H_
-#define _FF_TYPES_H_
-
-//---------------- BOOLEAN TYPES
-typedef	char			FF_T_BOOL;		///< This can be a char if your compiler isn't C99
-
-#define FF_TRUE		1;	///< 1 if bool not supported.
-#define FF_FALSE	0;	///< 0 if bool not supported.
-
-//---------------- 8 BIT INTEGERS
-typedef	char			FF_T_INT8;
-typedef	unsigned char	FF_T_UINT8;
-typedef signed char		FF_T_SINT8;
-
-//---------------- 16 BIT INTEGERS
-typedef	short			FF_T_INT16;
-typedef	unsigned short	FF_T_UINT16;
-typedef	signed short	FF_T_SINT16;
-
-//---------------- 32 BIT INTEGERS
-typedef	int				FF_T_INT32;
-typedef	unsigned int	FF_T_UINT32;
-typedef	signed int		FF_T_SINT32;
-
-#endif
+//---------- ENDIANESS
+#define _FF_LITTLE_ENDIAN_
+//#define _FF_BIG_ENDIAN_

@@ -1,4 +1,4 @@
-/**
+/******************************************************************************
  *   FullFAT - Embedded FAT File-System
  *
  *   Provides a full, thread-safe, implementation of the FAT file-system
@@ -24,17 +24,22 @@
  *   please contact the author, james@worm.me.uk
  *
  *   Removing the above notice is illegal and will invalidate this license.
- **/
+ *****************************************************************************/
 
 /**
- *	ff_ioman - IO Management Module
- *	Handles buffers for FullFAT safely.
+ *	@file		ff_ioman.c
+ *	@author		James Walmsley
+ *	@ingroup	IOMAN
  *
- *	Provides a simple, static interface to manage buffers.
+ *	@defgroup	IOMAN	I/O Manager
+ *	@brief		Handles IO buffers for FullFAT safely.
+ *
+ *	Provides a simple static interface to the rest of FullFAT to manage
+ *	buffers. It also defines the public interfaces for Creating and 
+ *	Destroying a FullFAT IO object.
  **/
-#include <stdlib.h>		// Use of malloc()
-#include "ff_ioman.h"	// Includes ff_types.h
 
+#include "ff_ioman.h"	// Includes ff_types.h, ff_safety.h, <stdio.h>
 
 /**
  *	@public
@@ -50,7 +55,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 	
 	FF_IOMAN *pIoman = NULL;
 
-	if((Size % 512) != 0 || Size == 1) {
+	if((Size % 512) != 0 || Size == 0) {
 		return NULL;	// Memory Size not a multiple of 512 > 0
 	}
 
@@ -74,6 +79,12 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 	pIoman->pBlkDevice	= (FF_BLK_DEVICE *) malloc(sizeof(FF_BLK_DEVICE));
 	if(pIoman->pBlkDevice) {	// If succeeded, flag that allocation.
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BLKDEV;
+
+		// Make sure all pointers are NULL
+		pIoman->pBlkDevice->fnReadBlocks = NULL;
+		pIoman->pBlkDevice->fnWriteBlocks = NULL;
+		pIoman->pBlkDevice->pParam = NULL;
+
 	} else {
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
@@ -121,7 +132,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 
 	// Ensure no NULL pointer was provided.
 	if(!pIoman) {
-		return FF_IOMAN_NULL_POINTER;
+		return FF_ERR_IOMAN_NULL_POINTER;
 	}
 	
 	// Ensure pPartition pointer was allocated.
@@ -230,6 +241,8 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
 				// Buffer is suitable, ensure we don't overflow its handle count.
 				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {
+					
+					
 					(pIoman->pBuffers + i)->NumHandles ++;
 					//(pIoman->pBuffers + i)->Persistance ++;
 					return (pIoman->pBuffers + i);
@@ -252,5 +265,41 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 	return NULL;	// No buffer available.
 }
 
-// Adding ReleaseBuffer soon, its already written, by I need to rewrite it for release.
-// I'm also thinking about how to handle Critical Sections, and Semaphores.
+void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
+	if(pIoman && pBuffer) {
+		pBuffer->NumHandles--;
+		// Maybe for later when we handle buffers more complex
+		/*pBuffer->Persistance--;
+		if(pBuffer->NumHandles == 0) {
+			pBuffer->Persistance = 0;
+		}*/
+	}
+}
+
+
+FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
+	if(!pIoman) {	// We can't do anything without an IOMAN object.
+		return FF_ERR_IOMAN_NULL_POINTER;
+	}
+	
+	// Ensure that a device cannot be re-registered "mid-flight"
+	// Doing so would corrupt the context of FullFAT
+	if(pIoman->pBlkDevice->fnReadBlocks) {
+		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
+	}
+	if(pIoman->pBlkDevice->fnWriteBlocks) {
+		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
+	}
+	if(pIoman->pBlkDevice->pParam) {
+		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
+	}
+	
+	// Here we shall just set the values.
+	// FullFAT checks before using any of these values.
+	pIoman->pBlkDevice->fnReadBlocks	= fnReadBlocks;
+	pIoman->pBlkDevice->fnWriteBlocks	= fnWriteBlocks;
+	pIoman->pBlkDevice->pParam			= pParam;
+
+	return 0;	// Success
+}
+
