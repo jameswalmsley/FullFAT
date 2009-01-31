@@ -169,13 +169,13 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	int i;
 	for(i = 0; i < pIoman->CacheSize; i++) {
-		pIoman->pBuffers->ID			= i;
+		pIoman->pBuffers->ID 			= i;
 		pIoman->pBuffers->ContextID		= 0;
 		pIoman->pBuffers->Mode			= 0;
-		pIoman->pBuffers->NumHandles	= 0;
-		pIoman->pBuffers->Persistance	= 0;
-		pIoman->pBuffers->Sector		= 0;
-		pIoman->pBuffers->pBuffer		= ((pIoman->pCacheMem) + 512 * i);
+		pIoman->pBuffers->NumHandles 	= 0;
+		pIoman->pBuffers->Persistance 	= 0;
+		pIoman->pBuffers->Sector 		= 0;
+		pIoman->pBuffers->pBuffer 		= ((pIoman->pCacheMem) + 512 * i);
 	}
 }
 
@@ -265,7 +265,18 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 	return NULL;	// No buffer available.
 }
 
+
+/**
+ *	@private
+ *	@brief	Releases a buffer resource.
+ *
+ *	@param	pIoman	Pointer to an FF_IOMAN object.
+ *	@param	pBuffer	Pointer to an FF_BUFFER object.
+ *
+ **/
 void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
+	// Have a pIoman argument, to be consistent with all other interfaces
+	// but also because this might help in the future.
 	if(pIoman && pBuffer) {
 		pBuffer->NumHandles--;
 		// Maybe for later when we handle buffers more complex
@@ -276,7 +287,20 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
 	}
 }
 
-
+/**
+ *	@public
+ *	@brief	Registers a device driver with FullFAT
+ *
+ *	The device drivers must adhere to the specification provided by
+ *	FF_WRITE_BLOCKS and FF_READ_BLOCKS.
+ *
+ *	@param	pIoman			FF_IOMAN object.
+ *	@param	fnWriteBlocks	Pointer to the Write Blocks to device function, as described by FF_WRITE_BLOCKS.
+ *	@param	fnReadBlocks	Pointer to the Read Blocks from device function, as described by FF_READ_BLOCKS.
+ *	@param	pParam			Pointer to a parameter for use in the functions. 
+ *
+ *	@return	0 on success, FF_ERR_IOMAN_DEV_ALREADY_REGD if a device was already hooked, FF_ERR_IOMAN_NULL_POINTER if a pIoman object wasn't provided.
+ **/
 FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
 	if(!pIoman) {	// We can't do anything without an IOMAN object.
 		return FF_ERR_IOMAN_NULL_POINTER;
