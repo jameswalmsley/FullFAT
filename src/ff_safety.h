@@ -31,6 +31,7 @@
  *	@author		James Walmsley
  *	@ingroup	SAFETY
  **/
+
 #ifndef _FF_SAFETY_H_
 #define	_FF_SAFETY_H_
 
@@ -43,7 +44,9 @@
 
 
 // PRIVATE:
-void		FF_EnterCriticalRegion	(void);
-void		FF_ExitCriticalRegion	(void);
+void		*FF_CreateSemaphore		(void);
+void		FF_PendSemaphore		(void *pSemaphore);
+void		FF_ReleaseSemaphore		(void *pSemaphore);
+void		FF_DestroySemaphore		(void *pSemaphore);
 
 #endif

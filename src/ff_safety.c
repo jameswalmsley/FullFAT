@@ -32,61 +32,52 @@
  *	@ingroup	SAFETY
  *
  *	@defgroup	SAFETY	Process Safety for FullFAT
- *	@brief		Provides critical regions, and thread-safety for FullFAT.
+ *	@brief		Provides semaphores, and thread-safety for FullFAT.
  *
  *	This module aims to be as portable as possible. It is necessary to modify
- *	the functions FF_EnterCriticalRegion() and FF_ExitCriticalRegion() as
- *	appropriate for your platform.
+ *	the functions FF_CreateSemaphore, FF_PendSemaphore, FF_ReleaseSemaphore,
+ *  and FF_DestroySemaphore, as appropriate for your platform.
+ *
+ *	If your application has no OS and is therefore single threaded, simply
+ *	have:
+ *	
+ *	FF_CreateSemaphore() return NULL.
+ *	
+ *	FF_PendSemaphore() should disable any interrupts, and Sync any data
+ *  or instruction caches (if applicable).
+ *
+ *	FF_ReleaseSemaphore() should then undo those changes.
+ *
+ *	FF_DestroySemaphore() should do nothing.
+ *	
  **/
 
 #include "ff_safety.h"	// Íncludes ff_types.h
 
-/**
- *	Critical Regions
- *	
- *	These 2 functions enter and exit critical regions of code. This means
- *	that the underlying OS should prevent:
- *
- *	Context Switching (via Process/Thread switching) in an OS Kernel.
- *	Interrupts should be disabled to achieve this.
- *
- *	Upon FF_ExitCriticalRegion() Context switching and Interrupts should
- *	be re-enabled.
- *
- *	Essentially critical regions should ensure that what happens between
- *	these 2 functions is completely atomic.
- *
- *	Because we can guarantee this, FullFAT can create its own semaphore
- *	system without having to worry about portability issues.
- *
- *	These functions should not fail. EnterCriticalRegions should
- *	block the program flow, until a critical region can be provided.
- *
- *	FullFAT will only enter a critical regions for atomic memory
- *	operations. Code between these regions is always 100% non-blocking
- *	and very fast. It's also limited to only 2 C statements.
- *
- *	This ensures that your OS Kernel, or system will not be compromised
- *	in terms of performance.
- **/
-
-void FF_EnterCriticalRegion(void) {
-	// Disable OS Kernel Context switching, if applicable.
-
-	// Disable Intterupts.
+void *FF_CreateSemaphore(void) {
+	// Call your OS's CreateSemaphore function
+	//
+	
+	// return pointer to semaphore
 }
 
-void FF_ExitCriticalRegion(void) {
-	// Enable OS Kernel Context switching, if applicable.
-
-	// Disable Interrupts.
+void FF_PendSemaphore(void *pSemaphore) {
+	// Call your OS's PendSemaphore with the provided pSemaphore pointer.
+	//
+	// This should block indefinitely until the Semaphore
+	// becomes available. (No timeout!)
 }
 
-/**
- *	DUAL-CORE Systems
- *	You may have to do extra work in the above code to ensure 100% safety
- *	in a multi-core system. 
- *
- *	Just ensure that EnterCritcalRegion ensures atomic operations on your
- *	platform!
- **/
+void FF_ReleaseSemaphore(void *pSemaphore) {
+	// Call your OS's ReleaseSemaphore with the provided pSemaphore pointer.
+	//
+
+	//
+}
+
+void FF_DestroySemaphore(void *pSemaphore) {
+	// Call your OS's DestroySemaphore with the provided pSemaphore pointer.
+	//
+
+	//
+}
