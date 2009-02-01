@@ -121,7 +121,8 @@ typedef struct {
 	FF_T_INT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
 	FF_T_UINT16		BlkSize;		///< Size of a Sector Block in bytes.
-	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers. 
+	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
+	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
 } FF_IOMAN;
 
 // Bit-Masks for Memory Allocation testing.

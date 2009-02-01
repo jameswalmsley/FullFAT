@@ -59,6 +59,7 @@ void *FF_CreateSemaphore(void) {
 	//
 	
 	// return pointer to semaphore
+	return NULL;	// Comment this out for your implementation.
 }
 
 void FF_PendSemaphore(void *pSemaphore) {
@@ -66,6 +67,8 @@ void FF_PendSemaphore(void *pSemaphore) {
 	//
 	// This should block indefinitely until the Semaphore
 	// becomes available. (No timeout!)
+	// If your OS doesn't do it for you, you should sleep
+	// this thread until the Semaphore is available.
 }
 
 void FF_ReleaseSemaphore(void *pSemaphore) {
@@ -81,3 +84,10 @@ void FF_DestroySemaphore(void *pSemaphore) {
 
 	//
 }
+
+/**
+ *	Notes on implementation.
+ *
+ *	
+ *
+ **/

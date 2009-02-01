@@ -35,6 +35,7 @@
 #ifndef _FF_SAFETY_H_
 #define	_FF_SAFETY_H_
 
+#include <stdlib.h>
 #include "ff_types.h"
 
 

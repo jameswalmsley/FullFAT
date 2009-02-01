@@ -116,6 +116,9 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 		FF_DestroyIOMAN(pIoman);
 	}
 
+	// Finally create a Semaphore for Buffer Description modifications.
+	pIoman->pSemaphore = FF_CreateSemaphore();
+
 	return pIoman;	// Sucess, return the created object.
 }
 
@@ -153,6 +156,11 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 	// Ensure pCacheMem pointer was allocated.
 	if((pIoman->MemAllocation & FF_IOMAN_ALLOC_BUFFERS)) {
 		free(pIoman->pCacheMem);
+	}
+	
+	// Destroy any Semaphore that was created.
+	if(pIoman->pSemaphore) {
+		FF_DestroySemaphore(pIoman->pSemaphore);
 	}
 	
 	// Finally free the FF_IOMAN object.
@@ -235,16 +243,21 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 		return NULL;	// Make sure mode is correctly set.
 	}
 
+	// Get a Semaphore now, and release on any return.
+	// Improves speed of the searching. Prevents description changes
+	// Mid-loop. This could be a performance issue later on!!
+
+	FF_PendSemaphore(pIoman->pSemaphore);
+
 	// Search for an appropriate buffer.
 	if(Mode == FF_MODE_READ) {
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
 				// Buffer is suitable, ensure we don't overflow its handle count.
-				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {
-					
-					
+				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {				
 					(pIoman->pBuffers + i)->NumHandles ++;
 					//(pIoman->pBuffers + i)->Persistance ++;
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
 					return (pIoman->pBuffers + i);
 				}
 			}
@@ -256,12 +269,14 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 			(pIoman->pBuffers + i)->Mode = Mode;
 			(pIoman->pBuffers + i)->NumHandles = 1;
 			// Fill the buffer with data from the device.
-			FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer); 
+			FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
 			return (pIoman->pBuffers + i);
 		}
 	}
 
 	// TODO: Think of a better way to deal with this situation.
+	FF_ReleaseSemaphore(pIoman->pSemaphore);	// Important that we free access!
 	return NULL;	// No buffer available.
 }
 
@@ -275,10 +290,12 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
  *
  **/
 void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
-	// Have a pIoman argument, to be consistent with all other interfaces
-	// but also because this might help in the future.
 	if(pIoman && pBuffer) {
-		pBuffer->NumHandles--;
+		// Protect description changes with a semaphore.		
+		FF_PendSemaphore(pIoman->pSemaphore);
+			pBuffer->NumHandles--;
+		FF_ReleaseSemaphore(pIoman->pSemaphore);
+		
 		// Maybe for later when we handle buffers more complex
 		/*pBuffer->Persistance--;
 		if(pBuffer->NumHandles == 0) {
