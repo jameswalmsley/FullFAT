@@ -56,4 +56,19 @@ typedef	int				FF_T_INT32;
 typedef	unsigned int	FF_T_UINT32;
 typedef	signed int		FF_T_SINT32;
 
+
+/* -- Alternative declaration
+#define FF_T_INT8	char
+#define FF_T_UINT8	unsigned char
+#define FF_T_SINT8	signed char
+
+#define FF_T_INT16	short
+#define FF_T_UINT16	unsigned short
+#define FF_T_SINT16	signed short
+
+#define FF_T_INT32	int
+#define FF_T_UINT32	unsigned int
+#define FF_T_SINT32	signed int
+*/
+
 #endif

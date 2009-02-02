@@ -35,7 +35,7 @@
  *	@brief		Handles IO buffers for FullFAT safely.
  *
  *	Provides a simple static interface to the rest of FullFAT to manage
- *	buffers. It also defines the public interfaces for Creating and 
+ *	buffers. It also defines the public interfaces for Creating and
  *	Destroying a FullFAT IO object.
  **/
 
@@ -52,7 +52,7 @@
  *
  **/
 FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
-	
+
 	FF_IOMAN *pIoman = NULL;
 
 	if((Size % 512) != 0 || Size == 0) {
@@ -60,14 +60,14 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 	}
 
 	pIoman = (FF_IOMAN *) malloc(sizeof(FF_IOMAN));
-	
+
 	if(!pIoman) {		// Ensure malloc() succeeded.
 		return NULL;
 	}
 
 	// This is just a bit-mask, to use a byte to keep track of memory.
-	pIoman->MemAllocation = 0x00;	// Unset all allocation identifiers.
-	
+	pIoman->MemAllocation = (FF_T_UINT8) 0x00;	// Unset all allocation identifiers.
+
 	pIoman->pPartition	= (FF_PARTITION  *) malloc(sizeof(FF_PARTITION));
 	if(pIoman->pPartition) {	// If succeeded, flag that allocation.
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_PART;
@@ -89,7 +89,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
 	}
-	
+
 	// Organise the memory provided, or create our own!
 	if(pCacheMem) {
 		pIoman->pCacheMem = pCacheMem;
@@ -103,12 +103,12 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFFERS;
 		pIoman->CacheSize = Size / 512;
 	}
-	
+
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
-		but uses buffer objects instead. Allows us to provide thread safety.	
+		but uses buffer objects instead. Allows us to provide thread safety.
 	*/
 	pIoman->pBuffers = (FF_BUFFER *) malloc(sizeof(FF_BUFFER) * pIoman->CacheSize);
-	
+
 	if(pIoman->pBuffers) {
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFDESCR;
 		FF_IOMAN_InitBufferDescriptors(pIoman);
@@ -137,7 +137,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 	if(!pIoman) {
 		return FF_ERR_IOMAN_NULL_POINTER;
 	}
-	
+
 	// Ensure pPartition pointer was allocated.
 	if((pIoman->MemAllocation & FF_IOMAN_ALLOC_PART)) {
 		free(pIoman->pPartition);
@@ -157,12 +157,12 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 	if((pIoman->MemAllocation & FF_IOMAN_ALLOC_BUFFERS)) {
 		free(pIoman->pCacheMem);
 	}
-	
+
 	// Destroy any Semaphore that was created.
 	if(pIoman->pSemaphore) {
 		FF_DestroySemaphore(pIoman->pSemaphore);
 	}
-	
+
 	// Finally free the FF_IOMAN object.
 	free(pIoman);
 
@@ -175,7 +175,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
  *
  **/
 void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
-	int i;
+	FF_T_UINT16 i;
 	for(i = 0; i < pIoman->CacheSize; i++) {
 		pIoman->pBuffers->ID 			= i;
 		pIoman->pBuffers->ContextID		= 0;
@@ -191,7 +191,7 @@ void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
  *	@private
  *	@brief	Tests the Mode for validity.
  *
- *	@param	Mode	Mode of buffer to check. 
+ *	@param	Mode	Mode of buffer to check.
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
@@ -254,7 +254,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
 				// Buffer is suitable, ensure we don't overflow its handle count.
-				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {				
+				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {
 					(pIoman->pBuffers + i)->NumHandles ++;
 					//(pIoman->pBuffers + i)->Persistance ++;
 					FF_ReleaseSemaphore(pIoman->pSemaphore);
@@ -291,11 +291,11 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
  **/
 void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
 	if(pIoman && pBuffer) {
-		// Protect description changes with a semaphore.		
+		// Protect description changes with a semaphore.
 		FF_PendSemaphore(pIoman->pSemaphore);
 			pBuffer->NumHandles--;
 		FF_ReleaseSemaphore(pIoman->pSemaphore);
-		
+
 		// Maybe for later when we handle buffers more complex
 		/*pBuffer->Persistance--;
 		if(pBuffer->NumHandles == 0) {
@@ -314,7 +314,7 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
  *	@param	pIoman			FF_IOMAN object.
  *	@param	fnWriteBlocks	Pointer to the Write Blocks to device function, as described by FF_WRITE_BLOCKS.
  *	@param	fnReadBlocks	Pointer to the Read Blocks from device function, as described by FF_READ_BLOCKS.
- *	@param	pParam			Pointer to a parameter for use in the functions. 
+ *	@param	pParam			Pointer to a parameter for use in the functions.
  *
  *	@return	0 on success, FF_ERR_IOMAN_DEV_ALREADY_REGD if a device was already hooked, FF_ERR_IOMAN_NULL_POINTER if a pIoman object wasn't provided.
  **/
@@ -322,7 +322,7 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks,
 	if(!pIoman) {	// We can't do anything without an IOMAN object.
 		return FF_ERR_IOMAN_NULL_POINTER;
 	}
-	
+
 	// Ensure that a device cannot be re-registered "mid-flight"
 	// Doing so would corrupt the context of FullFAT
 	if(pIoman->pBlkDevice->fnReadBlocks) {
@@ -334,7 +334,7 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks,
 	if(pIoman->pBlkDevice->pParam) {
 		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
 	}
-	
+
 	// Here we shall just set the values.
 	// FullFAT checks before using any of these values.
 	pIoman->pBlkDevice->fnReadBlocks	= fnReadBlocks;
