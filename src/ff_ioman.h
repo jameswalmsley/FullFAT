@@ -38,13 +38,16 @@
 #include <stdlib.h>		// Use of malloc()
 #include "ff_types.h"
 #include "ff_safety.h"	// Provide critical regions
+#include "ff_memory.h"
 
 
 #define	FF_MAX_PARTITION_NAME	5	///< Partition name length.
 
 
-#define FF_ERR_IOMAN_NULL_POINTER		-10	///< Null Pointer return error code.
-#define FF_ERR_IOMAN_DEV_ALREADY_REGD	-11 ///< Device was already registered.
+#define FF_ERR_IOMAN_NULL_POINTER			-10	///< Null Pointer return error code.
+#define FF_ERR_IOMAN_DEV_ALREADY_REGD		-11 ///< Device was already registered.
+#define FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION -12
+#define FF_ERR_IOMAN_INVALID_FORMAT			-13
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -96,16 +99,22 @@ typedef struct {
 typedef struct {
 	FF_T_UINT8		ID;					///< Partition Incremental ID number.
 	FF_T_UINT8		Type;				///< Partition Type Identifier.
+	FF_T_UINT16		BlkSize;		///< Size of a Sector Block in bytes.
 	FF_T_INT8		Name[FF_MAX_PARTITION_NAME];	///< Partition Identifier e.g. c: sd0: etc.
 	FF_T_INT8		VolLabel[12];		///< Volume Label of the partition.
 	FF_T_UINT32		BeginLBA;			///< LBA start address of the partition.
 	FF_T_UINT32		PartSize;			///< Size of Partition in number of sectors.
 	FF_T_UINT32		FatBeginLBA;		///< LBA of the FAT tables.
 	FF_T_UINT8		NumFATS;			///< Number of FAT tables.
-	FF_T_UINT16		SectorsPerFAT;		///< Number of sectors per Fat.
+	FF_T_UINT32		SectorsPerFAT;		///< Number of sectors per Fat.
+	FF_T_UINT8		SectorsPerCluster;	///< Number of sectors per Cluster.
+	FF_T_UINT32		TotalSectors;
+	FF_T_UINT32		DataSectors;
+	FF_T_UINT32		RootDirSectors;
+	FF_T_UINT16		ReservedSectors;
 	FF_T_UINT32		ClusterBeginLBA;	///< LBA of first cluster.
 	FF_T_UINT32		NumClusters;		///< Number of clusters.
-	FF_T_UINT16		RootDirCluster;		///< Cluster number of the root directory entry.
+	FF_T_UINT32		RootDirCluster;		///< Cluster number of the root directory entry.
 } FF_PARTITION;
 
 /**
@@ -120,7 +129,6 @@ typedef struct {
 	FF_BUFFER		*pBuffers;		///< Pointer to the first buffer description.
 	FF_T_INT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
-	FF_T_UINT16		BlkSize;		///< Size of a Sector Block in bytes.
 	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
 	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
 } FF_IOMAN;
@@ -138,8 +146,10 @@ typedef struct {
 // PUBLIC:
 FF_IOMAN	*FF_CreateIOMAN		(FF_T_INT8	*pCacheMem,	FF_T_UINT32 Size);
 FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN	*pIoman);
+FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
 
 // PRIVATE:
 void		FF_IOMAN_InitBufferDescriptors	(FF_IOMAN *pIoman);
+
 
 #endif

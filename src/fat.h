@@ -25,35 +25,27 @@
  *
  *   Removing the above notice is illegal and will invalidate this license.
  *****************************************************************************/
+#ifndef _FAT_H_
+#define _FAT_H_
 
-/**
- *	This file defines some portable types.
- *	You should change these as appropriate for your platform, as necessary.
- *
- **/
+/*
+	This file defines offsets to various data for the FAT specification.
+*/
 
-#ifndef _FF_TYPES_H_
-#define _FF_TYPES_H_
+// MBR / PBR Offsets
 
-//---------------- BOOLEAN TYPES
-typedef	char			FF_T_BOOL;		///< This can be a char if your compiler isn't C99
+#define FF_FAT_BYTES_PER_SECTOR		0x00B
+#define FF_FAT_SECTORS_PER_CLUS		0x00D
+#define FF_FAT_RESERVED_SECTORS		0x00E
+#define FF_FAT_NUMBER_OF_FATS		0x010
+#define FF_FAT_ROOT_ENTRY_COUNT		0x011
+#define FF_FAT_16_TOTAL_SECTORS		0x013
+#define FF_FAT_32_TOTAL_SECTORS		0x020
+#define FF_FAT_16_SECTORS_PER_FAT	0x016
+#define FF_FAT_32_SECTORS_PER_FAT	0x018
+#define FF_FAT_ROOT_DIR_CLUSTER		0x02C
 
-#define FF_TRUE		1;	///< 1 if bool not supported.
-#define FF_FALSE	0;	///< 0 if bool not supported.
-
-//---------------- 8 BIT INTEGERS
-typedef	char			FF_T_INT8;
-typedef	unsigned char	FF_T_UINT8;
-typedef signed char		FF_T_SINT8;
-
-//---------------- 16 BIT INTEGERS
-typedef	short			FF_T_INT16;
-typedef	unsigned short	FF_T_UINT16;
-typedef	signed short	FF_T_SINT16;
-
-//---------------- 32 BIT INTEGERS
-typedef	int				FF_T_INT32;
-typedef	unsigned int	FF_T_UINT32;
-typedef	signed int		FF_T_SINT32;
+#define FF_FAT_PTBL					0x1BE
+#define FF_FAT_PTBL_LBA				0x008
 
 #endif
