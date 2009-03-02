@@ -42,10 +42,13 @@
 #define FF_FAT_16_TOTAL_SECTORS		0x013
 #define FF_FAT_32_TOTAL_SECTORS		0x020
 #define FF_FAT_16_SECTORS_PER_FAT	0x016
-#define FF_FAT_32_SECTORS_PER_FAT	0x018
+#define FF_FAT_32_SECTORS_PER_FAT	0x024
 #define FF_FAT_ROOT_DIR_CLUSTER		0x02C
 
 #define FF_FAT_PTBL					0x1BE
 #define FF_FAT_PTBL_LBA				0x008
+
+// Directory Entry Offsets
+#define FF_FAT_DIRENT_ATTRIB		0x00A
 
 #endif
