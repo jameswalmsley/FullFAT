@@ -406,6 +406,8 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
 
 	pPart->SectorsPerCluster = FF_getChar(pBuffer->pBuffer, FF_FAT_SECTORS_PER_CLUS);
 
+	pPart->BlkFactor = pPart->BlkSize / 512;    // Set the BlockFactor (How many real-blocks in a fake block!).
+
 	if(pPart->SectorsPerFAT == 0) {	// FAT32
 		pPart->SectorsPerFAT = FF_getLong(pBuffer->pBuffer, FF_FAT_32_SECTORS_PER_FAT);
 		pPart->RootDirCluster = FF_getLong(pBuffer->pBuffer, FF_FAT_ROOT_DIR_CLUSTER);
