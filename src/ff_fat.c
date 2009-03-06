@@ -70,10 +70,10 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 
 // Calculates the sector number of the FAT table required for entry corresponding to nCluster.
 FF_T_UINT32 FF_getFATSector(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
-	
+
 	FF_T_UINT32 nSector = 0;
 	FF_T_UINT32 nEntries = 0;
-	
+
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
 		nEntries = (512 / 4);
 	} else {
@@ -89,7 +89,7 @@ FF_T_UINT32 FF_getFATSector(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 fatEntry = 0;
 	FF_BUFFER *pBuffer = 0;
-	
+
 	pBuffer = FF_GetBuffer(pIoman, FF_getFATSector(pIoman, nCluster), FF_MODE_READ);
 
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
@@ -105,7 +105,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 
 FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 	FF_T_BOOL result = FF_FALSE;
-	
+
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
 		if(fatEntry == 0xffffffff)
 			result = FF_TRUE;
@@ -131,9 +131,9 @@ FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8
 	nameLength = strlen(name);
 
 	for(i = 0; i < numEntries; i++) {
-		
+
 		Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * i)));
-		
+
 		if((Attrib & pa_Attrib) == pa_Attrib) {
 			memcpy(shortName, (pBuffer->pBuffer + (32 * i)), 11);
 			if(strncmp(name, shortName, nameLength) == 0) {
@@ -166,14 +166,11 @@ FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8
 FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pa_pDirent) {
 	FF_PARTITION *pPart = pIoman->pPartition;
 
-	char filename[260];
 
-	FF_T_UINT16 numEntries = 512 / 32; // Entries in the current sector
-	FF_T_UINT16 dirSector = 0;	// Current sector of the  current Dir entry
-	FF_T_UINT16 dirEntry = 0;
+
 	FF_T_UINT32 currentCluster = DirCluster; // The cluster of the Dir we are working on.
-	FF_T_UINT32 dirLBA, fatLBA, itemCluster;
-	FF_T_UINT16 i,x;
+	FF_T_UINT32 dirLBA, itemCluster;
+	FF_T_UINT16 i;
 
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 fatEntry = 0;
@@ -181,13 +178,13 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 
 
 
-	
+
 	//pBuffer = FF_GetBuffer(pIoman, dirLBA, FF_MODE_READ);
 
 	while(!FF_isEndOfChain(pIoman, fatEntry)) {	// Not at End of fat chain!
 
 		fatEntry = FF_getFatEntry(pIoman, currentCluster);
-		
+
 		for(i = 0; i < pPart->SectorsPerCluster; i++) { // Process Each Sector
 			// Process Each sector of the Dirent!
 			dirLBA = FF_Cluster2LBA(pIoman, currentCluster);
@@ -205,7 +202,7 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 				break;
 			}
 		}
-		
+
 		if(isEndOfDir == FF_TRUE) { // End of the Directory was found. Finish!
 				break;
 		}
@@ -218,13 +215,10 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 
 // returns the Cluster of the specified directory
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
-	FF_T_UINT32 dirLBA = 0;
+
 	FF_T_UINT32 dirCluster = pIoman->pPartition->RootDirCluster;
-	FF_BUFFER *pBuffer;
 
-	FF_DIRENT mydir;
-
-	char mypath[260];
+    char mypath[260];
 
 	FF_T_INT8 *token;
 
@@ -244,7 +238,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 		dirCluster = FF_FindEntry(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, NULL);
 		token = FF_strtok(mypath, &it, &mod);
 	}
-	
+
 	return dirCluster;
 }
 
@@ -254,14 +248,14 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
  **/
 FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 
-	FF_T_UINT32	dirCluster, currentCluster;
+	FF_T_UINT32	dirCluster;//, currentCluster;
 
 	if(!pIoman) {
 		return FF_ERR_FAT_NULL_POINTER;
 	}
 
 	dirCluster = FF_FindDir(pIoman, path);
-	
+
 	FF_FindEntry(pIoman, dirCluster, "", 0x00, pDirent);
 
 	return 0;
@@ -278,9 +272,9 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 	}
 
 	dirCluster = FF_FindDir(pIoman, path);
-	
+
 	while(!FF_isEndOfChain(pIoman, dirCluster)) {	// Not at End of fat chain!
-		
+
 		for(i = 0; i < pPart->SectorsPerCluster; i++) { // Process Each Sector
 			// Process Each sector of the Dirent!
 			dirLBA = FF_Cluster2LBA(pIoman, currentCluster);
