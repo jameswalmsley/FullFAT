@@ -82,20 +82,6 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 // 0 means its finished!
 // Token is a buffer, of the maxlength of a token!
 
-char *FF_strtok_new(char *string, unsigned short *iteration) {
-	int i,x;
-
-	i = 0;
-
-	if(string[i] == '\\' || string[i] == '/') {
-		i++;
-	}
-
-	for(x = i; string[x] != '\\' || string[x] != '/' || string[x] != '\0'; x++);
-
-
-	
-}
 
 char *FF_strtok(char *string, unsigned short *iteration, unsigned short *modded) {
 	int i,x;

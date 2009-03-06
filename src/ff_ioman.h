@@ -63,8 +63,8 @@
  *	Provide access to any Block Device via the following interfaces.
  *	Returns the number of blocks actually read or written.
  **/
-typedef FF_T_UINT32 (*FF_WRITE_BLOCKS)	(FF_T_INT8 *pBuffer, FF_T_UINT32 Sector, FF_T_UINT16 NumSectors, void *pParam);
-typedef FF_T_UINT32 (*FF_READ_BLOCKS)	(FF_T_INT8 *pBuffer, FF_T_UINT32 Sector, FF_T_UINT16 NumSectors, void *pParam);
+typedef FF_T_UINT32 (*FF_WRITE_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 Sector, FF_T_UINT16 NumSectors, void *pParam);
+typedef FF_T_UINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 Sector, FF_T_UINT16 NumSectors, void *pParam);
 
 /**
  *	@public
@@ -88,7 +88,7 @@ typedef struct {
 	FF_T_UINT16		ContextID;		///< Context Identifier.
 	FF_T_UINT16		NumHandles;		///< Number of objects using this buffer.
 	FF_T_UINT16		Persistance;	///< For the persistance algorithm.
-	FF_T_INT8		*pBuffer;		///< Pointer to the cache block.
+	FF_T_UINT8		*pBuffer;		///< Pointer to the cache block.
 } FF_BUFFER;
 
 /**

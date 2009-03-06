@@ -184,7 +184,7 @@ void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 		pIoman->pBuffers->NumHandles 	= 0;
 		pIoman->pBuffers->Persistance 	= 0;
 		pIoman->pBuffers->Sector 		= 0;
-		pIoman->pBuffers->pBuffer 		= ((pIoman->pCacheMem) + 512 * i);
+		pIoman->pBuffers->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + 512 * i);
 	}
 }
 
@@ -216,7 +216,7 @@ FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-void FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 *pBuffer) {
+void FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
 	if(pIoman->pBlkDevice->fnReadBlocks) {	// Make sure we don't execute a NULL.
 		pIoman->pBlkDevice->fnReadBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
 	}
