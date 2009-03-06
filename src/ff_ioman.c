@@ -417,7 +417,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
 	} else {	// FAT16
 		pPart->ClusterBeginLBA = pPart->BeginLBA + pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT);
 		pPart->TotalSectors = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_TOTAL_SECTORS);
-		pPart->RootDirCluster = 0;
+		pPart->RootDirCluster = 1; // 1st Cluster is RootDir!
 		if(pPart->TotalSectors == 0) {
 			pPart->TotalSectors = FF_getLong(pBuffer->pBuffer, FF_FAT_32_TOTAL_SECTORS);
 		}

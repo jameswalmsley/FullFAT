@@ -49,6 +49,18 @@
 #define FF_FAT_PTBL_LBA				0x008
 
 // Directory Entry Offsets
-#define FF_FAT_DIRENT_ATTRIB		0x00A
+#define FF_FAT_DIRENT_SHORTNAME		0x000
+#define FF_FAT_DIRENT_ATTRIB		0x00B
+#define FF_FAT_DIRENT_CLUS_HIGH		0x014
+#define FF_FAT_DIRENT_CLUS_LOW		0x01A
+#define FF_FAT_DIRENT_FILESIZE		0x01C
+
+// Dirent Attributes
+#define FF_FAT_ATTR_READONLY		0x01
+#define FF_FAT_ATTR_HIDDEN			0x02
+#define FF_FAT_ATTR_SYSTEM			0x04
+#define FF_FAT_ATTR_VOLID			0x08
+#define FF_FAT_ATTR_DIR				0x10
+#define FF_FAT_ATTR_ARCHIVE			0x20
 
 #endif

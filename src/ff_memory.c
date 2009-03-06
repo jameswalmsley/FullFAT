@@ -41,8 +41,9 @@
  **/
 
 #include "ff_memory.h"
+#include <stdlib.h>
 
-#ifdef _FF_LITTLE_ENDIAN_
+#ifdef FF_LITTLE_ENDIAN
 /* This exists because some systems don't have byte access, in this case make this return the byte of interest */
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT8) (pBuffer[offset]);
@@ -58,7 +59,7 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 
 #endif
 
-#ifdef _FF_BIG_ENDIAN_
+#ifdef FF_BIG_ENDIAN
 /*
 	TODO: These need converting to BIG ENDIAN!!!
 */
@@ -75,4 +76,60 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 }
 
 #endif
+
+//strtok() is not threadsafe, here's one that is! (but it works differently!!)
+// returns the iteration value that should passed into the iteration arg
+// 0 means its finished!
+// Token is a buffer, of the maxlength of a token!
+
+char *FF_strtok_new(char *string, unsigned short *iteration) {
+	int i,x;
+
+	i = 0;
+
+	if(string[i] == '\\' || string[i] == '/') {
+		i++;
+	}
+
+	for(x = i; string[x] != '\\' || string[x] != '/' || string[x] != '\0'; x++);
+
+
+	
+}
+
+char *FF_strtok(char *string, unsigned short *iteration, unsigned short *modded) {
+	int i,x;
+	/* Find working token!! (iteration number!!) */
+
+	if(*modded == 1) {
+		return NULL;
+	}
+
+	i = 0;
+
+	if(string[i] == '\\' || string[i] == '/') {
+		i++;
+	}
+
+	for(x = *iteration; x > 0; i++) {
+		if(string[i] == '\0') {
+			x--;
+		}
+	}
+
+	for(x = i; string[x] != '\0'; x++) {
+		if(string[x] == '\\' || string[x] == '/') {
+			*iteration += 1;
+			string[x] = '\0';
+			return &string[i];
+		}
+	}
+
+	if(string[x] == '\0') {
+		*modded = 1;
+		return &string[i];
+	}
+
+	return NULL; // A default case!
+}
 

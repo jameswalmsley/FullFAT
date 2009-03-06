@@ -27,33 +27,27 @@
  *****************************************************************************/
 
 /**
- *	This file defines some portable types.
- *	You should change these as appropriate for your platform, as necessary.
- *
+ *	@file		ff_fat.h
+ *	@author		James Walmsley
+ *	@ingroup	FAT
  **/
 
-#ifndef _FF_TYPES_H_
-#define _FF_TYPES_H_
+#ifndef _FF_FAT_H_
+#define _FF_FAT_H_
 
-//---------------- BOOLEAN TYPES
-typedef	char			FF_T_BOOL;		///< This can be a char if your compiler isn't C99
+#include "fat.h"
+#include "ff_ioman.h"
 
-#define FF_TRUE		1	///< 1 if bool not supported.
-#define FF_FALSE	0	///< 0 if bool not supported.
+typedef struct {
+	FF_T_INT8	ShortNAME[12];
+	FF_T_UINT8	Attrib;
+	FF_T_UINT32 Filesize;
+	FF_T_UINT32 CurrentCluster;
+} FF_DIRENT;
 
-//---------------- 8 BIT INTEGERS
-typedef	char			FF_T_INT8;
-typedef	unsigned char	FF_T_UINT8;
-typedef signed char		FF_T_SINT8;
 
-//---------------- 16 BIT INTEGERS
-typedef	short			FF_T_INT16;
-typedef	unsigned short	FF_T_UINT16;
-typedef	signed short	FF_T_SINT16;
+//---------- ERROR CODES
 
-//---------------- 32 BIT INTEGERS
-typedef	int				FF_T_INT32;
-typedef	unsigned int	FF_T_UINT32;
-typedef	signed int		FF_T_SINT32;
+#define FF_ERR_FAT_NULL_POINTER	-2
 
 #endif

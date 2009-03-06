@@ -25,12 +25,19 @@
  *
  *   Removing the above notice is illegal and will invalidate this license.
  *****************************************************************************/
-
+#ifndef _FF_CONFIG_H_
+#define _FF_CONFIG_H_
 /*
 	Here you can change the configuration of FullFAT as appropriate to your
 	platform.
 */
 
 //---------- ENDIANESS
-#define _FF_LITTLE_ENDIAN_
-//#define _FF_BIG_ENDIAN_
+#define FF_LITTLE_ENDIAN
+//#define FF_BIG_ENDIAN
+
+//---------- LFN (Long File-name) SUPPORT
+// Comment this out if you don't want to worry about Patent Issues.
+#define FF_LFN_SUPPORT
+
+#endif
