@@ -401,7 +401,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
 	pPart->ReservedSectors = FF_getShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS);
 	pPart->FatBeginLBA = pPart->BeginLBA + pPart->ReservedSectors;
 
-	pPart->NumFATS = FF_getShort(pBuffer->pBuffer, FF_FAT_NUMBER_OF_FATS);
+	pPart->NumFATS = (FF_T_UINT8) FF_getShort(pBuffer->pBuffer, FF_FAT_NUMBER_OF_FATS);
 	pPart->SectorsPerFAT = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_SECTORS_PER_FAT);
 
 	pPart->SectorsPerCluster = FF_getChar(pBuffer->pBuffer, FF_FAT_SECTORS_PER_CLUS);

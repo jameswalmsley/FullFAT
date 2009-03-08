@@ -62,5 +62,6 @@
 #define FF_FAT_ATTR_VOLID			0x08
 #define FF_FAT_ATTR_DIR				0x10
 #define FF_FAT_ATTR_ARCHIVE			0x20
+#define FF_FAT_ATTR_LFN				0x0F
 
 #endif

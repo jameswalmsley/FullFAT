@@ -38,6 +38,6 @@
 
 //---------- LFN (Long File-name) SUPPORT
 // Comment this out if you don't want to worry about Patent Issues.
-#define FF_LFN_SUPPORT
+//#define FF_LFN_SUPPORT
 
 #endif

@@ -39,10 +39,24 @@
 #include "ff_ioman.h"
 
 typedef struct {
+	FF_IOMAN	*pIoman;		///< Ioman Pointer!
+	FF_T_UINT32 Filesize;		///< File's Size.
+	FF_T_UINT32 ObjectCluster;	///< File's Start Cluster.
+	FF_T_UINT32 FilePointer;	///< Current Position Pointer.
+	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
+	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
+	FF_T_UINT32 AddrCurrentCluster;
+} FF_FILE;
+
+typedef struct {
 	FF_T_INT8	ShortNAME[12];
 	FF_T_UINT8	Attrib;
 	FF_T_UINT32 Filesize;
-	FF_T_UINT32 CurrentCluster;
+	FF_T_UINT32	ObjectCluster;
+	//---- Book Keeping for FF_Find Functions
+	FF_T_UINT32	CurrentItem;	
+	FF_T_UINT32	DirCluster;
+	FF_T_UINT32	CurrentCluster;
 } FF_DIRENT;
 
 

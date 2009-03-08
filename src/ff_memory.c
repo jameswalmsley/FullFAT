@@ -86,7 +86,16 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 char *FF_strtok(char *string, unsigned short *iteration, unsigned short *modded) {
 	int i,x;
 	/* Find working token!! (iteration number!!) */
-
+	i = strlen(string);
+	
+	/*
+		Strips Trailing / or \ from a path. 
+		Otherwise a NULL pointer may not be returned.
+	*/
+	if(string[i-1] == '\\' || string[i-1] == '/') {
+		string[i-1] = '\0';
+	}
+	
 	if(*modded == 1) {
 		return NULL;
 	}
