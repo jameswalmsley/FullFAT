@@ -159,7 +159,7 @@ FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8
 				// Process LFN!
 #ifdef FF_LFN_SUPPORT
 
-#else		
+#endif	
 				// Skip Past the LFN!
 				if(test == 0x41) {
 					numLFNs = 1;
@@ -173,7 +173,6 @@ FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8
 
 				// Get Real Attribute 
 				Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * i)));
-#endif
 			}
 			
 
@@ -188,8 +187,8 @@ FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8
 					if(pDirent) {
 						pDirent->Attrib = Attrib;
 						pDirent->ObjectCluster = itemCluster;
-						strncpy(pDirent->ShortNAME, (pBuffer->pBuffer + (32 * i)), 11);	
-						pDirent->Filesize		 = FF_getLong(pBuffer->pBuffer, (FF_FAT_DIRENT_FILESIZE + (32 * i)));
+						strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * i)), 11);	
+						pDirent->Filesize = FF_getLong(pBuffer->pBuffer, (FF_FAT_DIRENT_FILESIZE + (32 * i)));
 					}
 
 					if(!itemCluster) {
@@ -287,18 +286,44 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	return dirCluster;
 }
 
-FF_T_SINT8 FF_getLFN(FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF_T_INT8 *filename) {
+FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF_T_INT8 *filename) {
 
 	FF_T_UINT8	 	numLFNs;
 	FF_T_UINT8	 	retLFNs = 0;
 	FF_T_UINT16		lenlfn = 0;
 	FF_T_UINT8		tester;
+	FF_T_UINT16		i,y;
+	FF_T_UINT32		OriginalSector = pBuffer->Sector, Sector = pBuffer->Sector;
+
+	FF_T_UINT8		*buffer = pBuffer->pBuffer;
 	
 	tester = FF_getChar(pBuffer->pBuffer, (Entry * 32));
 	numLFNs = tester & ~0x40;
 
 	while(numLFNs > 0) {
+		if(numLFNs + Entry > 15) {
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			Sector += 1;
+			pBuffer = FF_GetBuffer(pIoman, Sector, FF_MODE_READ);
+			Entry = 0;
+		}
 		
+		for(i = 0, y = 0; i < 5; i++, y += 2) {
+			filename[i + ((numLFNs - 1) * 13)] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_1 + y];
+			lenlfn++;
+		}
+
+		for(i = 0, y = 0; i < 6; i++, y += 2) {
+			filename[i + ((numLFNs - 1) * 13) + 5] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_2 + y];
+			lenlfn++;
+		}
+
+		for(i = 0, y = 0; i < 2; i++, y += 2) {
+			filename[i + ((numLFNs - 1) * 13) + 11] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_3 + y];
+			lenlfn++;
+		}
+
+		Entry++;
 		numLFNs--;
 	}
 
@@ -323,6 +348,30 @@ FF_T_SINT8 FF_getLFN(FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF_T_INT8 *filename)
 	filename[lenlfn] = '\0'; // String Terminator required!
 	return retLFNs;*/
 	return numLFNs;
+}
+
+void FF_ProcessShortName(FF_T_INT8 *name) {
+	FF_T_INT8	shortName[12];
+	FF_T_UINT8	i;
+	memcpy(shortName, name, 11);
+	
+	for(i = 0; i < 8; i++) {
+		if(shortName[i] == 0x20) {
+			if(shortName[8] != 0x20){
+				name[i] = '.';
+				name[i+1] = shortName[8];
+				name[i+2] = shortName[9];
+				name[i+3] = shortName[10];
+				name[i+4] = '\0';
+			} else {
+				name[i] = '\0';
+			}
+			break;
+		}
+		name[i] = shortName[i];
+	}
+
+
 }
 
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
@@ -377,15 +426,25 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 				if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 					numLFNs = (tester & ~0x40);
 #ifdef FF_LFN_SUPPORT
-					
-
+					// May Get the Next Buffer if it needs to!
+					FF_getLFN(pIoman, pBuffer, minorBlockEntry, pDirent->FileName);
+					pDirent->ProcessedLFN = FF_TRUE;
 #endif
 					pDirent->CurrentItem += numLFNs;
 					minorBlockEntry += (numLFNs -1);	// (LFN's -1 because the loop will increment once also!)
 					retVal = -1;
 
 				} else {
-					strncpy(pDirent->ShortNAME, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);	
+					if(pDirent->ProcessedLFN == FF_TRUE) {
+						pDirent->ProcessedLFN = FF_FALSE;
+					} else {
+						if(pDirent->Attrib == FF_FAT_ATTR_DIR || pDirent->Attrib == FF_FAT_ATTR_VOLID) {
+							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
+						} else {
+							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
+							FF_ProcessShortName(pDirent->FileName);
+						}
+					}
 					myShort					 = FF_getShort(pBuffer->pBuffer, (FF_FAT_DIRENT_CLUS_HIGH + (32 * minorBlockEntry)));
 					pDirent->ObjectCluster   = (FF_T_UINT32) (myShort << 16);
 					myShort					 = FF_getShort(pBuffer->pBuffer, (FF_FAT_DIRENT_CLUS_LOW + (32 * minorBlockEntry)));
@@ -429,8 +488,9 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 	}
 
 	pDirent->CurrentCluster = 0;
-	pDirent->ShortNAME[11] = '\0';
+	pDirent->FileName[11] = '\0';
 	pDirent->CurrentItem = 0;	// Set current item to 0
+	pDirent->ProcessedLFN = FF_FALSE;
 //	pDirent->isSectorOffsetSet = FF_FALSE;
 
 	FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent);

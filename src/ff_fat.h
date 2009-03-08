@@ -48,15 +48,23 @@ typedef struct {
 	FF_T_UINT32 AddrCurrentCluster;
 } FF_FILE;
 
+
 typedef struct {
-	FF_T_INT8	ShortNAME[12];
+	
+#ifdef FF_LFN_SUPPORT
+	FF_T_INT8	FileName[256];
+#else
+	FF_T_INT8	FileName[13];
+#endif
 	FF_T_UINT8	Attrib;
 	FF_T_UINT32 Filesize;
 	FF_T_UINT32	ObjectCluster;
+
 	//---- Book Keeping for FF_Find Functions
 	FF_T_UINT32	CurrentItem;	
 	FF_T_UINT32	DirCluster;
 	FF_T_UINT32	CurrentCluster;
+	FF_T_BOOL	ProcessedLFN;
 } FF_DIRENT;
 
 

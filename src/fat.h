@@ -54,6 +54,9 @@
 #define FF_FAT_DIRENT_CLUS_HIGH		0x014
 #define FF_FAT_DIRENT_CLUS_LOW		0x01A
 #define FF_FAT_DIRENT_FILESIZE		0x01C
+#define FF_FAT_LFN_NAME_1			0x001
+#define FF_FAT_LFN_NAME_2			0x00E
+#define FF_FAT_LFN_NAME_3			0x01C
 
 // Dirent Attributes
 #define FF_FAT_ATTR_READONLY		0x01
