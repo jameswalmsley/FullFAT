@@ -81,7 +81,7 @@ int main(void) {
 
 	
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test_ipod, (FF_READ_BLOCKS) test_ipod, string);
+		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test_ipod, (FF_READ_BLOCKS) test, f);
 		FF_MountPartition(pIoman);
 		/*jim = fopen("c:\\talktest.mp3", "wb");
 

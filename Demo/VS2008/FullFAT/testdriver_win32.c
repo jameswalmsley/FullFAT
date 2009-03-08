@@ -4,13 +4,11 @@
 #define BLKSIZE 2048
 
 void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
-//	FILE *f = fopen((char *) pParam, "rb");
 	int i = 0;
 	unsigned int address;
 	address = sector * 512;
 	fseek(pParam, address, 0);
-	fread(buffer, BLKSIZE, sectors, pParam);
-	//fclose(f);
+	fread(buffer, 512, sectors, pParam);
 }
 
 void test_ipod(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {

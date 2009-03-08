@@ -182,6 +182,10 @@
 				Name="FullFAT"
 				>
 				<File
+					RelativePath="..\..\..\src\ff_blk.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_fat.c"
 					>
 				</File>
@@ -209,6 +213,10 @@
 				>
 				<File
 					RelativePath="..\..\..\src\fat.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_blk.h"
 					>
 				</File>
 				<File
