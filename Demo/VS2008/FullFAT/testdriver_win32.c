@@ -13,21 +13,20 @@ void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, v
 
 void test_ipod(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 
-	FILE *f = fopen((char *) pParam, "rb");
+		FILE *f = pParam;
 
-	unsigned long realSector = sector / (BLKSIZE / 512);
-	unsigned char realSectorOffset = sector % (BLKSIZE / 512);
-	unsigned long address = realSector * BLKSIZE;
-	unsigned char mybuf[4096];
+		unsigned long realSector = sector / (BLKSIZE / 512);
+		unsigned char realSectorOffset = sector % (BLKSIZE / 512);
+		unsigned long address = realSector * BLKSIZE;
+		unsigned char mybuf[4096];
 
-	if(fseek(f, address, 0) != 0){
-		//return(-1);
-	}
+		if(fseek(f, address, 0) != 0){
+			//return(-1);
+		}
 
-	fread(mybuf, BLKSIZE, sectors, f);
+		fread(mybuf, BLKSIZE, sectors, f);
 
-	fclose(f);
 
-	memcpy(buffer, (mybuf + (512 * realSectorOffset)), 512);
+		memcpy(buffer, (mybuf + (512 * realSectorOffset)), 512);
 	
 }

@@ -43,8 +43,15 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <windows.h>
+#include <winbase.h>
 #include "../../../src/ff_ioman.h"
 #include "../../../src/ff_fat.h"
+
+#define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -64,76 +71,123 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 }
 
 int main(void) {
-	/*printf("FullFAT by James Walmsley - Test Suite\n");
-	FF_ioman_test();*/
-	FILE *f, *jim;
-	FF_FILE *MyFile;
+	LARGE_INTEGER ticksPerSecond;
+	LARGE_INTEGER start_ticks, end_ticks, cputime; 
+	FILE *f, *fDest;
+	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
-	char buffer[4096];
-	char cmd[10];
-	char arg[512];
+	
+	char buffer[COPY_BUFFER_SIZE];
+	char commandLine[1024];
+	char commandShadow[2600];
+	char source[260], destination[260];
+	char workingDir[2600] = "\\";
 	char tester;
 	unsigned long BytesRead;
 	FF_T_UINT32 i;
-	char string[] = "\\\\.\\PHYSICALDRIVE1";
 	FF_DIRENT mydir;
+	float time, transferRate;
 	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	
+	QueryPerformanceFrequency(&ticksPerSecond);
 
+	printf("FullFAT by James Walmsley - Windows Demonstration\n");
+	printf("Use the command help for more information\n\n");
 	
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test_ipod, (FF_READ_BLOCKS) test, f);
 		FF_MountPartition(pIoman);
-		/*jim = fopen("c:\\talktest.mp3", "wb");
-
-		MyFile = FF_Open(pIoman, "\\", "TALK", FF_MODE_READ);
-
-		if(MyFile) {
-			fputc(FF_GetC(MyFile), jim);
-			 do{
-				BytesRead = FF_Read(MyFile, 4096, 1, buffer);
-				if(BytesRead == 0)
-					break;
-				fwrite(buffer, BytesRead, 1, jim);
-			}while(BytesRead > 0);
-			fclose(jim);
-			FF_Close(MyFile);
-		}
-
-		MyFile = FF_Open(pIoman, "\\", "1FILE", FF_MODE_READ);
-		if(MyFile) {
-			for(i = 0; i < MyFile->Filesize; i++) {
-				printf("%c", FF_GetC(MyFile));
-			}
-			FF_Close(MyFile);
-		}*/
 
 		while(1) {
-			scanf("%s %s", cmd, arg);
-			if(strstr(cmd, "cd")) {
+			printf("FullFAT:%s>",workingDir);
+			for(i = 0; i < 1024; i++) {
+				commandLine[i] = getch();
+				putch(commandLine[i]);
+				if(commandLine[i] == '\r') {
+					putch('\n');
+					commandLine[i] = '\0';
+					break;
+				}
+			}
+			if(strstr(commandLine, "cd")) {
+				
+				if(commandLine[3] != '\\' && commandLine[3] != '/') {
+					if(strlen(workingDir) == 1) {
+						sprintf(commandShadow, "\\%s", (commandLine + 3));
+					} else {
+						sprintf(commandShadow, "%s\\%s", workingDir, (commandLine + 3));
+					}
+				} else {
+					sprintf(commandShadow, "%s", (commandLine + 3));
+				}
+
+				if(FF_FindDir(pIoman, commandShadow)) {
+					sprintf(workingDir, "%s", commandShadow);
+				} else {
+					printf("Path %s Not Found\n", commandShadow);
+				}
+			}
+
+			if(strstr(commandLine, "ls") || strstr(commandLine, "dir")) {
 				i = 0;
 				tester = 0;
-				tester = FF_FindFirst(pIoman, &mydir, arg);
+				tester = FF_FindFirst(pIoman, &mydir, workingDir);
 				while(tester == 0) {
 					FF_PrintDir(&mydir);
 					i++;
 					tester = FF_FindNext(pIoman, &mydir);
 				}
 				printf("\n%d Items\n", i);
+				putchar('\n');
 			}
 
-			if(strstr(cmd, "view")) {
-				MyFile = FF_Open(pIoman, "\\", arg, FF_MODE_READ);
-				if(MyFile) {
-					for(i = 0; i < MyFile->Filesize; i++) {
-						printf("%c", FF_GetC(MyFile));
+			if(strstr(commandLine, "view")) {
+				fSource = FF_Open(pIoman, workingDir, (commandLine+5), FF_MODE_READ);
+				if(fSource) {
+					for(i = 0; i < fSource->Filesize; i++) {
+						printf("%c", FF_GetC(fSource));
 					}
 
-					FF_Close(MyFile);
+					FF_Close(fSource);
 				}else {
 					printf("File Not Found!\n");
 				}
 			}
-		
+
+			if(strstr(commandLine, "pwd")) {
+				printf("%s\n", workingDir);
+			}
+
+			if(strstr(commandLine, "cp")) {
+				sscanf((commandLine + 3), "%s %s", source, destination);
+				
+				fDest = fopen(destination, "wb");
+				if(fDest) {
+					fSource = FF_Open(pIoman, workingDir, source, FF_MODE_READ);
+					if(fSource) {
+						QueryPerformanceCounter(&start_ticks);  
+						do{
+							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, buffer);
+							fwrite(buffer, BytesRead, 1, fDest);
+							QueryPerformanceCounter(&end_ticks); 
+							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
+							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+							transferRate = (fSource->FilePointer / time) / 1024;
+							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+						}while(BytesRead > 0);
+						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+						fclose(fDest);
+						FF_Close(fSource);
+					} else {
+						fclose(fDest);
+						printf("Error Opening Source\n");
+					}
+				} else {
+					printf("Error Opening Deestination\n");
+				}
+				strcpy(source, "");
+				strcpy(destination, "");
+			}
 		}
 		
 	} else {
