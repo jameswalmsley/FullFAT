@@ -64,4 +64,14 @@ typedef struct {
 
 #define FF_ERR_FAT_NULL_POINTER	-2
 
+//---------- PROTOTYPES
+// PUBLIC (Interfaces):
+FF_T_SINT8	 FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path);
+FF_T_SINT8	 FF_FindNext	(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
+
+FF_FILE		*FF_Open	(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UINT8 Mode);
+FF_T_SINT8	 FF_Close	(FF_FILE *pFile);
+FF_T_UINT8	 FF_GetC	(FF_FILE *pFile);
+FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
+FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
 #endif

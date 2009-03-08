@@ -41,7 +41,7 @@
  **/
 
 #include "ff_memory.h"
-#include <stdlib.h>
+#include <string.h>
 
 #ifdef FF_LITTLE_ENDIAN
 /* This exists because some systems don't have byte access, in this case make this return the byte of interest */

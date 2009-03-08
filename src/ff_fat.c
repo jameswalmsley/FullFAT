@@ -151,7 +151,7 @@ FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8
 	nameLength = strlen(name);
 	
 	for(i = 0; i < numEntries; i++) {
-		test = FF_getShort(pBuffer->pBuffer, (32*i));	//
+		test = FF_getChar(pBuffer->pBuffer, (32*i));	//
 		if(test != 0xe5 && test != 0x00) {
 			
 			Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * i)));
@@ -289,10 +289,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 FF_T_SINT8 FF_getLFN(FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF_T_INT8 *filename) {
 
-	unsigned char 	numLFNs;
-	unsigned char 	retLFNs = 0;
-	short 			lenlfn = 0;
-	int y,i;
+	FF_T_UINT8	 	numLFNs;
+	FF_T_UINT8	 	retLFNs = 0;
+	FF_T_UINT16		lenlfn = 0;
 	FF_T_UINT8		tester;
 	
 	tester = FF_getChar(pBuffer->pBuffer, (Entry * 32));
@@ -323,6 +322,7 @@ FF_T_SINT8 FF_getLFN(FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF_T_INT8 *filename)
 	}
 	filename[lenlfn] = '\0'; // String Terminator required!
 	return retLFNs;*/
+	return numLFNs;
 }
 
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
@@ -374,7 +374,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 			if(tester != 0xe5 && tester != 0x00) {
 				
 				pDirent->Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * minorBlockEntry)));
-				if((pDirent->Attrib & FF_FAT_ATTR_LFN)) {
+				if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 					numLFNs = (tester & ~0x40);
 #ifdef FF_LFN_SUPPORT
 					
@@ -495,7 +495,7 @@ FF_T_BOOL FF_isEOF(FF_FILE *pFile) {
 
 FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
 	FF_T_UINT32 Bytes = ElementSize * Count;
-	FF_T_UINT32 i,BytesRead = 0;
+	FF_T_UINT32 BytesRead = 0;
 	FF_PARTITION *pPart = pFile->pIoman->pPartition;
 	FF_T_UINT32 fileLBA, fatEntry;
 	FF_BUFFER	*pBuffer;
@@ -644,6 +644,7 @@ FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// If file written, flush to disk
 	free(pFile);
 	// Simply free the pointer!
+	return 0;
 }
 
 

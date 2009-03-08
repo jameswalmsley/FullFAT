@@ -34,106 +34,17 @@
  *	You should ensure all Unit-tests are passed on your platform.
  **/
 
+/*
+	NOTE THIS DEMO IS HIGHLY SUBJECT TO CHANGE:
+	AND MOST UNIT TESTS HAVE NOT BEEN INCLUDED AT THIS POINT:
+
+	SIMPLY USE A BASIC DEMO
+*/
+
 #include <stdio.h>
 #include <string.h>
-#include "ff_ioman.h"
-#include "ff_fat.h"
-
-// FF_IOMAN UNIT TESTS
-// iomanDestroy doesn't accept a NULL pointer!
-char TEST_DestroyIOMAN_1() {
-	char i = 0;
-	i = FF_DestroyIOMAN(NULL);
-	if(i != FF_ERR_IOMAN_NULL_POINTER) {
-		return 0;
-	}
-
-	return 1;
-}
-
-// iomanCreate test only accepts multiples of 512 memory. 0 is invalid, and nothing else.
-char TEST_CreateIOMAN_1() {
-	int i;
-	FF_IOMAN *test = 0;
-	//  Test 0 unaccepted!
-	test = FF_CreateIOMAN(NULL, 0);
-	if(test) {
-			FF_DestroyIOMAN(test);
-			return 0;
-		}
-	FF_DestroyIOMAN(test);
-	// Test all non multiples up to 1 megabyte
-	for(i = 1; i < 1024768; i++) {
-		if((i % 512) == 0)
-			i++;
-		test = FF_CreateIOMAN(NULL, i);
-		if(test) {
-			FF_DestroyIOMAN(test);
-			return 0;
-		}
-		FF_DestroyIOMAN(test);
-		// Destroy test on each loop to prevent over allocation of mem! 
-	}
-
-	// Test all multples up to 1 megabyte
-	for(i = 1; i < 1024768; i++) {
-		if((i % 512) == 0) {
-			test = FF_CreateIOMAN(NULL, i);
-			if(!test) {
-				FF_DestroyIOMAN(test);
-				return 0;
-			}
-			FF_DestroyIOMAN(test);
-		}
-	}
-
-	return 1;
-}
-
-char TEST_CreateIOMAN_2() {
-	FF_IOMAN *test = NULL;
-	test = FF_CreateIOMAN(NULL, 512);
-	if(test->pBlkDevice->fnReadBlocks) {
-		FF_DestroyIOMAN(test);
-		return 0;
-	}
-	
-	if(test->pBlkDevice->fnWriteBlocks) {
-		FF_DestroyIOMAN(test);
-		return 0;
-	}
-
-	// Test pParam because we don't know what it is.
-	// It's unlikely but it could be an function pointer.
-	if(test->pBlkDevice->pParam) {
-		FF_DestroyIOMAN(test);
-		return 0;
-	}
-
-	return 1;
-}
-
-void FF_ioman_test(void) {
-
-	// CreateIOMAN
-	printf("IOMAN - CreateIOMAN() only accepts sizes of 512 Multiple...");
-	if(TEST_CreateIOMAN_1())
-		printf("Passed\n");
-	else
-		printf("Failed\n");
-	printf("IOMAN - CreateIOMAN() provides no executable pointers...");
-	if(TEST_CreateIOMAN_2())
-		printf("Passed\n");
-	else
-		printf("Failed\n");
-
-	// DestroyIOMAN
-	printf("IOMAN - DestroyIOMAN() returns -1 if NULL pointer passed...");
-	if(TEST_DestroyIOMAN_1())
-		printf("Passed\n");
-	else
-		printf("Failed\n");
-}
+#include "../../../src/ff_ioman.h"
+#include "../../../src/ff_fat.h"
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
@@ -157,78 +68,78 @@ int main(void) {
 	FILE *f, *jim;
 	FF_FILE *MyFile;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
-	FF_T_UINT32 clus,sect;
 	char buffer[4096];
 	char cmd[10];
 	char arg[512];
 	char tester;
 	unsigned long BytesRead;
-	int i;
+	FF_T_UINT32 i;
 
 	FF_DIRENT mydir;
 	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	//char string[] = "\\\\.\\PHYSICALDRIVE1";
 	
-	FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
+	if(f) {
+		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
+		FF_MountPartition(pIoman);
+		/*jim = fopen("c:\\talktest.mp3", "wb");
 
+		MyFile = FF_Open(pIoman, "\\", "TALK", FF_MODE_READ);
 
-	
-	FF_MountPartition(pIoman);
-	//test(buffer, 2065, 1, string);
-
-	jim = fopen("c:\\talktest.mp3", "wb");
-	MyFile = FF_Open(pIoman, "\\", "TALK", FF_MODE_READ);
-	fputc(FF_GetC(MyFile), jim);
-	 do{
-		BytesRead = FF_Read(MyFile, 4096, 1, buffer);
-		if(BytesRead == 0)
-			break;
-		fwrite(buffer, BytesRead, 1, jim);
-	}while(BytesRead > 0);
-	fclose(jim);
-	
-	/*for(i = 0; i < MyFile->Filesize; i++) {
-		fputc(FF_GetC(MyFile), jim);
-	}*/
-
-	
-
-	FF_Close(MyFile);
-
-	MyFile = FF_Open(pIoman, "\\", "1FILE", FF_MODE_READ);
-
-	for(i = 0; i < MyFile->Filesize; i++) {
-		printf("%c", FF_GetC(MyFile));
-	}
-
-	FF_Close(MyFile);
-
-	while(1) {
-		scanf("%s %s", cmd, arg);
-		if(strstr(cmd, "cd")) {
-			i = 0;
-			tester = 0;
-			tester = FF_FindFirst(pIoman, &mydir, arg);
-			while(tester == 0) {
-				FF_PrintDir(&mydir);
-				i++;
-				tester = FF_FindNext(pIoman, &mydir);
-			}
-			printf("\n%d Items\n", i);
+		if(MyFile) {
+			fputc(FF_GetC(MyFile), jim);
+			 do{
+				BytesRead = FF_Read(MyFile, 4096, 1, buffer);
+				if(BytesRead == 0)
+					break;
+				fwrite(buffer, BytesRead, 1, jim);
+			}while(BytesRead > 0);
+			fclose(jim);
+			FF_Close(MyFile);
 		}
 
-		if(strstr(cmd, "view")) {
-			MyFile = FF_Open(pIoman, "\\", arg, FF_MODE_READ);
-			if(MyFile) {
-				for(i = 0; i < MyFile->Filesize; i++) {
-					printf("%c", FF_GetC(MyFile));
-				}
-
-				FF_Close(MyFile);
-			}else {
-				printf("File Not Found!\n");
+		MyFile = FF_Open(pIoman, "\\", "1FILE", FF_MODE_READ);
+		if(MyFile) {
+			for(i = 0; i < MyFile->Filesize; i++) {
+				printf("%c", FF_GetC(MyFile));
 			}
+			FF_Close(MyFile);
+		}*/
+
+		while(1) {
+			scanf("%s %s", cmd, arg);
+			if(strstr(cmd, "cd")) {
+				i = 0;
+				tester = 0;
+				tester = FF_FindFirst(pIoman, &mydir, arg);
+				while(tester == 0) {
+					FF_PrintDir(&mydir);
+					i++;
+					tester = FF_FindNext(pIoman, &mydir);
+				}
+				printf("\n%d Items\n", i);
+			}
+
+			if(strstr(cmd, "view")) {
+				MyFile = FF_Open(pIoman, "\\", arg, FF_MODE_READ);
+				if(MyFile) {
+					for(i = 0; i < MyFile->Filesize; i++) {
+						printf("%c", FF_GetC(MyFile));
+					}
+
+					FF_Close(MyFile);
+				}else {
+					printf("File Not Found!\n");
+				}
+			}
+		
 		}
 		
+	} else {
+		
+		printf("Couldn't Open Block Device\n");
+		printf("Run Visual Studio as an Administrator!\n");
+		getchar();
 	}
+
 }
