@@ -37,6 +37,7 @@
 
 #include "fat.h"
 #include "ff_ioman.h"
+#include "ff_blk.h"
 
 typedef struct {
 	FF_IOMAN	*pIoman;		///< Ioman Pointer!
@@ -82,4 +83,7 @@ FF_T_SINT8	 FF_Close	(FF_FILE *pFile);
 FF_T_UINT8	 FF_GetC	(FF_FILE *pFile);
 FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
+
+FF_T_SINT8	 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
+
 #endif

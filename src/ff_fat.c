@@ -262,7 +262,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 	FF_T_UINT32 dirCluster = pIoman->pPartition->RootDirCluster;
 
-    char mypath[260];
+	FF_T_INT8 mypath[260];
 
 	FF_T_INT8 *token;
 
@@ -286,7 +286,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	return dirCluster;
 }
 
-FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF_T_INT8 *filename) {
+
+
+FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, FF_T_INT8 *filename) {
 
 	FF_T_UINT8	 	numLFNs;
 	FF_T_UINT8	 	retLFNs = 0;
@@ -294,20 +296,39 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF
 	FF_T_UINT8		tester;
 	FF_T_UINT16		i,y;
 	FF_T_UINT32		OriginalSector = pBuffer->Sector, Sector = pBuffer->Sector;
+	FF_T_UINT32		CurrentCluster;
+	FF_T_UINT32		fatEntry;
 
 	FF_T_UINT8		*buffer = pBuffer->pBuffer;
-	
+
+	FF_T_UINT32		Entry		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
+
 	tester = FF_getChar(pBuffer->pBuffer, (Entry * 32));
 	numLFNs = tester & ~0x40;
 
 	while(numLFNs > 0) {
-		if(numLFNs + Entry > 15) {
+		if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
+			
+			if(FF_isEndOfChain(pIoman, fatEntry)) {
+				CurrentCluster = pDirent->DirCluster;
+				// ERROR THIS SHOULD NOT OCCUR!
+			} else {
+				CurrentCluster = fatEntry;
+			}
+
+			pBuffer = FF_GetBuffer(pIoman, FF_getRealLBA(pIoman, FF_Cluster2LBA(pIoman, CurrentCluster)), FF_MODE_READ);
+			Entry = 0;	
+		}
+
+		if(Entry > 15) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			Sector += 1;
 			pBuffer = FF_GetBuffer(pIoman, Sector, FF_MODE_READ);
 			Entry = 0;
 		}
-		
+
 		for(i = 0, y = 0; i < 5; i++, y += 2) {
 			filename[i + ((numLFNs - 1) * 13)] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_1 + y];
 			lenlfn++;
@@ -323,10 +344,17 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF
 			lenlfn++;
 		}
 
-		Entry++;
 		numLFNs--;
-	}
 
+		/*if(numLFNs + Entry > 15) {
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			Sector += 1;
+			pBuffer = FF_GetBuffer(pIoman, Sector, FF_MODE_READ);
+			Entry = 0;
+		}*/
+		Entry++;
+		pDirent->CurrentItem += 1;
+	}
 	return 0;
 }
 
@@ -363,19 +391,11 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	FF_PARTITION	*pPart = pIoman->pPartition;	///< Used to make code easier to read.
 	FF_BUFFER		*pBuffer;	///< Buffer for acquired sector.
 
-	// Calculate which cluster of the chain the entry is in.
-	FF_T_UINT32 clusterChainNumber	= nEntry / (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / 32);
-	FF_T_UINT32 relClusterEntry		= nEntry % (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / 32);
-	
-	FF_T_UINT32 majorBlockNumber	= relClusterEntry / (pPart->BlkSize / 32);
-	FF_T_UINT32 relmajorBlockEntry	= relClusterEntry % (pPart->BlkSize / 32);
-
-	FF_T_UINT32 minorBlockNumber	= relmajorBlockEntry / (512 / 32);
-	FF_T_UINT32 minorBlockEntry		= relmajorBlockEntry % (512 / 32);
+	FF_T_UINT32 minorBlockEntry		= FF_getMinorBlockEntry(pIoman, nEntry, 32);
 	
 	// Lets follow the chain to find its real number
 	
-	if(clusterChainNumber > pDirent->CurrentCluster) {
+	if(FF_getClusterChainNumber(pIoman, nEntry, 32) > pDirent->CurrentCluster) {
 
 		fatEntry = FF_getFatEntry(pIoman, DirCluster);
 		
@@ -390,28 +410,29 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 		pDirent->CurrentCluster += 1;
 	}
 
-	itemLBA = FF_Cluster2LBA(pIoman, CurrentCluster) + majorBlockNumber;
-	itemLBA = FF_getRealLBA(pIoman, itemLBA) + minorBlockNumber;
+	itemLBA = FF_Cluster2LBA(pIoman, CurrentCluster) + FF_getMajorBlockNumber(pIoman, nEntry, 32);
+	itemLBA = FF_getRealLBA(pIoman, itemLBA) + FF_getMinorBlockNumber(pIoman, nEntry, 32);
 
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
 	{
 		
 		for(;minorBlockEntry < (512 / 32); minorBlockEntry++) {
 			tester = FF_getChar(pBuffer->pBuffer, (minorBlockEntry * 32));
-			if(tester != 0xe5 && tester != 0x00) {
+			if(tester != 0xE5 && tester != 0x00) {
 				
 				pDirent->Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * minorBlockEntry)));
 				if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 					numLFNs = (tester & ~0x40);
 #ifdef FF_LFN_SUPPORT
 					// May Get the Next Buffer if it needs to!
-					FF_getLFN(pIoman, pBuffer, minorBlockEntry, pDirent->FileName);
+					FF_getLFN(pIoman, pBuffer, pDirent, pDirent->FileName);
 					pDirent->ProcessedLFN = FF_TRUE;
-#endif
+#else
 					pDirent->CurrentItem += numLFNs;
+					
+#endif
 					minorBlockEntry += (numLFNs -1);	// (LFN's -1 because the loop will increment once also!)
 					retVal = -1;
-
 				} else {
 					if(pDirent->ProcessedLFN == FF_TRUE) {
 						pDirent->ProcessedLFN = FF_FALSE;
