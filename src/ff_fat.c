@@ -587,7 +587,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		Bytes = pFile->Filesize - pFile->FilePointer;
 	}
 
-	if(Bytes < 512) { // We have to memcpy from a buffer!
+	if((Bytes + relMinorBlockPos) < 512) { // We have to memcpy from a buffer!
 
 		pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 		{
@@ -691,12 +691,8 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		buffer += Bytes;
 		BytesRead += Bytes;
 		pFile->FilePointer += Bytes;	
+	
 	}
-
-
-			//pIoman->pBlkDevice->fnReadBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
-
-
 	return BytesRead;
 }
 
