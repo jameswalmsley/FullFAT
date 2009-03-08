@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BLKSIZE 512
+#define BLKSIZE 2048
 
 void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 //	FILE *f = fopen((char *) pParam, "rb");

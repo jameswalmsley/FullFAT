@@ -47,6 +47,7 @@
 #include "../../../src/ff_fat.h"
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -59,7 +60,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
 
-	printf("%s %12lu %s BeginCluster: %lu\n", attr, pDirent->Filesize, pDirent->ShortNAME, pDirent->ObjectCluster);
+	printf("%s %12lu %s\n", attr, pDirent->Filesize, pDirent->FileName);
 }
 
 int main(void) {
@@ -74,13 +75,13 @@ int main(void) {
 	char tester;
 	unsigned long BytesRead;
 	FF_T_UINT32 i;
-
+	char string[] = "\\\\.\\PHYSICALDRIVE1";
 	FF_DIRENT mydir;
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
-	//char string[] = "\\\\.\\PHYSICALDRIVE1";
+	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+
 	
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
+		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test_ipod, (FF_READ_BLOCKS) test_ipod, string);
 		FF_MountPartition(pIoman);
 		/*jim = fopen("c:\\talktest.mp3", "wb");
 
