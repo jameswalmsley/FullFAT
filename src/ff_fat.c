@@ -327,27 +327,7 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_UINT32 Entry, FF
 		numLFNs--;
 	}
 
-	/*while(numLFNs != 0) {
-		numLFNs --;
-		lfn = (FF_LFN *)cache;
-		for(i = 0, y = 0; i < 5; i++, y += 2) {
-			filename[i + (numLFNs * 13)] = lfn->Name_0[y];
-			lenlfn++;
-		}
-		for(i = 0, y = 0; i < 6; i++, y += 2) {
-			filename[i + (numLFNs * 13) + 5] = lfn->Name_1[y];
-			lenlfn++;
-		}
-		for(i = 0, y = 0; i < 2; i++, y += 2) {
-			filename[i + (numLFNs * 13) + 11] = lfn->Name_2[y];
-			lenlfn++;
-		}
-		cache++;
-		retLFNs++;
-	}
-	filename[lenlfn] = '\0'; // String Terminator required!
-	return retLFNs;*/
-	return numLFNs;
+	return 0;
 }
 
 void FF_ProcessShortName(FF_T_INT8 *name) {
@@ -370,15 +350,13 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 		}
 		name[i] = shortName[i];
 	}
-
-
 }
 
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
 	FF_T_UINT8		tester;			///< Unsigned byte for testing if dir is deleted
 	FF_T_SINT8		retVal = 0;		///< Return Value for Function
-	FF_T_UINT32     CurrentCluster = DirCluster;
+	FF_T_UINT32		CurrentCluster = DirCluster;
 	FF_T_UINT16		myShort, numLFNs;	///< 16 bits for calculating item cluster.
 	FF_T_UINT32		fatEntry = 0;	///< Used for following Cluster Chain
 	FF_T_UINT32		itemLBA;
