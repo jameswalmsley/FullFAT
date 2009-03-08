@@ -346,12 +346,6 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 
 		numLFNs--;
 
-		/*if(numLFNs + Entry > 15) {
-			FF_ReleaseBuffer(pIoman, pBuffer);
-			Sector += 1;
-			pBuffer = FF_GetBuffer(pIoman, Sector, FF_MODE_READ);
-			Entry = 0;
-		}*/
 		Entry++;
 		pDirent->CurrentItem += 1;
 	}
@@ -558,6 +552,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_PARTITION *pPart = pFile->pIoman->pPartition;
 	FF_T_UINT32 fileLBA, fatEntry;
 	FF_BUFFER	*pBuffer;
+	FF_T_UINT32 numClusters;
 	FF_T_UINT32 clusterNum		= pFile->FilePointer / ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
 	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
 	FF_T_UINT32 bytesPerCluster = pPart->BlkSize * pPart->SectorsPerCluster;
@@ -573,7 +568,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		return 0;
 	}
 
-	if(clusterNum > pFile->CurrentCluster) {
+	if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
@@ -585,7 +580,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	}
 
 	fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-	fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + majorBlockNum) + minorBlockNum;
+	fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->Filesize, 1);
 
 	
 	if(Bytes > (pFile->Filesize - pFile->FilePointer)) {
@@ -618,14 +613,62 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		// CARE ABOUT CLUSTER BOUNDARIES!
 		Bytes -= 512 - relMinorBlockPos;
 		BytesRead += 512 - relMinorBlockPos;
+		pFile->FilePointer += 512 - relMinorBlockPos;
 		
 		// Direct Copy :D Remaining Bytes > 512
 
 		while(Bytes > bytesPerCluster) {
 			// Direct Copy Size Remaining Cluster's!
-			
+			numClusters		 = Bytes / bytesPerCluster;
+			relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
+			majorBlockNum	 = relClusterPos / pPart->BlkSize;
+			relMajorBlockPos = relClusterPos % pPart->BlkSize;
+			minorBlockNum	 = relMajorBlockPos / 512;
+			relMinorBlockPos = relMajorBlockPos % 512;
 
+			if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
+				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
+					pFile->AddrCurrentCluster = pFile->ObjectCluster;
+					// ERROR THIS SHOULD NOT OCCUR!
+				} else {
+					pFile->AddrCurrentCluster = fatEntry;
+					pFile->CurrentCluster += 1;
+				}
+			}
+			
+			fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
+			fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->Filesize, 1);
+
+			Sectors = (bytesPerCluster - relClusterPos) / 512;
+
+			pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
+			buffer += (bytesPerCluster - relClusterPos);
+			Bytes -= (bytesPerCluster - relClusterPos);
+			pFile->FilePointer += (bytesPerCluster - relClusterPos);
+			BytesRead += (bytesPerCluster - relClusterPos);
 		}
+
+		relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
+		majorBlockNum	 = relClusterPos / pPart->BlkSize;
+		relMajorBlockPos = relClusterPos % pPart->BlkSize;
+		minorBlockNum	 = relMajorBlockPos / 512;
+		relMinorBlockPos = relMajorBlockPos % 512;
+
+		if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
+			fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+			if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
+				pFile->AddrCurrentCluster = pFile->ObjectCluster;
+				// ERROR THIS SHOULD NOT OCCUR!
+			} else {
+				pFile->AddrCurrentCluster = fatEntry;
+				pFile->CurrentCluster += 1;
+			}
+		}
+		
+		fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
+		fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->Filesize, 1);
+
 
 		if(Bytes >= 512) {
 			Sectors = Bytes / 512;
@@ -633,6 +676,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			Bytes -= Sectors * 512;
 			buffer += Sectors * 512;
 			BytesRead += Sectors * 512;
+			pFile->FilePointer += Sectors * 512;
 			fileLBA += Sectors;
 		}
 
@@ -646,8 +690,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		buffer += Bytes;
 		BytesRead += Bytes;
-				
-		pFile->FilePointer += BytesRead;
+		pFile->FilePointer += Bytes;	
 	}
 
 
