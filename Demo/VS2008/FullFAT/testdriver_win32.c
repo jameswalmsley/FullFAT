@@ -13,7 +13,6 @@ void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, v
 
 void test_ipodSectRead(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 		FILE *f = pParam;
-		int i;
 		unsigned long realSector = sector / (BLKSIZE / 512);
 		unsigned char realSectorOffset = sector % (BLKSIZE / 512);
 		unsigned long address = realSector * BLKSIZE;
