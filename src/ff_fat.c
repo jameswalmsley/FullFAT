@@ -72,41 +72,29 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 	return cluster;
 }
 
-// Calculates the sector number of the FAT table required for entry corresponding to nCluster.
-FF_T_UINT32 FF_getFATSector(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
-
-	FF_T_UINT32 nSector = 0;
-	FF_T_UINT32 nEntries = 0;
-
-	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		nEntries = (pIoman->pPartition->BlkSize / 4);
-	} else {
-		nEntries = (pIoman->pPartition->BlkSize / 2);
-	}
-
-	nSector  = pIoman->pPartition->FatBeginLBA;
-	nSector += nCluster / nEntries; // + 2
-	return nSector;
-}
 
 // Release all buffers before calling this!
 FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 fatEntry = 0;
 	FF_BUFFER *pBuffer = 0;
 	FF_T_UINT32 LBAadjust;
-	FF_T_UINT32 FatSector = FF_getRealLBA(pIoman, FF_getFATSector(pIoman, nCluster));
+	FF_T_UINT32 FatSector;
 
 	FF_T_UINT32 relClusterNum;
 	
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		LBAadjust = (nCluster / (512 / 4));
+		FatSector = FF_getMajorBlockNumber(pIoman, nCluster, 4) + pIoman->pPartition->FatBeginLBA;
+		FatSector = FF_getRealLBA(pIoman, FatSector);
+		LBAadjust = FF_getMinorBlockNumber(pIoman, nCluster, 4);
 		relClusterNum = nCluster % (512 / 4);
 	} else {
-		LBAadjust = (nCluster / (512 / 2));
+		FatSector = FF_getMajorBlockNumber(pIoman, nCluster, 2) + pIoman->pPartition->FatBeginLBA;
+		FatSector = FF_getRealLBA(pIoman, FatSector);
+		LBAadjust = FF_getMinorBlockNumber(pIoman, nCluster, 2);
 		relClusterNum = nCluster % (512 / 2);
 	}
 
-	pBuffer = FF_GetBuffer(pIoman, FatSector, FF_MODE_READ);
+	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
 		fatEntry = FF_getLong(pBuffer->pBuffer, (relClusterNum * 4));
@@ -580,7 +568,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	}
 
 	fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-	fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->Filesize, 1);
+	fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 	
 	if(Bytes > (pFile->Filesize - pFile->FilePointer)) {
@@ -599,7 +587,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		return Bytes;
 	} else {
 
-		if(relMinorBlockPos >= 0) { // Not on a Sector Boundary. Memcpy First Lot
+		if(relMinorBlockPos > 0) { // Not on a Sector Boundary. Memcpy First Lot
 		// Read Across Multiple Clusters
 			pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 			{
@@ -608,12 +596,12 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			FF_ReleaseBuffer(pFile->pIoman, pBuffer);
 
 			buffer += (512 - relMinorBlockPos);
+			fileLBA += 1;	// Next Copy just be from the Next LBA.
+			// CARE ABOUT CLUSTER BOUNDARIES!
+			Bytes -= 512 - relMinorBlockPos;
+			BytesRead += 512 - relMinorBlockPos;
+			pFile->FilePointer += 512 - relMinorBlockPos;
 		}
-		fileLBA += 1;	// Next Copy just be from the Next LBA.
-		// CARE ABOUT CLUSTER BOUNDARIES!
-		Bytes -= 512 - relMinorBlockPos;
-		BytesRead += 512 - relMinorBlockPos;
-		pFile->FilePointer += 512 - relMinorBlockPos;
 		
 		// Direct Copy :D Remaining Bytes > 512
 
@@ -638,7 +626,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			}
 			
 			fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-			fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->Filesize, 1);
+			fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 			Sectors = (bytesPerCluster - relClusterPos) / 512;
 
@@ -667,7 +655,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		}
 		
 		fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-		fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->Filesize, 1);
+		fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 
 		if(Bytes >= 512) {
