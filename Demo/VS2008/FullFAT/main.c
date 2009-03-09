@@ -95,7 +95,7 @@ int main(void) {
 	printf("Use the command help for more information\n\n");
 	
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test_ipod, (FF_READ_BLOCKS) test, f);
+		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
 		FF_MountPartition(pIoman);
 
 		while(1) {
@@ -183,7 +183,7 @@ int main(void) {
 						printf("Error Opening Source\n");
 					}
 				} else {
-					printf("Error Opening Deestination\n");
+					printf("Error Opening Destination\n");
 				}
 				strcpy(source, "");
 				strcpy(destination, "");
