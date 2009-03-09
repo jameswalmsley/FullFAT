@@ -87,7 +87,7 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	float time, transferRate;
-	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -158,6 +158,18 @@ int main(void) {
 				printf("%s\n", workingDir);
 			}
 
+			if(strstr(commandLine, "help")) {
+				printf("The following commands are available:\n\n");
+				printf("pwd \t\t- Print the working directory\n");
+				printf("ls or dir \t- List the contents of the working directory\n");
+				printf("cd \t\t- Change working directory e.g. cd path_to_dir\n");
+				printf("cp \t\t- Copy a file to the hard disk.\n");
+				printf("\t\t  e.g. cp filename c:\\filename\n");
+				printf("exit \t\t- Quits the FullFAT test suite.\n");
+				printf("\nFullFAT is developed and maintained by James Walmsley\n");
+				printf("\nVisit www.worm.me.uk/fullfat for more information, and contact details\n\n");
+			}
+
 			if(strstr(commandLine, "cp")) {
 				sscanf((commandLine + 3), "%s %s", source, destination);
 				
@@ -187,6 +199,10 @@ int main(void) {
 				}
 				strcpy(source, "");
 				strcpy(destination, "");
+			}
+
+			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
+				return 0;
 			}
 		}
 		
