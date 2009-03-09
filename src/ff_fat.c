@@ -383,6 +383,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 		
 		if(FF_isEndOfChain(pIoman, fatEntry)) {
 			CurrentCluster = DirCluster;
+			return -2;
 			// ERROR THIS SHOULD NOT OCCUR!
 		} else {
 			CurrentCluster = fatEntry;
@@ -421,6 +422,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 					} else {
 						if(pDirent->Attrib == FF_FAT_ATTR_DIR || pDirent->Attrib == FF_FAT_ATTR_VOLID) {
 							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
+							pDirent->FileName[11] = '\0';
 						} else {
 							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
 							FF_ProcessShortName(pDirent->FileName);
@@ -561,6 +563,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			// ERROR THIS SHOULD NOT OCCUR!
+			return 0;
 		} else {
 			pFile->AddrCurrentCluster = fatEntry;
 			pFile->CurrentCluster += 1;
@@ -619,6 +622,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 					pFile->AddrCurrentCluster = pFile->ObjectCluster;
 					// ERROR THIS SHOULD NOT OCCUR!
+					return 0;
 				} else {
 					pFile->AddrCurrentCluster = fatEntry;
 					pFile->CurrentCluster += 1;
@@ -648,6 +652,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 				pFile->AddrCurrentCluster = pFile->ObjectCluster;
 				// ERROR THIS SHOULD NOT OCCUR!
+				return 0;
 			} else {
 				pFile->AddrCurrentCluster = fatEntry;
 				pFile->CurrentCluster += 1;
@@ -705,6 +710,7 @@ FF_T_UINT8 FF_GetC(FF_FILE *pFile) {
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			// ERROR THIS SHOULD NOT OCCUR!
+			return 0;
 		} else {
 			pFile->AddrCurrentCluster = fatEntry;
 			pFile->CurrentCluster += 1;
