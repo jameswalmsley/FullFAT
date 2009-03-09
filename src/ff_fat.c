@@ -77,46 +77,52 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 // Release all buffers before calling this!
 FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 fatEntry = 0;
-	FF_BUFFER *pBuffer = 0;
+	FF_T_UINT8	fatEntrySize;
+	FF_BUFFER	*pBuffer = 0;
 	FF_T_UINT32 FatSector;
 	FF_T_UINT32 LBAadjust;
 	FF_T_UINT32 relMajorBlockEntry;
-
 	FF_T_UINT32 relClusterNum;
-	
+
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		FatSector = ((nCluster)/ (pIoman->pPartition->BlkSize / 4)) + pIoman->pPartition->FatBeginLBA;
-		relMajorBlockEntry = nCluster % (pIoman->pPartition->BlkSize / 4);
-		LBAadjust = relMajorBlockEntry / (512 / 4);
-		FatSector = FF_getRealLBA(pIoman, FatSector);
-		relClusterNum = nCluster % (512 / 4);
+		fatEntrySize = 4;
 	} else {
-		FatSector = ((nCluster)/ (pIoman->pPartition->BlkSize / 2)) + pIoman->pPartition->FatBeginLBA;
-		relMajorBlockEntry = nCluster % (pIoman->pPartition->BlkSize / 2);
-		LBAadjust = relMajorBlockEntry / (512 / 2);
-		FatSector = FF_getRealLBA(pIoman, FatSector);
-		relClusterNum = nCluster % (512 / 2);
+		fatEntrySize = 2;
 	}
+	
+	FatSector = ((nCluster)/ (pIoman->pPartition->BlkSize / fatEntrySize)) + pIoman->pPartition->FatBeginLBA;
+	relMajorBlockEntry = nCluster % (pIoman->pPartition->BlkSize / fatEntrySize);
+	LBAadjust = relMajorBlockEntry / (512 / fatEntrySize);
+	FatSector = FF_getRealLBA(pIoman, FatSector);
+	relClusterNum = nCluster % (512 / fatEntrySize);
 
 	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
-
-	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		fatEntry = FF_getLong(pBuffer->pBuffer, (relClusterNum * 4));
-		fatEntry &= 0x0fffffff;	// Clear the top 4 bits.
-	} else {
-		fatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, (relClusterNum * 2));
+	{
+		if(pIoman->pPartition->Type == FF_T_FAT32) {
+			fatEntry = FF_getLong(pBuffer->pBuffer, (relClusterNum * 4));
+			fatEntry &= 0x0fffffff;	// Clear the top 4 bits.
+		} else {
+			fatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, (relClusterNum * 2));
+		}
 	}
-
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
 	return fatEntry;
 }
 
+/**
+ *	@brief	Tests if the fatEntry is an End of Chain Marker.
+ *	
+ *	@param	pIoman		FF_IOMAN Object
+ *	@param	fatEntry	The fat entry from the FAT table to be checked.
+ *
+ *	@return	FF_TRUE if it is an end of chain, otherwise FF_FALSE.
+ *
+ **/
 FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 	FF_T_BOOL result = FF_FALSE;
-
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		if(fatEntry >= 0x0ffffff8) {
+		if((fatEntry & 0x0fffffff) >= 0x0ffffff8) {
 			result = FF_TRUE;
 		}
 	} else {
@@ -124,7 +130,6 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 			result = FF_TRUE;
 		}
 	}
-
 	return result;
 }
 
@@ -134,18 +139,19 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 */
 FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
 	
-	int i = 0;
-	int retVal;
-
-	FF_DIRENT MyDir;
-
-	char Filename[260];
-	int fnameLen;
-	int compareLength;
-	int nameLen = strlen(name);
+	FF_T_UINT32		retVal;
+	FF_DIRENT		MyDir;
+#ifdef FF_LFN_SUPPORT
+	FF_T_INT8		Filename[260];
+#else
+	FF_T_INT8		Filename[12];
+#endif
+	FF_T_UINT16		fnameLen;
+	FF_T_UINT16		compareLength;
+	FF_T_UINT16		nameLen = strlen(name);
 	
-	MyDir.CurrentItem = 0;
-	MyDir.CurrentCluster = 0;
+	MyDir.CurrentItem = 0;		// Starting at the first Dir Entry
+	MyDir.CurrentCluster = 0;	// Set to Zero so that traversing across dir's > than 1 cluster in size works.
 
 	while(1) {	
 		do {
@@ -170,7 +176,7 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 				if(pDirent) {
 					memcpy(pDirent, &MyDir, sizeof(FF_DIRENT));
 				}
-				return MyDir.ObjectCluster;
+				return MyDir.ObjectCluster;	// Return the cluster number
 			}
 		}
 		
@@ -188,14 +194,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	FF_T_INT8 *token;
 	FF_T_UINT16	it = 0, mod = 0;		// Re-entrancy Variables for FF_strtok()
 	FF_T_UINT32 pathLength = strlen(path);
-
 	FF_DIRENT MyDir;
 
 	if(pathLength == 1) {	// Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
 	}
-
-
 
 	strcpy(mypath, path);
 
@@ -213,7 +216,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 }
 
 
-
+#ifdef FF_LFN_SUPPORT
 FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, FF_T_INT8 *filename) {
 
 	FF_T_UINT8	 	numLFNs;
@@ -277,6 +280,7 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 	}
 	return 0;
 }
+#endif
 
 void FF_ProcessShortName(FF_T_INT8 *name) {
 	FF_T_INT8	shortName[12];
@@ -399,6 +403,13 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 /**
  *	@brief	Find's the first directory entry for the provided path.
  *
+ *	All values recorded in pDirent must be preserved to and between calls to
+ *	FF_FindNext().
+ *
+ *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
+ *	@param	pDirent		FF_DIRENT object to store the entry information.
+ *	@param	path		String to of the path to the Dir being listed.
+ *
  **/
 FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 
@@ -406,32 +417,38 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 		return FF_ERR_FAT_NULL_POINTER;
 	}
 
-	pDirent->DirCluster = FF_FindDir(pIoman, path);
-
+	pDirent->DirCluster = FF_FindDir(pIoman, path);	// Get the directory cluster, if it exists.
 
 	if(pDirent->DirCluster == 0) {
 		return -2;
 	}
 
-	pDirent->CurrentCluster = 0;
+	pDirent->CurrentCluster = 0;	// Ensure CurrentCluster is 0 so we can traverse clusters.
 	pDirent->FileName[11] = '\0';
 	pDirent->CurrentItem = 0;	// Set current item to 0
 	pDirent->ProcessedLFN = FF_FALSE;
-//	pDirent->isSectorOffsetSet = FF_FALSE;
 
 	FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent);
-	//FF_FindEntry(pIoman, pDirent->CurrentCluster, "", 0x00, pDirent);
 
 	return 0;
 }
 
+/**
+ *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.
+ *
+ *	All values recorded in pDirent must be preserved to and between calls to
+ *	FF_FindNext().
+ *
+ *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
+ *	@param	pDirent		FF_DIRENT object to store the entry information.
+ *
+ **/
 FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 
 	FF_T_SINT8 retVal = 0;
 	if(!pIoman) {
 		return FF_ERR_FAT_NULL_POINTER;
 	}
-	
 	do {
 		retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent);
 	}while(retVal == -1);
@@ -439,6 +456,14 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	return retVal;
 }
 
+/**
+ *	@brief	Opens a File for Access
+ *
+ *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
+ *	@param	path		Path to the File or object.
+ *	@param	Mode		Access Mode required.
+ *
+ **/
 FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UINT8 Mode) {
 	FF_FILE		*pFile;
 	FF_DIRENT	Object;
@@ -471,6 +496,15 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UI
 	return (FF_FILE *)NULL;
 }
 
+
+/**
+ *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *
+ *	@return FF_TRUE if End of File was reached. FF_TRUE if not.
+ *
+ **/
 FF_T_BOOL FF_isEOF(FF_FILE *pFile) {
 	if(pFile->FilePointer >= pFile->Filesize) {
 		return FF_TRUE;
@@ -479,6 +513,18 @@ FF_T_BOOL FF_isEOF(FF_FILE *pFile) {
 	}
 }
 
+
+/**
+ *	@brief	Equivalent to fread()
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *	@param	ElementSize	The size of an element to read.
+ *	@param	Count		The number of elements to read.
+ *	@param	buffer		A pointer to a buffer of adequate size to be filled with the requested data.
+ *
+ *	@return Number of bytes read.
+ *
+ **/
 FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
 	FF_T_UINT32 Bytes = ElementSize * Count;
 	FF_T_UINT32 BytesRead = 0;
@@ -632,6 +678,15 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	return BytesRead;
 }
 
+
+/**
+ *	@brief	Equivalent to fgetc()
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *
+ *	@return The character that was read.
+ *
+ **/
 FF_T_UINT8 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32 fileLBA;
 	FF_BUFFER *pBuffer;
@@ -675,6 +730,15 @@ FF_T_UINT8 FF_GetC(FF_FILE *pFile) {
 	return retChar;
 }
 
+
+/**
+ *	@brief	Equivalent to fclose()
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *
+ *	@return 0 on sucess.
+ *
+ **/
 FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// If file written, flush to disk
 	free(pFile);
