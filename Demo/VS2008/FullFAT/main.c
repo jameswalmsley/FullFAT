@@ -87,7 +87,8 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	float time, transferRate;
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	f = fopen("c:\\driveimage", "rb");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -168,6 +169,16 @@ int main(void) {
 				printf("exit \t\t- Quits the FullFAT test suite.\n");
 				printf("\nFullFAT is developed and maintained by James Walmsley\n");
 				printf("\nVisit www.worm.me.uk/fullfat for more information, and contact details\n\n");
+			}
+
+			if(strstr(commandLine, "info")) {
+				switch(pIoman->pPartition->Type) {
+					case FF_T_FAT32:
+						printf("FAT32 Formatted Drive\n"); break;
+					case FF_T_FAT16:
+						printf("FAT16 Formatted Drive\n"); break;
+				}
+				printf("Block Size: %d\n", pIoman->pPartition->BlkSize);
 			}
 
 			if(strstr(commandLine, "cp")) {
