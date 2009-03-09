@@ -49,10 +49,11 @@ FF_T_UINT32 FF_Cluster2LBA(FF_IOMAN *pIoman, FF_T_UINT32 Cluster) {
 	FF_PARTITION *pPart;
 	if(pIoman) {
 		pPart = pIoman->pPartition;
-		if(pPart->Type == FF_T_FAT32) {
-			lba = pPart->ClusterBeginLBA + ((Cluster - 2) * pPart->SectorsPerCluster);
+
+		if(Cluster > 1) {
+			lba = ((Cluster - 2) * pPart->SectorsPerCluster) + pPart->FirstDataSector;
 		} else {
-			lba = pPart->ClusterBeginLBA + ((Cluster - 1) * pPart->SectorsPerCluster);
+			lba = pPart->ClusterBeginLBA;
 		}
 	}
 	return lba;
@@ -101,6 +102,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
 		fatEntry = FF_getLong(pBuffer->pBuffer, (relClusterNum * 4));
+		fatEntry &= 0x0fffffff;	// Clear the top 4 bits.
 	} else {
 		fatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, (relClusterNum * 2));
 	}
@@ -126,122 +128,52 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 	return result;
 }
 
-// Finds Entries within a Sector of a Directory
-// Will Swap out the Buffer if it has to process an LFN across 2 sectors.
-FF_T_UINT32 FF_FindEntryInSector(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
-	FF_T_UINT16 numEntries = 512 / 32;
-	FF_T_UINT16 myShort;
-	FF_T_UINT32 itemCluster = 0;
-	FF_T_UINT8 i, numLFNs;
-	FF_T_UINT8 nameLength;
-	FF_T_UINT8 Attrib = 0x00;
-	FF_T_UINT8 test;			// Used for checking if an entry was deleted.
+/*
+	FindEntry Now Wraps GetEntry, Removing the previous functions.
+	Saving massive code density.
+*/
+FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
 	
-	FF_T_INT8 shortName[13];
-	
-	nameLength = strlen(name);
-	
-	for(i = 0; i < numEntries; i++) {
-		test = FF_getChar(pBuffer->pBuffer, (32*i));	//
-		if(test != 0xe5 && test != 0x00) {
-			
-			Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * i)));
-			if((Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
-				// Process LFN!
-#ifdef FF_LFN_SUPPORT
+	int i = 0;
+	int retVal;
 
-#endif	
-				// Skip Past the LFN!
-				if(test == 0x41) {
-					numLFNs = 1;
-				} else {
-					numLFNs = (test & ~0x40);
-				}
-				i += numLFNs;
-				if(i >= numEntries) {
-					return 0;	// Real Entry is in the next sector!
-				}
+	FF_DIRENT MyDir;
 
-				// Get Real Attribute 
-				Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * i)));
+	char Filename[260];
+	int fnameLen;
+	int compareLength;
+	int nameLen = strlen(name);
+	
+	MyDir.CurrentItem = 0;
+	MyDir.CurrentCluster = 0;
+
+	while(1) {	
+		do {
+			retVal = FF_GetEntry(pIoman, MyDir.CurrentItem, DirCluster, &MyDir);
+		}while(retVal == -1);
+
+		if(retVal == -2) {
+			break;
+		}
+		if((MyDir.Attrib & pa_Attrib) == pa_Attrib){
+			strcpy(Filename, MyDir.FileName);
+			fnameLen = strlen(Filename);
+			FF_tolower(Filename, fnameLen);
+			FF_tolower(name, nameLen);
+			if(nameLen > fnameLen) {
+				compareLength = nameLen;
+			} else {
+				compareLength = fnameLen;
 			}
-			
-
-			if((Attrib & pa_Attrib) == pa_Attrib) {
-				memcpy(shortName, (pBuffer->pBuffer + (32 * i)), 11);
-				if(strncmp(name, shortName, nameLength) == 0) {
-					// Item Found! :D
-					myShort = FF_getShort(pBuffer->pBuffer, (FF_FAT_DIRENT_CLUS_HIGH + (32 * i)));
-					itemCluster = (FF_T_UINT32) (myShort << 16);
-					myShort = FF_getShort(pBuffer->pBuffer, (FF_FAT_DIRENT_CLUS_LOW + (32 * i)));
-					itemCluster |= myShort;
-					if(pDirent) {
-						pDirent->Attrib = Attrib;
-						pDirent->ObjectCluster = itemCluster;
-						strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * i)), 11);	
-						pDirent->Filesize = FF_getLong(pBuffer->pBuffer, (FF_FAT_DIRENT_FILESIZE + (32 * i)));
-					}
-
-					if(!itemCluster) {
-						return 1;	// Nothing can have this cluster number!
-					} else {
-						return itemCluster;
-					}
+			if(strncmp(name, Filename, compareLength) == 0) {
+				// Object found!!
+				if(pDirent) {
+					memcpy(pDirent, &MyDir, sizeof(FF_DIRENT));
 				}
+				return MyDir.ObjectCluster;
 			}
 		}
-	}
-
-	return 0;
-}
-
-
-// Searches for entries from the beginning of a sector.
-// Returns the Cluster Number of the found Entry
-//
-FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pa_pDirent) {
-	FF_PARTITION *pPart = pIoman->pPartition;
-
-	FF_T_UINT32 currentCluster = DirCluster; // The cluster of the Dir we are working on.
-	FF_T_UINT32 dirLBA, itemCluster;
-	FF_T_UINT16 i,x,y = 0;
-	FF_T_UINT16 numEntries = pIoman->pPartition->BlkSize / 32;
-	FF_BUFFER *pBuffer;
-	FF_T_UINT32 fatEntry = 0;
-	FF_T_BOOL isEndOfDir = FF_FALSE;	// Flag true if the End of the Directory was reached!
 		
-	while(!FF_isEndOfChain(pIoman, fatEntry)) {	// Not at End of fat chain!
-
-		fatEntry = FF_getFatEntry(pIoman, currentCluster);
-		
-		for(i = 0; i < pPart->SectorsPerCluster; i++) { // Process Each Sector
-
-			// Process Each sector of the Dirent!
-			dirLBA = FF_getRealLBA(pIoman, (FF_Cluster2LBA(pIoman, currentCluster) + i));
-			
-			// Loop for the BlockFactor
-			for(x = 0; x < pIoman->pPartition->BlkFactor; x++) {
-				
-				pBuffer = FF_GetBuffer(pIoman, dirLBA + x, FF_MODE_READ);
-
-				itemCluster = FF_FindEntryInSector(pIoman, pBuffer, name, pa_Attrib, pa_pDirent);
-
-				FF_ReleaseBuffer(pIoman, pBuffer);
-				
-				if(itemCluster) {
-					return itemCluster;
-				}
-			}	
-
-			if(isEndOfDir == FF_TRUE) { // End of the Directory was found. Finish!
-				break;
-			}
-		}
-
-		if(isEndOfDir == FF_TRUE) { // End of the Directory was found. Finish!
-				break;
-		}
-		currentCluster = fatEntry;
 	}
 
 	return 0;
@@ -252,25 +184,28 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 	FF_T_UINT32 dirCluster = pIoman->pPartition->RootDirCluster;
-
 	FF_T_INT8 mypath[260];
-
 	FF_T_INT8 *token;
-
 	FF_T_UINT16	it = 0, mod = 0;		// Re-entrancy Variables for FF_strtok()
-
 	FF_T_UINT32 pathLength = strlen(path);
+
+	FF_DIRENT MyDir;
 
 	if(pathLength == 1) {	// Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
 	}
+
+
 
 	strcpy(mypath, path);
 
 	token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
 
 	while(token != NULL) {
-		dirCluster = FF_FindEntry(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, NULL);
+		dirCluster = FF_FindEntry(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
+		if(dirCluster == 0 && MyDir.CurrentItem == 2) {	// .. Dir Entry pointing to root dir.
+			dirCluster = pIoman->pPartition->RootDirCluster;
+		}
 		token = FF_strtok(mypath, &it, &mod);
 	}
 
@@ -376,7 +311,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	FF_T_UINT32		itemLBA;
 	FF_PARTITION	*pPart = pIoman->pPartition;	///< Used to make code easier to read.
 	FF_BUFFER		*pBuffer;	///< Buffer for acquired sector.
-
+	FF_T_UINT8		i;
 	FF_T_UINT32 minorBlockEntry		= FF_getMinorBlockEntry(pIoman, nEntry, 32);
 	
 	// Lets follow the chain to find its real number
@@ -425,7 +360,12 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 					} else {
 						if(pDirent->Attrib == FF_FAT_ATTR_DIR || pDirent->Attrib == FF_FAT_ATTR_VOLID) {
 							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
-							pDirent->FileName[11] = '\0';
+							for(i = 0; i < 11; i++) {
+								if(pDirent->FileName[i] == 0x20) {
+									break;
+								}
+							}
+							pDirent->FileName[i] = '\0';
 						} else {
 							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
 							FF_ProcessShortName(pDirent->FileName);

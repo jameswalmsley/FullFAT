@@ -409,27 +409,27 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
 	pPart->BlkFactor = pPart->BlkSize / 512;    // Set the BlockFactor (How many real-blocks in a fake block!).
 
 	if(pPart->SectorsPerFAT == 0) {	// FAT32
-		pPart->SectorsPerFAT = FF_getLong(pBuffer->pBuffer, FF_FAT_32_SECTORS_PER_FAT);
-		pPart->RootDirCluster = FF_getLong(pBuffer->pBuffer, FF_FAT_ROOT_DIR_CLUSTER);
-		pPart->ClusterBeginLBA = pPart->BeginLBA + pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT);
-		pPart->TotalSectors = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_TOTAL_SECTORS);
+		pPart->SectorsPerFAT	= FF_getLong(pBuffer->pBuffer, FF_FAT_32_SECTORS_PER_FAT);
+		pPart->RootDirCluster	= FF_getLong(pBuffer->pBuffer, FF_FAT_ROOT_DIR_CLUSTER);
+		pPart->ClusterBeginLBA	= pPart->BeginLBA + pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT);
+		pPart->TotalSectors		= (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_TOTAL_SECTORS);
 		if(pPart->TotalSectors == 0) {
 			pPart->TotalSectors = FF_getLong(pBuffer->pBuffer, FF_FAT_32_TOTAL_SECTORS);
 		}
 	} else {	// FAT16
-		pPart->ClusterBeginLBA = pPart->BeginLBA + pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT);
-		pPart->TotalSectors = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_TOTAL_SECTORS);
-		pPart->RootDirCluster = 1; // 1st Cluster is RootDir!
+		pPart->ClusterBeginLBA	= pPart->BeginLBA + pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT);
+		pPart->TotalSectors		= (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_TOTAL_SECTORS);
+		pPart->RootDirCluster	= 1; // 1st Cluster is RootDir!
 		if(pPart->TotalSectors == 0) {
 			pPart->TotalSectors = FF_getLong(pBuffer->pBuffer, FF_FAT_32_TOTAL_SECTORS);
 		}
 	}
 
 	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
-	pPart->RootDirSectors = ((FF_getShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT) * 32) + pPart->BlkSize - 1) / pPart->BlkSize;
-
-	pPart->DataSectors = pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
-	pPart->NumClusters = pPart->DataSectors / pPart->SectorsPerCluster;
+	pPart->RootDirSectors	= ((FF_getShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT) * 32) + pPart->BlkSize - 1) / pPart->BlkSize;
+	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
+	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
+	pPart->NumClusters		= pPart->DataSectors / pPart->SectorsPerCluster;
 	FF_DetermineFatType(pIoman);
 
 	return 0;

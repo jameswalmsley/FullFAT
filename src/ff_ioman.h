@@ -99,8 +99,8 @@ typedef struct {
 typedef struct {
 	FF_T_UINT8		ID;					///< Partition Incremental ID number.
 	FF_T_UINT8		Type;				///< Partition Type Identifier.
-	FF_T_UINT16		BlkSize;		///< Size of a Sector Block in bytes.
-	FF_T_UINT8      BlkFactor;      ///< Scale Factor for blocksizes above 512!
+	FF_T_UINT16		BlkSize;			///< Size of a Sector Block in bytes.
+	FF_T_UINT8      BlkFactor;			///< Scale Factor for blocksizes above 512!
 	FF_T_INT8		Name[FF_MAX_PARTITION_NAME];	///< Partition Identifier e.g. c: sd0: etc.
 	FF_T_INT8		VolLabel[12];		///< Volume Label of the partition.
 	FF_T_UINT32		BeginLBA;			///< LBA start address of the partition.
@@ -112,6 +112,7 @@ typedef struct {
 	FF_T_UINT32		TotalSectors;
 	FF_T_UINT32		DataSectors;
 	FF_T_UINT32		RootDirSectors;
+	FF_T_UINT32		FirstDataSector;
 	FF_T_UINT16		ReservedSectors;
 	FF_T_UINT32		ClusterBeginLBA;	///< LBA of first cluster.
 	FF_T_UINT32		NumClusters;		///< Number of clusters.
