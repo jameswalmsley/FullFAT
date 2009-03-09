@@ -77,20 +77,23 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 fatEntry = 0;
 	FF_BUFFER *pBuffer = 0;
-	FF_T_UINT32 LBAadjust;
 	FF_T_UINT32 FatSector;
+	FF_T_UINT32 LBAadjust;
+	FF_T_UINT32 relMajorBlockEntry;
 
 	FF_T_UINT32 relClusterNum;
 	
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		FatSector = FF_getMajorBlockNumber(pIoman, nCluster, 4) + pIoman->pPartition->FatBeginLBA;
+		FatSector = ((nCluster)/ (pIoman->pPartition->BlkSize / 4)) + pIoman->pPartition->FatBeginLBA;
+		relMajorBlockEntry = nCluster % (pIoman->pPartition->BlkSize / 4);
+		LBAadjust = relMajorBlockEntry / (512 / 4);
 		FatSector = FF_getRealLBA(pIoman, FatSector);
-		LBAadjust = FF_getMinorBlockNumber(pIoman, nCluster, 4);
 		relClusterNum = nCluster % (512 / 4);
 	} else {
-		FatSector = FF_getMajorBlockNumber(pIoman, nCluster, 2) + pIoman->pPartition->FatBeginLBA;
+		FatSector = ((nCluster)/ (pIoman->pPartition->BlkSize / 2)) + pIoman->pPartition->FatBeginLBA;
+		relMajorBlockEntry = nCluster % (pIoman->pPartition->BlkSize / 2);
+		LBAadjust = relMajorBlockEntry / (512 / 2);
 		FatSector = FF_getRealLBA(pIoman, FatSector);
-		LBAadjust = FF_getMinorBlockNumber(pIoman, nCluster, 2);
 		relClusterNum = nCluster % (512 / 2);
 	}
 
@@ -362,6 +365,7 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 	}
 }
 
+
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
 	FF_T_UINT8		tester;			///< Unsigned byte for testing if dir is deleted
@@ -379,7 +383,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	
 	if(FF_getClusterChainNumber(pIoman, nEntry, 32) > pDirent->CurrentCluster) {
 
-		fatEntry = FF_getFatEntry(pIoman, DirCluster);
+		fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
 		
 		if(FF_isEndOfChain(pIoman, fatEntry)) {
 			CurrentCluster = DirCluster;
@@ -389,7 +393,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 			CurrentCluster = fatEntry;
 			pDirent->DirCluster = fatEntry;
 		}
-		
+		//clusterSwitched = FF_TRUE;
 		pDirent->CurrentCluster += 1;
 	}
 
@@ -398,7 +402,6 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
 	{
-		
 		for(;minorBlockEntry < (512 / 32); minorBlockEntry++) {
 			tester = FF_getChar(pBuffer->pBuffer, (minorBlockEntry * 32));
 			if(tester != 0xE5 && tester != 0x00) {
