@@ -41,12 +41,16 @@
 	SIMPLY USE A BASIC DEMO
 */
 #include <stdio.h>
-#include <termios.h>
-#include <unistd.h>
-#include <string.h>
-#include <time.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
+#include <termios.h>
+#include <string.h>
+
 #include "../../src/ff_ioman.h"
 #include "../../src/ff_fat.h"
 
@@ -64,9 +68,10 @@ int mygetch( ) {
 	return ch;
 }
 
-#define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	2048	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test2(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
@@ -84,9 +89,9 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 }
 
 int main(void) {
-//	LARGE_INTEGER ticksPerSecond;
-//	LARGE_INTEGER start_ticks, end_ticks, cputime; 
-	FILE *f, *fDest;
+	clock_t startTick, endTick; 
+	FILE *fDev,*fDest;
+	int f;
 	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
 	
@@ -99,17 +104,20 @@ int main(void) {
 	unsigned long BytesRead;
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
-	float time, transferRate;
-	f = fopen("driveimage", "rb");
-	
-//	QueryPerformanceFrequency(&ticksPerSecond);
+	unsigned long long time;
+	float transferRate;
+	fDev = fopen("/dev/sdb", "rb");		// fopen seems to be more reliable, and its valid.
+//f = open(argv[1], O_RDONLY);
+	//f = open("/dev/sdb2", O_RDONLY);
+	printf("Main Handle %d\n", f);
+
 
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 	
-	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
-		FF_MountPartition(pIoman);
+	if(fDev) {
+		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, fDev);
+		FF_MountPartition(pIoman, 1);
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
@@ -200,17 +208,16 @@ int main(void) {
 				if(fDest) {
 					fSource = FF_Open(pIoman, workingDir, source, FF_MODE_READ);
 					if(fSource) {
-						//QueryPerformanceCounter(&start_ticks);  
+						startTick = clock(); 
 						do{
 							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, buffer);
 							fwrite(buffer, BytesRead, 1, fDest);
-//							QueryPerformanceCounter(&end_ticks); 
-//							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
-//							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
-//							transferRate = (fSource->FilePointer / time) / 1024;
-//							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+							endTick = clock();
+							time = (endTick - startTick) / CLOCKS_PER_SEC;
+							transferRate = (float)((float)fSource->FilePointer / (float)time) / 1024.0;
+							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 						}while(BytesRead > 0);
-//						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 						fclose(fDest);
 						FF_Close(fSource);
 					} else {
@@ -225,7 +232,7 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
-				fclose(f);
+				close(f);
 				return 0;
 			}
 		}

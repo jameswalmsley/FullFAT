@@ -1,15 +1,31 @@
+#define _LARGEFILE64_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
+#include <sys/types.h>
 #include <string.h>
+
+#include <unistd.h> 
 
 #define BLKSIZE 2048
 
+/*
+	Standard Linux driver, will read very large Harddrives.
+	As long as drive doesn't exceed 2TB.
+*/
 void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
-	int i = 0;
-	unsigned int address;
-	address = sector * 512;
-	fseek(pParam, address, 0);
+	off64_t address;
+	address = (off64_t) sector * 512;
+	fseeko64(pParam, address, 0);
 	fread(buffer, 512, sectors, pParam);
 }
+
 
 void test_ipodSectRead(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 		FILE *f = pParam;
