@@ -85,6 +85,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 FatEntry;
 	FF_T_UINT8	LBAadjust;
 	FF_T_UINT32 relClusterEntry;
+	FF_T_UINT8	char1, char2;
 	/*
 		This code needs to be modified to work with big sectors > 512 in size!
 	*/
@@ -103,14 +104,34 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	LBAadjust = (FatSectorEntry / 512);
 	relClusterEntry = FatSectorEntry % 512;
 	
+
+	
+	FatSector = FF_getRealLBA(pIoman, FatSector);
+	
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
 		if(relClusterEntry == (512 - 1)) {
 			// Fat Entry SPANS a Sector!
-			printf("Fix This!");	
+			// First Buffer get the last Byte!
+			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
+			{
+				char1 = FF_getChar(pBuffer->pBuffer, 511);				
+			}
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			
+			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_READ);
+			{
+				char2 = FF_getChar(pBuffer->pBuffer, 0);				
+			}
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			
+			FatEntry = (FF_T_UINT16) (char1) | (FF_T_UINT16)(char2  << 8);	// ENDIANESS NEEDS GATING HERE!
+			FatEntry = FatEntry >> 4;
+			FatEntry &= 0x0FFF;
+			
+			return FatEntry;
+			
 		}
 	}
-	
-	FatSector = FF_getRealLBA(pIoman, FatSector);
 	
 	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 	{
@@ -775,6 +796,7 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
  **/
 FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// If file written, flush to disk
+
 	free(pFile);
 	// Simply free the pointer!
 	return 0;
