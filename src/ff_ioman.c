@@ -370,9 +370,13 @@ void FF_DetermineFatType(FF_IOMAN *pIoman) {
 /*
 
 */
-FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
+FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_PARTITION	*pPart	 = pIoman->pPartition;
 	FF_BUFFER		*pBuffer = 0;
+
+	if(PartitionNumber > 3) {
+		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+	}
 
 	pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_READ);
 
@@ -383,7 +387,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
 		pPart->BeginLBA = 0;
 	} else {
 		// Primary Partitions to deal with!
-		pPart->BeginLBA = FF_getShort(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA);
+		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber));
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		if(!pPart->BeginLBA) {
@@ -394,6 +398,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman) {
 
 		pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
 		if(pPart->BlkSize != 512 && pPart->BlkSize != 1024 && pPart->BlkSize != 2048 && pPart->BlkSize != 4096) {
+			FF_ReleaseBuffer(pIoman, pBuffer);
 			return FF_ERR_IOMAN_INVALID_FORMAT;
 		}
 	}
