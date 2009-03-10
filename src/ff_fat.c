@@ -77,38 +77,61 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 
 // Release all buffers before calling this!
 FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
-	FF_T_UINT32 fatEntry = 0;
-	FF_T_UINT8	fatEntrySize;
-	FF_BUFFER	*pBuffer = 0;
-	FF_T_UINT32 FatSector;
-	FF_T_UINT32 LBAadjust;
-	FF_T_UINT32 relMajorBlockEntry;
-	FF_T_UINT32 relClusterNum;
 
+	FF_BUFFER 	*pBuffer;
+	FF_T_UINT32 FatOffset;
+	FF_T_UINT32 FatSector;
+	FF_T_UINT32 FatSectorEntry;
+	FF_T_UINT32 FatEntry;
+	FF_T_UINT8	LBAadjust;
+	FF_T_UINT32 relClusterEntry;
+	/*
+		This code needs to be modified to work with big sectors > 512 in size!
+	*/
+	
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
-		fatEntrySize = 4;
-	} else {
-		fatEntrySize = 2;
+		FatOffset = nCluster * 4;
+	} else if(pIoman->pPartition->Type == FF_T_FAT16) {
+		FatOffset = nCluster * 2;
+	}else {
+		FatOffset = nCluster + (nCluster / 2);
 	}
 	
-	FatSector = ((nCluster)/ (pIoman->pPartition->BlkSize / fatEntrySize)) + pIoman->pPartition->FatBeginLBA;
-	relMajorBlockEntry = nCluster % (pIoman->pPartition->BlkSize / fatEntrySize);
-	LBAadjust = relMajorBlockEntry / (512 / fatEntrySize);
+	FatSector = pIoman->pPartition->FatBeginLBA + (FatOffset / pIoman->pPartition->BlkSize);
+	FatSectorEntry = FatOffset % pIoman->pPartition->BlkSize;
+	
+	LBAadjust = (FatSectorEntry / 512);
+	relClusterEntry = FatSectorEntry % 512;
+	
+	if(pIoman->pPartition->Type == FF_T_FAT12) {
+		if(relClusterEntry == (512 - 1)) {
+			// Fat Entry SPANS a Sector!
+			printf("Fix This!");	
+		}
+	}
+	
 	FatSector = FF_getRealLBA(pIoman, FatSector);
-	relClusterNum = nCluster % (512 / fatEntrySize);
-
+	
 	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 	{
 		if(pIoman->pPartition->Type == FF_T_FAT32) {
-			fatEntry = FF_getLong(pBuffer->pBuffer, (relClusterNum * 4));
-			fatEntry &= 0x0fffffff;	// Clear the top 4 bits.
+			FatEntry = FF_getLong(pBuffer->pBuffer, relClusterEntry);
+			FatEntry &= 0x0fffffff;	// Clear the top 4 bits.
+		} else if(pIoman->pPartition->Type == FF_T_FAT16) {
+			FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, relClusterEntry);
 		} else {
-			fatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, (relClusterNum * 2));
+			FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, relClusterEntry);
+			if(nCluster & 0x0001) {
+				FatEntry = FatEntry >> 4;
+				FatEntry &= 0x0FFF;
+			} else {
+				FatEntry &= 0x0FFF;
+			}
 		}
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
-	return fatEntry;
+	return FatEntry;
 }
 
 /**
@@ -126,10 +149,14 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 		if((fatEntry & 0x0fffffff) >= 0x0ffffff8) {
 			result = FF_TRUE;
 		}
-	} else {
+	} else if(pIoman->pPartition->Type == FF_T_FAT16) {
 		if(fatEntry >= 0x0000fff8) {
 			result = FF_TRUE;
 		}
+	} else {
+		if(fatEntry >= 0x00000ff8) {
+			result = FF_TRUE;
+		}	
 	}
 	return result;
 }
@@ -140,7 +167,7 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 */
 FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
 	
-	FF_T_UINT32		retVal;
+	FF_T_INT32		retVal;
 	FF_DIRENT		MyDir;
 #ifdef FF_LFN_SUPPORT
 	FF_T_INT8		Filename[260];
@@ -689,7 +716,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
  *	@return The character that was read.
  *
  **/
-FF_T_UINT8 FF_GetC(FF_FILE *pFile) {
+FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32 fileLBA;
 	FF_BUFFER *pBuffer;
 	FF_PARTITION *pPart = pFile->pIoman->pPartition;
@@ -705,12 +732,17 @@ FF_T_UINT8 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32 minorBlockNum = relMajorBlockPos / 512;
 	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % 512;
 
+	
+	if(pFile->FilePointer >= pFile->Filesize) {
+		return -1; // EOF!	
+	}
+	
 	if(clusterNum > pFile->CurrentCluster) {
 		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			// ERROR THIS SHOULD NOT OCCUR!
-			return 0;
+			return -2;
 		} else {
 			pFile->AddrCurrentCluster = fatEntry;
 			pFile->CurrentCluster += 1;
@@ -729,7 +761,7 @@ FF_T_UINT8 FF_GetC(FF_FILE *pFile) {
 
 	pFile->FilePointer += 1;
 
-	return retChar;
+	return (FF_T_INT32) retChar;
 }
 
 
