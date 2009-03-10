@@ -85,10 +85,8 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 FatEntry;
 	FF_T_UINT8	LBAadjust;
 	FF_T_UINT32 relClusterEntry;
-	FF_T_UINT8	char1, char2;
-	/*
-		This code needs to be modified to work with big sectors > 512 in size!
-	*/
+	
+	FF_T_UINT8	F12short[2];		// For FAT12 FAT Table Across sector boundary traversal.
 	
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
 		FatOffset = nCluster * 4;
@@ -104,32 +102,31 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	LBAadjust = (FatSectorEntry / 512);
 	relClusterEntry = FatSectorEntry % 512;
 	
-
-	
 	FatSector = FF_getRealLBA(pIoman, FatSector);
 	
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
 		if(relClusterEntry == (512 - 1)) {
 			// Fat Entry SPANS a Sector!
-			// First Buffer get the last Byte!
+			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 			{
-				char1 = FF_getChar(pBuffer->pBuffer, 511);				
+				F12short[0] = FF_getChar(pBuffer->pBuffer, 511);				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			
+			// Second Buffer get the first Byte in buffer (second byte of out address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_READ);
 			{
-				char2 = FF_getChar(pBuffer->pBuffer, 0);				
+				F12short[1] = FF_getChar(pBuffer->pBuffer, 0);				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			
-			FatEntry = (FF_T_UINT16) (char1) | (FF_T_UINT16)(char2  << 8);	// ENDIANESS NEEDS GATING HERE!
-			FatEntry = FatEntry >> 4;
+			FatEntry = FF_getShort(&F12short, 0);	// Guarantee correct Endianess!
+
+			if(nCluster & 0x0001) {
+				FatEntry = FatEntry >> 4;
+			} 
 			FatEntry &= 0x0FFF;
-			
 			return FatEntry;
-			
 		}
 	}
 	
@@ -144,10 +141,8 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, relClusterEntry);
 			if(nCluster & 0x0001) {
 				FatEntry = FatEntry >> 4;
-				FatEntry &= 0x0FFF;
-			} else {
-				FatEntry &= 0x0FFF;
-			}
+			} 
+			FatEntry &= 0x0FFF;
 		}
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
@@ -328,6 +323,9 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 		Entry++;
 		pDirent->CurrentItem += 1;
 	}
+
+	filename[lenlfn] = '\0';
+
 	return 0;
 }
 #endif
