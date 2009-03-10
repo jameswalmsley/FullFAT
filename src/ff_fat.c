@@ -38,6 +38,7 @@
  **/
 
 #include "ff_fat.h"
+#include "ff_config.h"
 #include <string.h>
 
 FF_T_UINT32 FF_getRealLBA(FF_IOMAN *pIoman, FF_T_UINT32 LBA) {
@@ -196,10 +197,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	FF_T_UINT32 pathLength = strlen(path);
 	FF_DIRENT MyDir;
 
+	MyDir.CurrentCluster = 0;
+
 	if(pathLength == 1) {	// Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
 	}
-
 	strcpy(mypath, path);
 
 	token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
