@@ -3,11 +3,13 @@
 
 #define BLKSIZE 2048
 
+/*
+	This driver can inteface with Hard drives up to 2TB in size.
+*/
 void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
-	int i = 0;
-	unsigned int address;
-	address = sector * 512;
-	fseek(pParam, address, 0);
+	unsigned long long address;
+	address = (unsigned long long) sector * 512;
+	_fseeki64(pParam, address, 0);
 	fread(buffer, 512, sectors, pParam);
 }
 

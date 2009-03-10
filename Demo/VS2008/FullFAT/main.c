@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <winbase.h>
+#include <fcntl.h>
 #include "../../../src/ff_ioman.h"
 #include "../../../src/ff_fat.h"
 
@@ -73,7 +74,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
-	FILE *f, *fDest;
+	FILE *f,*fDest;
 	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
 	
@@ -87,17 +88,16 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	float time, transferRate;
-	f = fopen("c:\\driveimage", "rb");
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
-	
+
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
-		FF_MountPartition(pIoman);
+		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, (void *)f);
+		FF_MountPartition(pIoman,1);
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
