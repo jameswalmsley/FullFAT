@@ -25,8 +25,8 @@
  *
  *   Removing the above notice is illegal and will invalidate this license.
  *****************************************************************************/
-#ifndef _FF_CONFIG_H_
-#define _FF_CONFIG_H_
+//#ifndef _FF_CONFIG_H_
+//#define _FF_CONFIG_H_
 /*
 	Here you can change the configuration of FullFAT as appropriate to your
 	platform.
@@ -40,4 +40,4 @@
 // Comment this out if you don't want to worry about Patent Issues.
 #define FF_LFN_SUPPORT
 
-#endif
+//#endif
