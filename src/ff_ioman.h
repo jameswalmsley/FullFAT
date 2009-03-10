@@ -48,6 +48,7 @@
 #define FF_ERR_IOMAN_DEV_ALREADY_REGD		-11 ///< Device was already registered.
 #define FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION -12
 #define FF_ERR_IOMAN_INVALID_FORMAT			-13
+#define FF_ERR_IOMAN_INVALID_PARTITION_NUM	-14
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -149,7 +150,7 @@ typedef struct {
 FF_IOMAN	*FF_CreateIOMAN		(FF_T_INT8	*pCacheMem,	FF_T_UINT32 Size);
 FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN	*pIoman);
 FF_T_SINT8	FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
-FF_T_SINT8	FF_MountPartition	(FF_IOMAN *pIoman);
+FF_T_SINT8	FF_MountPartition	(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
 // PUBLIC  (To FullFAT Only):
 FF_BUFFER	*FF_GetBuffer		(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode);
 void		FF_ReleaseBuffer	(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
