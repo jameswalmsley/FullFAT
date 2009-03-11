@@ -39,6 +39,10 @@
 #include "ff_ioman.h"
 #include "ff_blk.h"
 
+#define FF_SEEK_SET	1
+#define FF_SEEK_CUR	2
+#define FF_SEEK_END	3
+
 typedef struct {
 	FF_IOMAN	*pIoman;		///< Ioman Pointer!
 	FF_T_UINT32 Filesize;		///< File's Size.

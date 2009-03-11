@@ -752,6 +752,10 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT8 retChar;
 	FF_T_UINT32 fatEntry;
 
+	/*
+		These can be replaced with the ff_blk.c functions! 
+		Will be done for the 1.0 release.
+	*/
 	FF_T_UINT32 clusterNum		= pFile->FilePointer / ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
 	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
 	
@@ -794,6 +798,53 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 }
 
 
+
+/**
+ *	@brief	Equivalent to fseek()
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *	@param	Offset		An integer (+/-) to seek to, from the specified origin.
+ *	@param	Origin		Where to seek from. (FF_SEEK_SET seek from start, FF_SEEK_CUR seek from current position, or FF_SEEK_END seek from end of file).
+ *
+ *	@return 0 on Sucess, -2 if offset results in an invalid position in the file. -1 if a FF_FILE pointer was not recieved.
+ *
+ **/
+FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
+	if(!pFile) {
+		return -1;
+	}
+
+	switch(Origin) {
+		case FF_SEEK_SET:
+			if(Offset <= pFile->Filesize && Offset >= 0) {
+				pFile->FilePointer = Offset;
+			} else {
+				return -2;
+			}
+			break;
+
+		case FF_SEEK_CUR:
+			if((Offset + pFile->FilePointer) <= pFile->Filesize && (Offset + pFile->FilePointer) >= 0) {
+				pFile->FilePointer = Offset + pFile->FilePointer;
+			} else {
+				return -2;
+			}
+			break;
+	
+		case FF_SEEK_END:
+			if((Offset + pFile->Filesize) > 0 && (Offset + pFile->Filesize) <= pFile->Filesize) {
+				pFile->FilePointer = Offset + pFile->Filesize;
+			} else {
+				return -2;
+			}
+			break;
+		
+	}
+
+	return 0;
+}
+
+
 /**
  *	@brief	Equivalent to fclose()
  *
@@ -804,7 +855,6 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
  **/
 FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// If file written, flush to disk
-
 	free(pFile);
 	// Simply free the pointer!
 	return 0;
