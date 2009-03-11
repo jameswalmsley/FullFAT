@@ -31,7 +31,7 @@
  *	@author		James Walmsley
  *	@ingroup	FAT
  *
- *	@defgroup	FAT
+ *	@defgroup	FAT Fat File-System
  *	@brief		Handles FAT access and traversal.
  *
  *	Provides file-system interfaces for the FAT file-system.
@@ -41,10 +41,16 @@
 #include "ff_config.h"
 #include <string.h>
 
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_getRealLBA(FF_IOMAN *pIoman, FF_T_UINT32 LBA) {
 	return LBA * pIoman->pPartition->BlkFactor;
 }
 
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_Cluster2LBA(FF_IOMAN *pIoman, FF_T_UINT32 Cluster) {
 	FF_T_UINT32 lba = 0;
 	FF_PARTITION *pPart;
@@ -60,6 +66,9 @@ FF_T_UINT32 FF_Cluster2LBA(FF_IOMAN *pIoman, FF_T_UINT32 Cluster) {
 	return lba;
 }
 
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 	FF_T_UINT32 cluster = 0;
 	FF_PARTITION *pPart;
@@ -75,7 +84,9 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 }
 
 
-// Release all buffers before calling this!
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 
 	FF_BUFFER 	*pBuffer;
@@ -151,6 +162,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 }
 
 /**
+ *	@private
  *	@brief	Tests if the fatEntry is an End of Chain Marker.
  *	
  *	@param	pIoman		FF_IOMAN Object
@@ -177,10 +189,9 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 	return result;
 }
 
-/*
-	FindEntry Now Wraps GetEntry, Removing the previous functions.
-	Saving massive code density.
-*/
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
 	
 	FF_T_INT32		retVal;
@@ -230,7 +241,9 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 
 }
 
-// returns the Cluster of the specified directory
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 	FF_T_UINT32 dirCluster = pIoman->pPartition->RootDirCluster;
@@ -262,6 +275,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 
 #ifdef FF_LFN_SUPPORT
+/**
+ *	@private
+ **/
 FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, FF_T_INT8 *filename) {
 
 	FF_T_UINT8	 	numLFNs;
@@ -327,6 +343,9 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 }
 #endif
 
+/**
+ *	@private
+ **/
 void FF_ProcessShortName(FF_T_INT8 *name) {
 	FF_T_INT8	shortName[13];
 	FF_T_UINT8	i;
@@ -363,7 +382,9 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 
 }
 
-
+/**
+ *	@private
+ **/
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
 	FF_T_UINT8		tester;			///< Unsigned byte for testing if dir is deleted
@@ -459,6 +480,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	return retVal;
 }
 /**
+ *	@public
  *	@brief	Find's the first directory entry for the provided path.
  *
  *	All values recorded in pDirent must be preserved to and between calls to
@@ -492,6 +514,7 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 }
 
 /**
+ *	@public
  *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.
  *
  *	All values recorded in pDirent must be preserved to and between calls to
@@ -515,6 +538,7 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 }
 
 /**
+ *	@public
  *	@brief	Opens a File for Access
  *
  *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
@@ -522,11 +546,16 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
  *	@param	Mode		Access Mode required.
  *
  **/
-FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UINT8 Mode) {
+FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 	FF_FILE		*pFile;
 	FF_DIRENT	Object;
-
 	FF_T_UINT32 DirCluster, FileCluster;
+#ifdef FF_LFN_SUPPORT	
+	FF_T_INT8	filename[260];
+#else
+	FF_T_INT8	filename[13];
+#endif
+	FF_T_UINT16	i;
 
 	if(!pIoman) {
 		return (FF_FILE *)NULL;
@@ -535,7 +564,24 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UI
 	if(!pFile) {
 		return (FF_FILE *)NULL;
 	}
-	
+
+	i = (FF_T_UINT16) strlen(path);
+
+	while(i > 0) {
+		if(path[i] == '\\' || path[i] == '/') {
+			break;
+		}
+		i--;
+	}
+
+#ifdef FF_LFN_SUPPORT	
+	strncpy(filename, (path + i + 1), 260);
+#else
+	strncpy(filename, (path + i + 1), 13);
+#endif
+
+	path[i + 1] = '\0';
+				
 	DirCluster = FF_FindDir(pIoman, path);
 
 	if(DirCluster) {
@@ -557,14 +603,19 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UI
 
 
 /**
+ *	@public
  *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.
  *
  *	@param	pFile		FF_FILE object that was created by FF_Open().
  *
- *	@return FF_TRUE if End of File was reached. FF_TRUE if not.
+ *	@return FF_TRUE if End of File was reached. FF_FALSE if not.
+ *	@return FF_FALSE if a null pointer was provided.
  *
  **/
 FF_T_BOOL FF_isEOF(FF_FILE *pFile) {
+	if(!pFile) {
+		return FF_FALSE;
+	}
 	if(pFile->FilePointer >= pFile->Filesize) {
 		return FF_TRUE;
 	} else {
@@ -574,6 +625,7 @@ FF_T_BOOL FF_isEOF(FF_FILE *pFile) {
 
 
 /**
+ *	@public
  *	@brief	Equivalent to fread()
  *
  *	@param	pFile		FF_FILE object that was created by FF_Open().
@@ -738,11 +790,13 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 
 /**
+ *	@public
  *	@brief	Equivalent to fgetc()
  *
  *	@param	pFile		FF_FILE object that was created by FF_Open().
  *
- *	@return The character that was read.
+ *	@return The character that was read (cast as a 32-bit interger). -1 on EOF.
+ *	@return -2 If a null file pointer was provided.
  *
  **/
 FF_T_INT32 FF_GetC(FF_FILE *pFile) {
@@ -765,6 +819,9 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32 minorBlockNum = relMajorBlockPos / 512;
 	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % 512;
 
+	if(!pFile) {
+		return -2;
+	}
 	
 	if(pFile->FilePointer >= pFile->Filesize) {
 		return -1; // EOF!	
@@ -800,14 +857,18 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 
 
 /**
+ *	@public
  *	@brief	Equivalent to fseek()
  *
  *	@param	pFile		FF_FILE object that was created by FF_Open().
  *	@param	Offset		An integer (+/-) to seek to, from the specified origin.
  *	@param	Origin		Where to seek from. (FF_SEEK_SET seek from start, FF_SEEK_CUR seek from current position, or FF_SEEK_END seek from end of file).
  *
- *	@return 0 on Sucess, -2 if offset results in an invalid position in the file. -1 if a FF_FILE pointer was not recieved.
- *
+ *	@return 0 on Sucess, 
+ *	@return -2 if offset results in an invalid position in the file. 
+ *	@return -1 if a FF_FILE pointer was not recieved.
+ *	@return -3 if an invalid origin was provided.
+ *	
  **/
 FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	if(!pFile) {
@@ -838,6 +899,9 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 				return -2;
 			}
 			break;
+
+		default:
+			return -3;
 		
 	}
 
@@ -846,14 +910,20 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 
 
 /**
+ *	@public
  *	@brief	Equivalent to fclose()
  *
  *	@param	pFile		FF_FILE object that was created by FF_Open().
  *
  *	@return 0 on sucess.
+ *	@return -1 if a null pointer was provided.
  *
  **/
 FF_T_SINT8 FF_Close(FF_FILE *pFile) {
+
+	if(!pFile) {
+		return -1;
+	}
 	// If file written, flush to disk
 	free(pFile);
 	// Simply free the pointer!
