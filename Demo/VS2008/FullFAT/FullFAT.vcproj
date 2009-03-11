@@ -243,6 +243,10 @@
 					RelativePath="..\..\..\src\ff_types.h"
 					>
 				</File>
+				<File
+					RelativePath="..\..\..\src\fullfat.h"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<Filter

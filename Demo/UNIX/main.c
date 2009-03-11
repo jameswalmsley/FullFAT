@@ -167,7 +167,13 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "view")) {
-				fSource = FF_Open(pIoman, workingDir, (commandLine+5), FF_MODE_READ);
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (commandLine+5)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
+				}
+				
+				fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
 				if(fSource) {
 					for(i = 0; i < fSource->Filesize; i++) {
 						printf("%c", FF_GetC(fSource));
@@ -208,17 +214,24 @@ int main(void) {
 			if(strstr(commandLine, "cp")) {
 				sscanf((commandLine + 3), "%s %s", source, destination);
 				
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (source)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (source));
+				}
+				
 				fDest = fopen(destination, "wb");
 				if(fDest) {
-					fSource = FF_Open(pIoman, workingDir, source, FF_MODE_READ);
+					fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
 					if(fSource) {
-						startTick = clock(); 
+						QueryPerformanceCounter(&start_ticks);  
 						do{
-							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, buffer);
+							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
 							fwrite(buffer, BytesRead, 1, fDest);
-							endTick = clock();
-							time = (endTick - startTick) / CLOCKS_PER_SEC;
-							transferRate = (float)((float)fSource->FilePointer / (float)time) / 1024.0;
+							QueryPerformanceCounter(&end_ticks); 
+							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
+							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+							transferRate = (fSource->FilePointer / time) / 1024;
 							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 						}while(BytesRead > 0);
 						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);

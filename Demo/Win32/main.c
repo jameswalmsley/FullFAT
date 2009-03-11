@@ -51,7 +51,7 @@
 #include <conio.h>
 #include "../../src/fullfat.h"
 
-#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
+#define PARTITION_NUMBER	1		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -89,7 +89,7 @@ int main(void) {
 	FF_DIRENT mydir;
 	float time, transferRate;
 	//f = fopen("c:\\driveimage", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
 
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -149,7 +149,13 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "view")) {
-				fSource = FF_Open(pIoman, workingDir, (commandLine+5), FF_MODE_READ);
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (commandLine+5)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
+				}
+				
+				fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
 				if(fSource) {
 					for(i = 0; i < fSource->Filesize; i++) {
 						printf("%c", FF_GetC(fSource));
@@ -198,16 +204,22 @@ int main(void) {
 
 			if(strstr(commandLine, "cp")) {
 				sscanf((commandLine + 3), "%s %s", source, destination);
-
+				
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (source)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (source));
+				}
+				
 				fDest = fopen(destination, "wb");
 				if(fDest) {
-					fSource = FF_Open(pIoman, workingDir, source, FF_MODE_READ);
+					fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
 					if(fSource) {
-						QueryPerformanceCounter(&start_ticks);
+						QueryPerformanceCounter(&start_ticks);  
 						do{
-							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, buffer);
+							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
 							fwrite(buffer, BytesRead, 1, fDest);
-							QueryPerformanceCounter(&end_ticks);
+							QueryPerformanceCounter(&end_ticks); 
 							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
 							transferRate = (fSource->FilePointer / time) / 1024;

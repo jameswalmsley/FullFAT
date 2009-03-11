@@ -441,11 +441,13 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 					if(pDirent->ProcessedLFN == FF_TRUE) {
 						pDirent->ProcessedLFN = FF_FALSE;
 					} else {
-						if(pDirent->Attrib == FF_FAT_ATTR_DIR || pDirent->Attrib == FF_FAT_ATTR_VOLID) {
+						if((pDirent->Attrib & FF_FAT_ATTR_DIR) == FF_FAT_ATTR_DIR || (pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
 							strncpy(pDirent->FileName, (FF_T_INT8 *)(pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
-							for(i = 0; i < 11; i++) {
-								if(pDirent->FileName[i] == 0x20) {
-									break;
+							if((pDirent->Attrib & FF_FAT_ATTR_DIR) == FF_FAT_ATTR_DIR) {
+								for(i = 0; i < 11; i++) {
+									if(pDirent->FileName[i] == 0x20) {
+										break;
+									}
 								}
 							}
 							pDirent->FileName[i] = '\0';

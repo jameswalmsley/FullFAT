@@ -90,6 +90,7 @@ int main(void) {
 	FF_DIRENT mydir;
 	float time, transferRate;
 	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	//f = fopen("c:\\ramdisk.dat", "rb");
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -149,7 +150,13 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "view")) {
-				fSource = FF_Open(pIoman, workingDir, (commandLine+5), FF_MODE_READ);
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (commandLine+5)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
+				}
+				
+				fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
 				if(fSource) {
 					for(i = 0; i < fSource->Filesize; i++) {
 						printf("%c", FF_GetC(fSource));
@@ -199,9 +206,15 @@ int main(void) {
 			if(strstr(commandLine, "cp")) {
 				sscanf((commandLine + 3), "%s %s", source, destination);
 				
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (source)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (source));
+				}
+				
 				fDest = fopen(destination, "wb");
 				if(fDest) {
-					fSource = FF_Open(pIoman, workingDir, source, FF_MODE_READ);
+					fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
 					if(fSource) {
 						QueryPerformanceCounter(&start_ticks);  
 						do{
