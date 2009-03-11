@@ -87,8 +87,8 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	float time, transferRate;
-	f = fopen("c:\\driveimage", "rb");
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	//f = fopen("c:\\driveimage", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -97,7 +97,7 @@ int main(void) {
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
-		FF_MountPartition(pIoman);
+		FF_MountPartition(pIoman, 1);
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);

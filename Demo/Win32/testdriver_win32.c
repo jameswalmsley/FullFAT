@@ -3,11 +3,13 @@
 
 #define BLKSIZE 2048
 
+/*
+	This driver can read verlarge drives up to 2TB in size.
+*/
 void test(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
-	int i = 0;
-	unsigned int address;
-	address = sector * 512;
-	fseek(pParam, address, 0);
+	off64_t address;
+	address = (off64_t) sector * 512;
+	fseeko64(pParam, address, 0);
 	fread(buffer, 512, sectors, pParam);
 }
 
