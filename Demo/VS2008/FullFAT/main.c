@@ -55,6 +55,7 @@
 #define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test2(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
@@ -97,7 +98,11 @@ int main(void) {
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, (void *)f);
-		FF_MountPartition(pIoman,1);
+		if(FF_MountPartition(pIoman,0)) {
+			fclose(f);
+			printf("FullFAT Couldn't mount the specified parition!\n");
+			getchar();
+		}
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);

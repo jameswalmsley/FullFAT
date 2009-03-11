@@ -328,13 +328,13 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 #endif
 
 void FF_ProcessShortName(FF_T_INT8 *name) {
-	FF_T_INT8	shortName[12];
+	FF_T_INT8	shortName[13];
 	FF_T_UINT8	i;
 	memcpy(shortName, name, 11);
 	
 	for(i = 0; i < 8; i++) {
 		if(shortName[i] == 0x20) {
-			name[i] = '.';
+			name[i] = '\0';
 			break;
 		}
 		name[i] = shortName[i];
@@ -350,16 +350,17 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 		name[i+2] = shortName[9];
 		name[i+3] = shortName[10];
 		name[i+4] = '\0';
+		for(i = 8; i < 11; i++) {
+			if(name[i] == 0x20) {
+				name[i] = '\0';
+				break;
+			}
+		}
 	} else {
 		name[i] = '\0';
 	}
 
-	for(i = 0; i < 11; i++) {
-		if(name[i] == 0x20) {
-			name[i] = '\0';
-			break;
-		}
-	}
+
 }
 
 

@@ -98,7 +98,12 @@ int main(void) {
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
-		FF_MountPartition(pIoman, 1);
+		if(FF_MountPartition(pIoman, 0)) {
+			fclose(f);
+			printf("FullFAT couldn't mount the specified partition\n");
+			getchar();
+			return -1;
+		}
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
