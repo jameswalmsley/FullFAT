@@ -43,5 +43,8 @@
 //---------- 64-Bit Number Support
 #define FF_64_NUM_SUPPORT
 
+//---------- Actively Determine if partition is FAT
+#define FF_FAT_CHECK	// This is experimental, so if FullFAT won't mount your volume, comment this out
+						// Also report the problem to james@worm.me.uk
 
 //#endif

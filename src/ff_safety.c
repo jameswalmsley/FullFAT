@@ -43,10 +43,9 @@
  *	
  *	FF_CreateSemaphore() return NULL.
  *	
- *	FF_PendSemaphore() should disable any interrupts, and Sync any data
- *  or instruction caches (if applicable).
+ *	FF_PendSemaphore() should do nothing.
  *
- *	FF_ReleaseSemaphore() should then undo those changes.
+ *	FF_ReleaseSemaphore() should do nothing.
  *
  *	FF_DestroySemaphore() should do nothing.
  *	

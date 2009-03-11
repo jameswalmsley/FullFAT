@@ -42,9 +42,9 @@ typedef	char			FF_T_BOOL;		///< This can be a char if your compiler isn't C99
 #define FF_FALSE	0	///< 0 if bool not supported.
 
 //---------------- 8 BIT INTEGERS
-typedef	char			FF_T_INT8;
-typedef	unsigned char	FF_T_UINT8;
-typedef signed char		FF_T_SINT8;
+typedef	char			FF_T_INT8;		///< 8 bit default integer
+typedef	unsigned char	FF_T_UINT8;		///< 8 bit unsigned integer
+typedef signed char		FF_T_SINT8;		///< 8 bit signed integer
 
 //---------------- 16 BIT INTEGERS
 typedef	short			FF_T_INT16;
@@ -56,9 +56,9 @@ typedef	int				FF_T_INT32;
 typedef	unsigned int	FF_T_UINT32;
 typedef	signed int		FF_T_SINT32;
 
-//---------------- 64 BIT INTEGERS
-typedef long long	FF_T_INT64;
-typedef unsigned long long FF_T_UINT64;
-typedef signed long long FF_T_SINT64;
-
+//---------------- 64 BIT INTEGERS			// If you cannot define these, then make sure you see ff_config.h
+typedef long long			FF_T_INT64;		// about 64-bit number support.
+typedef unsigned long long	FF_T_UINT64;	// It means that FF_GetVolumeSize() cannot return a size
+typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64-bits integers.
+											// No other function makes use of 64-bit numbers.
 #endif

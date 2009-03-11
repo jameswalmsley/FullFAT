@@ -31,27 +31,33 @@
  *	@author		James Walmsley
  *	@ingroup	BLK
  *
- *	@defgroup	BLK
+ *	@defgroup	BLK Block Calculater
  *	@brief		Handle Block Number conversions
  *
  *	Helps calculate block numbers.
  **/
 
 #include "ff_blk.h"
-
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_getClusterChainNumber(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT16 nEntrySize) {
 	FF_PARTITION *pPart				= pIoman->pPartition;
 	FF_T_UINT32 clusterChainNumber	= nEntry / (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
 	return clusterChainNumber;
 }
-
+/**
+ *	@private
+ **/
 FF_T_UINT32 FF_getMajorBlockNumber(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT16 nEntrySize) {
 	FF_PARTITION *pPart = pIoman->pPartition;
 	FF_T_UINT32 relClusterEntry		= nEntry % (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
 	FF_T_UINT32 majorBlockNumber	= relClusterEntry / (pPart->BlkSize / nEntrySize);
 	return majorBlockNumber;
 }
-
+/**
+ *	@private
+ **/
 FF_T_UINT8 FF_getMinorBlockNumber(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT16 nEntrySize) {
 	FF_PARTITION *pPart				= pIoman->pPartition;
 	FF_T_UINT32 relClusterEntry		= nEntry % (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
@@ -59,7 +65,9 @@ FF_T_UINT8 FF_getMinorBlockNumber(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UIN
 	FF_T_UINT8 minorBlockNumber		= (FF_T_UINT8) (relmajorBlockEntry / (512 / nEntrySize));
 	return minorBlockNumber;
 }
-
+/**
+ *	@private
+ **/
 FF_T_UINT8 FF_getMinorBlockEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT16 nEntrySize) {
 	FF_PARTITION *pPart				= pIoman->pPartition;
 	FF_T_UINT32 relClusterEntry		= nEntry % (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
