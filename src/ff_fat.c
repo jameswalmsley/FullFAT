@@ -334,18 +334,31 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 	
 	for(i = 0; i < 8; i++) {
 		if(shortName[i] == 0x20) {
-			if(shortName[8] != 0x20){
-				name[i] = '.';
-				name[i+1] = shortName[8];
-				name[i+2] = shortName[9];
-				name[i+3] = shortName[10];
-				name[i+4] = '\0';
-			} else {
-				name[i] = '\0';
-			}
+			name[i] = '.';
 			break;
 		}
 		name[i] = shortName[i];
+	}
+
+	if(i == 7) {
+		i++;
+	}
+
+	if(shortName[8] != 0x20){
+		name[i] = '.';
+		name[i+1] = shortName[8];
+		name[i+2] = shortName[9];
+		name[i+3] = shortName[10];
+		name[i+4] = '\0';
+	} else {
+		name[i] = '\0';
+	}
+
+	for(i = 0; i < 11; i++) {
+		if(name[i] == 0x20) {
+			name[i] = '\0';
+			break;
+		}
 	}
 }
 
