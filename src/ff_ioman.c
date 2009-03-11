@@ -257,12 +257,12 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
 				// Buffer is suitable, ensure we don't overflow its handle count.
-				if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {	// 	TODO!!:|260|warning: comparison is always true due to limited range of data type|
+				//if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {	// 	TODO!!:|260|warning: comparison is always true due to limited range of data type|
 					(pIoman->pBuffers + i)->NumHandles ++;
 					//(pIoman->pBuffers + i)->Persistance ++;
 					FF_ReleaseSemaphore(pIoman->pSemaphore);
 					return (pIoman->pBuffers + i);
-				}
+				//}
 			}
 		}
 	}

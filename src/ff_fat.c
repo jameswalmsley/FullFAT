@@ -120,7 +120,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			
-			FatEntry = FF_getShort(&F12short, 0);	// Guarantee correct Endianess!
+			FatEntry = FF_getShort((FF_T_UINT8*)&F12short, 0);	// Guarantee correct Endianess!
 
 			if(nCluster & 0x0001) {
 				FatEntry = FatEntry >> 4;
@@ -265,16 +265,13 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, FF_T_INT8 *filename) {
 
 	FF_T_UINT8	 	numLFNs;
-	FF_T_UINT8	 	retLFNs = 0;
 	FF_T_UINT16		lenlfn = 0;
 	FF_T_UINT8		tester;
 	FF_T_UINT16		i,y;
-	FF_T_UINT32		OriginalSector = pBuffer->Sector, Sector = pBuffer->Sector;
 	FF_T_UINT32		CurrentCluster;
 	FF_T_UINT32		fatEntry;
-
 	FF_T_UINT8		*buffer = pBuffer->pBuffer;
-
+	FF_T_UINT32		Sector = pBuffer->Sector;
 	FF_T_UINT32		Entry		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
 
 	tester = FF_getChar(pBuffer->pBuffer, (Entry * 32));
@@ -361,7 +358,6 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	FF_T_UINT16		myShort, numLFNs;	///< 16 bits for calculating item cluster.
 	FF_T_UINT32		fatEntry = 0;	///< Used for following Cluster Chain
 	FF_T_UINT32		itemLBA;
-	FF_PARTITION	*pPart = pIoman->pPartition;	///< Used to make code easier to read.
 	FF_BUFFER		*pBuffer;	///< Buffer for acquired sector.
 	FF_T_UINT8		i;
 	FF_T_UINT32 minorBlockEntry		= FF_getMinorBlockEntry(pIoman, nEntry, 32);
@@ -580,7 +576,6 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32 fileLBA, fatEntry;
 	FF_BUFFER	*pBuffer;
 	FF_T_UINT32 numClusters;
-	FF_T_UINT32 clusterNum		= pFile->FilePointer / ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
 	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
 	FF_T_UINT32 bytesPerCluster = pPart->BlkSize * pPart->SectorsPerCluster;
 	FF_T_UINT32 majorBlockNum	 = relClusterPos / pPart->BlkSize;
@@ -589,7 +584,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32 minorBlockNum	 = relMajorBlockPos / 512;
 	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % 512;
 
-	FF_T_UINT32 EOFadjust = 0,Sectors = Bytes / 512;
+	FF_T_UINT32 Sectors = Bytes / 512;
 
 	if(FF_isEOF(pFile)) {
 		return 0;

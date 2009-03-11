@@ -83,17 +83,16 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 // Token is a buffer, of the maxlength of a token!
 
 
-void FF_tolower(char *string, int y) {
-	int i;
-	//int y = strlen(string);
-	for(i = 0; i < y; i++) {
+void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
+	FF_T_UINT32 i;
+	for(i = 0; i < strLen; i++) {
 		if(string[i] >= 'A' && string[i] <= 'Z')
 			string[i] += 32;
 	}
 }
 
-char *FF_strtok(char *string, unsigned short *iteration, unsigned short *modded) {
-	int i,x;
+FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_UINT16 *iteration, FF_T_UINT16 *modded) {
+	FF_T_INT32 i,x;
 	/* Find working token!! (iteration number!!) */
 	i = strlen(string);
 	
