@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <winbase.h>
+#include <conio.h>
 #include "../../src/ff_ioman.h"
 #include "../../src/ff_fat.h"
 
@@ -67,7 +68,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
 
-	printf("%s %12lu %s\n", attr, pDirent->Filesize, pDirent->FileName);
+	printf("%s %12u %s\n", attr, pDirent->Filesize, pDirent->FileName);
 }
 
 int main(void) {
@@ -213,6 +214,7 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
+				fclose(f);
 				return 0;
 			}
 		}
@@ -224,4 +226,5 @@ int main(void) {
 		getchar();
 	}
 
+	return 0;
 }

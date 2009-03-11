@@ -48,7 +48,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <winbase.h>
-#include <fcntl.h>
+#include <conio.h>
 #include "../../../src/ff_ioman.h"
 #include "../../../src/ff_fat.h"
 
@@ -102,10 +102,10 @@ int main(void) {
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
 			for(i = 0; i < 1024; i++) {
-				commandLine[i] = getch();
-				putch(commandLine[i]);
+				commandLine[i] = _getch();
+				_putch(commandLine[i]);
 				if(commandLine[i] == '\r') {
-					putch('\n');
+					_putch('\n');
 					commandLine[i] = '\0';
 					break;
 				}
