@@ -38,13 +38,19 @@
  *	These are only used to read data from buffers. That are LITTLE ENDIAN
  *	due to the FAT specification.
  *
+ *	These routines may need to be modified to your platform.
+ *
  **/
 
 #include "ff_memory.h"
 #include <string.h>
 
 #ifdef FF_LITTLE_ENDIAN
-/* This exists because some systems don't have byte access, in this case make this return the byte of interest */
+
+/**
+ *	@public
+ *	@brief	8 bit memory access routines. 
+ **/
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT8) (pBuffer[offset]);
 }
@@ -61,28 +67,36 @@ FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 
 #ifdef FF_BIG_ENDIAN
 /*
-	TODO: These need converting to BIG ENDIAN!!!
+	These haven't been tested or checked. They should work in theory :)
+	Please contact james@worm.me.uk if they don't work, and also any fix.
 */
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT8) (pBuffer[offset]);
 }
 
 FF_T_UINT16 FF_getShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-	return (FF_T_UINT16) (pBuffer[offset] & 0x00FF) | ((FF_T_UINT16) (pBuffer[offset+1] << 8) & 0xFF00);
+	return (FF_T_UINT16) ((pBuffer[offset] & 0xFF00)  << 8) | ((FF_T_UINT16) (pBuffer[offset+1]) & 0x00FF);
 }
 
 FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-	return (FF_T_UINT32) (pBuffer[offset] & 0x000000FF) | ((FF_T_UINT32) (pBuffer[offset+1] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+2] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+3] << 24) & 0xFF000000);
+	return (FF_T_UINT32) ((pBuffer[offset] << 24) & 0xFF0000) | ((FF_T_UINT32) (pBuffer[offset+1] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+2] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+3]) & 0x000000FF);
 }
 
 #endif
+
+/*
+ *	These will eventually be moved into a platform independent string
+ *	library. Which will be optional. (To allow the use of system specific versions).
+ */
 
 //strtok() is not threadsafe, here's one that is! (but it works differently!!)
 // returns the iteration value that should passed into the iteration arg
 // 0 means its finished!
 // Token is a buffer, of the maxlength of a token!
 
-
+/**
+ *	@private
+ **/
 void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	FF_T_UINT32 i;
 	for(i = 0; i < strLen; i++) {
@@ -90,7 +104,9 @@ void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 			string[i] += 32;
 	}
 }
-
+/**
+ *	@private
+ **/
 FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_UINT16 *iteration, FF_T_UINT16 *modded) {
 	FF_T_INT32 i,x;
 	/* Find working token!! (iteration number!!) */
