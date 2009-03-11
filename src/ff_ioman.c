@@ -46,7 +46,7 @@
  *	@public
  *	@brief	Creates an FF_IOMAN object, to initialise FullFAT
  *
- *	@param	pCacheBuffer	Pointer to a buffer for the cache. (NULL if ok to Malloc).
+ *	@param	pCacheMem		Pointer to a buffer for the cache. (NULL if ok to Malloc).
  *	@param	Size			The size of the provided buffer, or size of the cache to be created.
  *
  *	@return	Returns a pointer to an FF_IOMAN type object.
@@ -348,31 +348,90 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks,
 	return 0;	// Success
 }
 
+/**
+ *	@private
+ **/
+FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 
-void FF_DetermineFatType(FF_IOMAN *pIoman) {
-
-	FF_PARTITION *pPart;
+	FF_PARTITION	*pPart;
+	FF_BUFFER		*pBuffer;
+	FF_T_UINT32		testLong;
 	if(pIoman) {
 		pPart = pIoman->pPartition;
 		if(pPart->NumClusters < 4085) {
 			// FAT12
 			pPart->Type = FF_T_FAT12;
+#ifdef FF_FAT_CHECK
+			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
+			{
+				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
+			}
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			if((testLong & 0x3FF) != 0xFF8) {
+				return -2;
+			}
+#endif
+			return 0;
+
 		} else if(pPart->NumClusters < 65525) {
 			// FAT 16
 			pPart->Type = FF_T_FAT16;
+#ifdef FF_FAT_CHECK
+			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
+			{
+				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
+			}
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			if(testLong != 0xFFF8) {
+				return -2;
+			}
+#endif
+			return 0;
 		}
 		else {
 			// FAT 32!
 			pPart->Type = FF_T_FAT32;
+#ifdef FF_FAT_CHECK
+			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
+			{
+				testLong = FF_getLong(pBuffer->pBuffer, 0x0000);
+			}
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8) {
+				return -2;
+			}
+#endif
+			return 0;
 		}
 	}
-}
-/*
 
-*/
+	return -1;
+}
+/**
+ *	@public
+ *	@brief	Mounts the Specified partition, the volume specified by the FF_IOMAN object provided.
+ *
+ *	The device drivers must adhere to the specification provided by
+ *	FF_WRITE_BLOCKS and FF_READ_BLOCKS.
+ *
+ *	@param	pIoman			FF_IOMAN object.
+ *	@param	PartitionNumber	The primary partition number to be mounted. (0 - 3).
+ *
+ *	@return	0 on success. 
+ *	@return FF_ERR_IOMAN_NULL_POINTER if a pIoman object wasn't provided. 
+ *	@return FF_ERR_IOMAN_INVALID_PARTITION_NUM if the partition number is out of range. 
+ *	@return FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION if no partition was found.
+ *	@return FF_ERR_IOMAN_INVALID_FORMAT if the master boot record or partition boot block didn't provide sensible data.
+ *	@return FF_ERR_IOMAN_NOT_FAT_FORMATTED if the volume or partition couldn't be determined to be FAT. (@see ff_config.h)
+ *
+ **/
 FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_PARTITION	*pPart	 = pIoman->pPartition;
 	FF_BUFFER		*pBuffer = 0;
+
+	if(!pIoman) {
+		return FF_ERR_IOMAN_NULL_POINTER;
+	}
 
 	if(PartitionNumber > 3) {
 		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
@@ -435,14 +494,28 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
 	pPart->NumClusters		= pPart->DataSectors / pPart->SectorsPerCluster;
-	FF_DetermineFatType(pIoman);
+	
+	if(FF_DetermineFatType(pIoman)) {
+		return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+	}
 
 	return 0;
 }
 #ifdef FF_64_NUM_SUPPORT
+/**
+ *	@brief	Returns the number of bytes contained within the mounted partition or volume.
+ *
+ *	@param	pIoman		FF_IOMAN Object returned from FF_CreateIOMAN()
+ *
+ *	@return The total number of bytes that the mounted partition or volume contains.
+ *
+ **/
 FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman) {
-	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
-	return (FF_T_UINT64) ((FF_T_UINT64)TotalClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
+	if(pIoman) {
+		FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
+		return (FF_T_UINT64) ((FF_T_UINT64)TotalClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
+	}
+	return 0;
 }
 #else
 FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman) {
