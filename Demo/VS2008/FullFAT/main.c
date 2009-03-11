@@ -49,9 +49,9 @@
 #include <windows.h>
 #include <winbase.h>
 #include <conio.h>
-#include "../../../src/ff_ioman.h"
-#include "../../../src/ff_fat.h"
+#include "../../../src/fullfat.h"
 
+#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -89,7 +89,7 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	float time, transferRate;
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -98,16 +98,17 @@ int main(void) {
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, (void *)f);
-		if(FF_MountPartition(pIoman,0)) {
+		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT Couldn't mount the specified parition!\n");
 			getchar();
+			return -1;
 		}
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
 			for(i = 0; i < 1024; i++) {
-				commandLine[i] = _getch();
+				commandLine[i] = (char) _getch();
 				_putch(commandLine[i]);
 				if(commandLine[i] == '\r') {
 					_putch('\n');
@@ -182,8 +183,17 @@ int main(void) {
 						printf("FAT32 Formatted Drive\n"); break;
 					case FF_T_FAT16:
 						printf("FAT16 Formatted Drive\n"); break;
+					case FF_T_FAT12:
+						printf("FAT12 Formatted Drive\n"); break;
 				}
+
 				printf("Block Size: %d\n", pIoman->pPartition->BlkSize);
+				printf("Cluster Size: %dKb\n", (pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster) / 1024);
+#ifdef FF_64_NUM_SUPPORT
+				printf("Volume Size: %llu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+#else
+				printf("Volume Size: %d (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+#endif
 			}
 
 			if(strstr(commandLine, "cp")) {
@@ -195,7 +205,7 @@ int main(void) {
 					if(fSource) {
 						QueryPerformanceCounter(&start_ticks);  
 						do{
-							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, buffer);
+							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
 							fwrite(buffer, BytesRead, 1, fDest);
 							QueryPerformanceCounter(&end_ticks); 
 							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;

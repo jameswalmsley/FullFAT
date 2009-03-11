@@ -49,9 +49,9 @@
 #include <windows.h>
 #include <winbase.h>
 #include <conio.h>
-#include "../../src/ff_ioman.h"
-#include "../../src/ff_fat.h"
+#include "../../src/fullfat.h"
 
+#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -98,7 +98,7 @@ int main(void) {
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
-		if(FF_MountPartition(pIoman, 0)) {
+		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT couldn't mount the specified partition\n");
 			getchar();
@@ -183,8 +183,17 @@ int main(void) {
 						printf("FAT32 Formatted Drive\n"); break;
 					case FF_T_FAT16:
 						printf("FAT16 Formatted Drive\n"); break;
+					case FF_T_FAT12:
+						printf("FAT12 Formatted Drive\n"); break;
 				}
+
 				printf("Block Size: %d\n", pIoman->pPartition->BlkSize);
+				printf("Cluster Size: %dKb\n", (pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster) / 1024);
+#ifdef FF_64_NUM_SUPPORT
+				printf("Volume Size: %llu (%u MB)\n", FF_GetVolumeSize(pIoman), (unsigned int)(FF_GetVolumeSize(pIoman) / 1048576));
+#else
+				printf("Volume Size: %d (%u MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+#endif
 			}
 
 			if(strstr(commandLine, "cp")) {
@@ -227,7 +236,7 @@ int main(void) {
 	} else {
 
 		printf("Couldn't Open Block Device\n");
-		printf("Run Visual Studio as an Administrator!\n");
+		printf("Run command prompt as Administrator\n");
 		getchar();
 	}
 

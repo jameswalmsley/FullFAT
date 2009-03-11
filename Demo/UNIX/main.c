@@ -54,7 +54,8 @@
 #include "../../src/ff_ioman.h"
 #include "../../src/ff_fat.h"
 
-
+#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
+#define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
 int mygetch( ) {
 	struct termios oldt,newt;
@@ -67,8 +68,6 @@ int mygetch( ) {
 	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
 	return ch;
 }
-
-#define COPY_BUFFER_SIZE	2048	// Increase This for Faster File Copies
 
 void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void test2(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -117,7 +116,12 @@ int main(void) {
 	
 	if(fDev) {
 		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, fDev);
-		FF_MountPartition(pIoman, 1);
+		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
+			fclose(f);
+			printf("FullFAT couldn't mount the specified partition\n");
+			getchar();
+			return -1;
+		}
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
