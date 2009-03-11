@@ -94,7 +94,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 	// Organise the memory provided, or create our own!
 	if(pCacheMem) {
 		pIoman->pCacheMem = pCacheMem;
-		pIoman->CacheSize = Size / 512;
+		pIoman->CacheSize = (FF_T_UINT8) (Size / 512);
 	}else {	// No-Cache buffer provided (malloc)
 		pIoman->pCacheMem = (FF_T_INT8 *) malloc(Size);
 		if(!pIoman->pCacheMem) {
@@ -102,7 +102,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
 			return NULL;
 		}
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFFERS;
-		pIoman->CacheSize = Size / 512;
+		pIoman->CacheSize = (FF_T_UINT8) (Size / 512);
 	}
 
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
@@ -178,7 +178,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	int i;
 	for(i = 0; i < pIoman->CacheSize; i++) {
-		pIoman->pBuffers->ID 			= i;
+		pIoman->pBuffers->ID 			= (FF_T_UINT16) i;
 		pIoman->pBuffers->ContextID		= 0;
 		pIoman->pBuffers->Mode			= 0;
 		pIoman->pBuffers->NumHandles 	= 0;
@@ -411,7 +411,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	pPart->SectorsPerCluster = FF_getChar(pBuffer->pBuffer, FF_FAT_SECTORS_PER_CLUS);
 
-	pPart->BlkFactor = pPart->BlkSize / 512;    // Set the BlockFactor (How many real-blocks in a fake block!).
+	pPart->BlkFactor = (FF_T_UINT8) (pPart->BlkSize / 512);    // Set the BlockFactor (How many real-blocks in a fake block!).
 
 	if(pPart->SectorsPerFAT == 0) {	// FAT32
 		pPart->SectorsPerFAT	= FF_getLong(pBuffer->pBuffer, FF_FAT_32_SECTORS_PER_FAT);
@@ -439,3 +439,15 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	return 0;
 }
+#ifdef FF_64_NUM_SUPPORT
+FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman) {
+	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
+	return (FF_T_UINT64) ((FF_T_UINT64)TotalClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
+}
+#else
+FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman) {
+	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
+	return (FF_T_UINT32) (TotalClusters * (pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize));
+}
+#endif
+

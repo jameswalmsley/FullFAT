@@ -40,4 +40,8 @@
 // Comment this out if you don't want to worry about Patent Issues.
 #define FF_LFN_SUPPORT
 
+//---------- 64-Bit Number Support
+#define FF_64_NUM_SUPPORT
+
+
 //#endif

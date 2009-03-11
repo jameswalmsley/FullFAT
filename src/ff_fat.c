@@ -84,7 +84,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FF_T_UINT32 FatSectorEntry;
 	FF_T_UINT32 FatEntry;
 	FF_T_UINT8	LBAadjust;
-	FF_T_UINT32 relClusterEntry;
+	FF_T_UINT16 relClusterEntry;
 	
 	FF_T_UINT8	F12short[2];		// For FAT12 FAT Table Across sector boundary traversal.
 	
@@ -99,7 +99,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FatSector = pIoman->pPartition->FatBeginLBA + (FatOffset / pIoman->pPartition->BlkSize);
 	FatSectorEntry = FatOffset % pIoman->pPartition->BlkSize;
 	
-	LBAadjust = (FatSectorEntry / 512);
+	LBAadjust = (FF_T_UINT8) (FatSectorEntry / 512);
 	relClusterEntry = FatSectorEntry % 512;
 	
 	FatSector = FF_getRealLBA(pIoman, FatSector);
@@ -192,7 +192,7 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 #endif
 	FF_T_UINT16		fnameLen;
 	FF_T_UINT16		compareLength;
-	FF_T_UINT16		nameLen = strlen(name);
+	FF_T_UINT16		nameLen = (FF_T_UINT16) strlen(name);
 	
 	MyDir.CurrentItem = 0;		// Starting at the first Dir Entry
 	MyDir.CurrentCluster = 0;	// Set to Zero so that traversing across dir's > than 1 cluster in size works.
@@ -207,7 +207,7 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 		}
 		if((MyDir.Attrib & pa_Attrib) == pa_Attrib){
 			strcpy(Filename, MyDir.FileName);
-			fnameLen = strlen(Filename);
+			fnameLen = (FF_T_UINT16) strlen(Filename);
 			FF_tolower(Filename, fnameLen);
 			FF_tolower(name, nameLen);
 			if(nameLen > fnameLen) {
@@ -274,7 +274,7 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 	FF_T_UINT32		Sector = pBuffer->Sector;
 	FF_T_UINT32		Entry		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
 
-	tester = FF_getChar(pBuffer->pBuffer, (Entry * 32));
+	tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(Entry * 32));
 	numLFNs = tester & ~0x40;
 
 	while(numLFNs > 0) {
@@ -400,10 +400,10 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
 	{
 		for(;minorBlockEntry < (512 / 32); minorBlockEntry++) {
-			tester = FF_getChar(pBuffer->pBuffer, (minorBlockEntry * 32));
+			tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(minorBlockEntry * 32));
 			if(tester != 0xE5 && tester != 0x00) {
 				
-				pDirent->Attrib = FF_getChar(pBuffer->pBuffer, (FF_FAT_DIRENT_ATTRIB + (32 * minorBlockEntry)));
+				pDirent->Attrib = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB + (32 * minorBlockEntry)));
 				if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 					numLFNs = (tester & ~0x40);
 #ifdef FF_LFN_SUPPORT
@@ -421,7 +421,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 						pDirent->ProcessedLFN = FF_FALSE;
 					} else {
 						if(pDirent->Attrib == FF_FAT_ATTR_DIR || pDirent->Attrib == FF_FAT_ATTR_VOLID) {
-							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
+							strncpy(pDirent->FileName, (FF_T_INT8 *)(pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
 							for(i = 0; i < 11; i++) {
 								if(pDirent->FileName[i] == 0x20) {
 									break;
@@ -429,15 +429,15 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 							}
 							pDirent->FileName[i] = '\0';
 						} else {
-							strncpy(pDirent->FileName, (pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
+							strncpy(pDirent->FileName, (FF_T_INT8 *)(pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
 							FF_ProcessShortName(pDirent->FileName);
 						}
 					}
-					myShort					 = FF_getShort(pBuffer->pBuffer, (FF_FAT_DIRENT_CLUS_HIGH + (32 * minorBlockEntry)));
+					myShort					 = FF_getShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH + (32 * minorBlockEntry)));
 					pDirent->ObjectCluster   = (FF_T_UINT32) (myShort << 16);
-					myShort					 = FF_getShort(pBuffer->pBuffer, (FF_FAT_DIRENT_CLUS_LOW + (32 * minorBlockEntry)));
+					myShort					 = FF_getShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW + (32 * minorBlockEntry)));
 					pDirent->ObjectCluster  |= myShort;
-					pDirent->Filesize		 = FF_getLong(pBuffer->pBuffer, (FF_FAT_DIRENT_FILESIZE + (32 * minorBlockEntry)));
+					pDirent->Filesize		 = FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE + (32 * minorBlockEntry)));
 					pDirent->CurrentItem	+= 1;
 					retVal = 0;
 					break;
@@ -547,6 +547,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_INT8 *filename, FF_T_UI
 			pFile->Filesize = Object.Filesize;
 			pFile->CurrentCluster = 0;
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
+			pFile->Mode = Mode;
 			return pFile;
 		}
 	}

@@ -56,7 +56,7 @@ FF_T_UINT8 FF_getMinorBlockNumber(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UIN
 	FF_PARTITION *pPart				= pIoman->pPartition;
 	FF_T_UINT32 relClusterEntry		= nEntry % (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
 	FF_T_UINT16 relmajorBlockEntry	= relClusterEntry % (pPart->BlkSize / nEntrySize);
-	FF_T_UINT8 minorBlockNumber		= relmajorBlockEntry / (512 / nEntrySize);
+	FF_T_UINT8 minorBlockNumber		= (FF_T_UINT8) (relmajorBlockEntry / (512 / nEntrySize));
 	return minorBlockNumber;
 }
 
@@ -64,7 +64,7 @@ FF_T_UINT8 FF_getMinorBlockEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT
 	FF_PARTITION *pPart				= pIoman->pPartition;
 	FF_T_UINT32 relClusterEntry		= nEntry % (512 * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
 	FF_T_UINT16 relmajorBlockEntry	= relClusterEntry % (pPart->BlkSize / nEntrySize);
-	FF_T_UINT8 minorBlockEntry		= relmajorBlockEntry % (512 / nEntrySize);
+	FF_T_UINT8 minorBlockEntry		= (FF_T_UINT8) relmajorBlockEntry % (512 / nEntrySize);
 	return minorBlockEntry;
 }
 
