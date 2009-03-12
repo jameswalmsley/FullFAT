@@ -49,5 +49,6 @@ void		*FF_CreateSemaphore		(void);
 void		FF_PendSemaphore		(void *pSemaphore);
 void		FF_ReleaseSemaphore		(void *pSemaphore);
 void		FF_DestroySemaphore		(void *pSemaphore);
+void		FF_Yield				(void);
 
 #endif

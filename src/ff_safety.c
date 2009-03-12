@@ -84,6 +84,11 @@ void FF_DestroySemaphore(void *pSemaphore) {
 	//
 }
 
+void FF_Yield(void) {
+	// Call your OS's thread Yield function. 
+	// If this doesn't work, then a deadlock will occur	
+}
+
 /**
  *	Notes on implementation.
  *
