@@ -367,7 +367,7 @@ FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			if((testLong & 0x3FF) != 0xFF8) {
+			if((testLong & 0x3FF) != 0x3F8) {
 				return -2;
 			}
 #endif
