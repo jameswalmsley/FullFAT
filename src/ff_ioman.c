@@ -54,7 +54,8 @@
  **/
 FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size) {
 
-	FF_IOMAN *pIoman = NULL;
+	FF_IOMAN	*pIoman = NULL;
+	FF_T_UINT32 *pLong = NULL;	// Force malloc to malloc memory on a 32-bit boundary.
 
 	if((Size % 512) != 0 || Size == 0) {
 		return NULL;	// Memory Size not a multiple of 512 > 0
@@ -96,7 +97,8 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size) {
 		pIoman->pCacheMem = pCacheMem;
 		pIoman->CacheSize = (FF_T_UINT8) (Size / 512);
 	}else {	// No-Cache buffer provided (malloc)
-		pIoman->pCacheMem = (FF_T_INT8 *) malloc(Size);
+		pLong = (FF_T_UINT32 *) malloc(Size);
+		pIoman->pCacheMem = (FF_T_INT8 *) pLong;
 		if(!pIoman->pCacheMem) {
 			FF_DestroyIOMAN(pIoman);
 			return NULL;
@@ -249,38 +251,41 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 	// Get a Semaphore now, and release on any return.
 	// Improves speed of the searching. Prevents description changes
 	// Mid-loop. This could be a performance issue later on!!
-
-	FF_PendSemaphore(pIoman->pSemaphore);
-
-	// Search for an appropriate buffer.
-	if(Mode == FF_MODE_READ) {
-		for(i = 0; i < pIoman->CacheSize; i++) {
-			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
-				// Buffer is suitable, ensure we don't overflow its handle count.
-				//if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {	// 	TODO!!:|260|warning: comparison is always true due to limited range of data type|
-					(pIoman->pBuffers + i)->NumHandles ++;
-					//(pIoman->pBuffers + i)->Persistance ++;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return (pIoman->pBuffers + i);
-				//}
+	while(1) {
+		
+		FF_PendSemaphore(pIoman->pSemaphore);
+		
+		// Search for an appropriate buffer.
+		if(Mode == FF_MODE_READ) {
+			for(i = 0; i < pIoman->CacheSize; i++) {
+				if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ ) {
+					// Buffer is suitable, ensure we don't overflow its handle count.
+					//if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {	// 	TODO!!:|260|warning: comparison is always true due to limited range of data type|
+						(pIoman->pBuffers + i)->NumHandles ++;
+						//(pIoman->pBuffers + i)->Persistance ++;
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+						return (pIoman->pBuffers + i);
+					//}
+				}
 			}
 		}
-	}
 
-	for(i = 0; i < pIoman->CacheSize; i++) {
-		if((pIoman->pBuffers + i)->NumHandles == 0) {
-			(pIoman->pBuffers + i)->Mode = Mode;
-			(pIoman->pBuffers + i)->NumHandles = 1;
-			(pIoman->pBuffers + i)->Sector = Sector;
-			// Fill the buffer with data from the device.
-			FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
-			FF_ReleaseSemaphore(pIoman->pSemaphore);
-			return (pIoman->pBuffers + i);
+		for(i = 0; i < pIoman->CacheSize; i++) {
+			if((pIoman->pBuffers + i)->NumHandles == 0) {
+				(pIoman->pBuffers + i)->Mode = Mode;
+				(pIoman->pBuffers + i)->NumHandles = 1;
+				(pIoman->pBuffers + i)->Sector = Sector;
+				// Fill the buffer with data from the device.
+				FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+				FF_ReleaseSemaphore(pIoman->pSemaphore);
+				return (pIoman->pBuffers + i);
+			}
 		}
-	}
 
-	// TODO: Think of a better way to deal with this situation.
-	FF_ReleaseSemaphore(pIoman->pSemaphore);	// Important that we free access!
+		// TODO: Think of a better way to deal with this situation.
+		FF_ReleaseSemaphore(pIoman->pSemaphore);	// Important that we free access!
+		FF_Yield();		// Yield Thread, so that further iterations can gain resources.
+	}
 	return NULL;	// No buffer available.
 }
 
