@@ -52,7 +52,7 @@
  *	@return	Returns a pointer to an FF_IOMAN type object.
  *
  **/
-FF_IOMAN *FF_CreateIOMAN(FF_T_INT8 *pCacheMem, FF_T_UINT32 Size) {
+FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size) {
 
 	FF_IOMAN *pIoman = NULL;
 

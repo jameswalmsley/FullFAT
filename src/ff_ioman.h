@@ -150,7 +150,7 @@ typedef struct {
 //---------- PROTOTYPES (in order of appearance)
 
 // PUBLIC (Interfaces):
-FF_IOMAN	*FF_CreateIOMAN		(FF_T_INT8	*pCacheMem,	FF_T_UINT32 Size);
+FF_IOMAN	*FF_CreateIOMAN		(FF_T_UINT8	*pCacheMem,	FF_T_UINT32 Size);
 FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN	*pIoman);
 FF_T_SINT8	FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
 FF_T_SINT8	FF_MountPartition	(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
