@@ -196,11 +196,7 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 	
 	FF_T_INT32		retVal;
 	FF_DIRENT		MyDir;
-#ifdef FF_LFN_SUPPORT
-	FF_T_INT8		Filename[260];
-#else
-	FF_T_INT8		Filename[12];
-#endif
+	FF_T_INT8		Filename[FF_MAX_FILENAME];
 	FF_T_UINT16		fnameLen;
 	FF_T_UINT16		compareLength;
 	FF_T_UINT16		nameLen = (FF_T_UINT16) strlen(name);
@@ -556,11 +552,8 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 	FF_FILE		*pFile;
 	FF_DIRENT	Object;
 	FF_T_UINT32 DirCluster, FileCluster;
-#ifdef FF_LFN_SUPPORT	
-	FF_T_INT8	filename[260];
-#else
-	FF_T_INT8	filename[13];
-#endif
+	FF_T_INT8	filename[FF_MAX_FILENAME];
+
 	FF_T_UINT16	i;
 
 	FF_T_INT8 *mypath;
@@ -582,11 +575,8 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 		i--;
 	}
 
-#ifdef FF_LFN_SUPPORT	
-	strncpy(filename, (path + i + 1), 260);
-#else
-	strncpy(filename, (path + i + 1), 13);
-#endif
+
+	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
 
 	mypath = (FF_T_INT8 *) &path;	// Allows us to modify a constant path, without an exception
 
@@ -596,6 +586,14 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 	
 	if(DirCluster) {
 		FileCluster = FF_FindEntry(pIoman, DirCluster, filename, 0x00, &Object);
+		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
+			FF_tolower(Object.FileName, FF_MAX_FILENAME);
+			FF_tolower(filename, FF_MAX_FILENAME);
+			if(Object.Filesize == 0 && strcmp(filename, Object.FileName) == 0) {
+				// The file really was found!
+				FileCluster = 1;
+			}
+		}
 		if(FileCluster) {
 			pFile->pIoman = pIoman;
 			pFile->FilePointer = 0;

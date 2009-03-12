@@ -48,3 +48,9 @@
 						// Also report the problem to james@worm.me.uk
 
 //#endif
+
+#ifdef FF_LFN_SUPPORT
+#define FF_MAX_FILENAME		260
+#else
+#define	FF_MAX_FILENAME		13
+#endif
