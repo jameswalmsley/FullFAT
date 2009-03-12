@@ -887,7 +887,7 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 			break;
 
 		case FF_SEEK_CUR:
-			if((Offset + pFile->FilePointer) <= pFile->Filesize && (Offset + pFile->FilePointer) >= 0) {
+			if((Offset + pFile->FilePointer) <= pFile->Filesize && (Offset + (FF_T_SINT32) pFile->FilePointer) >= 0) {
 				pFile->FilePointer = Offset + pFile->FilePointer;
 			} else {
 				return -2;
@@ -895,7 +895,7 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 			break;
 	
 		case FF_SEEK_END:
-			if((Offset + pFile->Filesize) > 0 && (Offset + pFile->Filesize) <= pFile->Filesize) {
+			if((Offset + (FF_T_SINT32) pFile->Filesize) >= 0 && (Offset + pFile->Filesize) <= pFile->Filesize) {
 				pFile->FilePointer = Offset + pFile->Filesize;
 			} else {
 				return -2;
