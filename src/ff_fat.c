@@ -449,8 +449,12 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 										break;
 									}
 								}
+								pDirent->FileName[i] = '\0';	
 							}
-							pDirent->FileName[i] = '\0';
+							if((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
+								pDirent->FileName[11] = '\0';
+							}
+							
 						} else {
 							strncpy(pDirent->FileName, (FF_T_INT8 *)(pBuffer->pBuffer + (32 * minorBlockEntry)), 11);
 							FF_ProcessShortName(pDirent->FileName);
@@ -559,6 +563,8 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 #endif
 	FF_T_UINT16	i;
 
+	FF_T_INT8 *mypath;
+
 	if(!pIoman) {
 		return (FF_FILE *)NULL;
 	}
@@ -582,10 +588,12 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 	strncpy(filename, (path + i + 1), 13);
 #endif
 
-	path[i + 1] = '\0';
-				
-	DirCluster = FF_FindDir(pIoman, path);
+	mypath = (FF_T_INT8 *) &path;	// Allows us to modify a constant path, without an exception
 
+	mypath[i + 1] = '\0';
+				
+	DirCluster = FF_FindDir(pIoman, mypath);
+	
 	if(DirCluster) {
 		FileCluster = FF_FindEntry(pIoman, DirCluster, filename, 0x00, &Object);
 		if(FileCluster) {
