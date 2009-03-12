@@ -110,18 +110,18 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	FatSector = pIoman->pPartition->FatBeginLBA + (FatOffset / pIoman->pPartition->BlkSize);
 	FatSectorEntry = FatOffset % pIoman->pPartition->BlkSize;
 	
-	LBAadjust = (FF_T_UINT8) (FatSectorEntry / 512);
-	relClusterEntry = FatSectorEntry % 512;
+	LBAadjust = (FF_T_UINT8) (FatSectorEntry / pIoman->BlkSize);
+	relClusterEntry = FatSectorEntry % pIoman->BlkSize;
 	
 	FatSector = FF_getRealLBA(pIoman, FatSector);
 	
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
-		if(relClusterEntry == (512 - 1)) {
+		if(relClusterEntry == (pIoman->BlkSize - 1)) {
 			// Fat Entry SPANS a Sector!
 			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 			{
-				F12short[0] = FF_getChar(pBuffer->pBuffer, 511);				
+				F12short[0] = FF_getChar(pBuffer->pBuffer, (pIoman->BlkSize - 1));				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			// Second Buffer get the first Byte in buffer (second byte of out address)!
@@ -416,7 +416,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
 	{
-		for(;minorBlockEntry < (512 / 32); minorBlockEntry++) {
+		for(;minorBlockEntry < (pIoman->BlkSize / 32); minorBlockEntry++) {
 			tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(minorBlockEntry * 32));
 			if(tester != 0xE5 && tester != 0x00) {
 				
@@ -651,15 +651,15 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32 fileLBA, fatEntry;
 	FF_BUFFER	*pBuffer;
 	FF_T_UINT32 numClusters;
-	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
+	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
 	FF_T_UINT32 bytesPerCluster = pPart->BlkSize * pPart->SectorsPerCluster;
 	FF_T_UINT32 majorBlockNum	 = relClusterPos / pPart->BlkSize;
 	FF_T_UINT32 relMajorBlockPos = relClusterPos % pPart->BlkSize;
 	
-	FF_T_UINT32 minorBlockNum	 = relMajorBlockPos / 512;
-	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % 512;
+	FF_T_UINT32 minorBlockNum	 = relMajorBlockPos / pFile->pIoman->BlkSize;
+	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % pFile->pIoman->BlkSize;
 
-	FF_T_UINT32 Sectors = Bytes / 512;
+	FF_T_UINT32 Sectors = Bytes / pFile->pIoman->BlkSize;
 
 	if(FF_isEOF(pFile)) {
 		return 0;
@@ -685,7 +685,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		Bytes = pFile->Filesize - pFile->FilePointer;
 	}
 
-	if((Bytes + relMinorBlockPos) < 512) { // We have to memcpy from a buffer!
+	if((Bytes + relMinorBlockPos) < pFile->pIoman->BlkSize) { // We have to memcpy from a buffer!
 
 		pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 		{
@@ -701,28 +701,28 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		// Read Across Multiple Clusters
 			pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 			{
-				memcpy(buffer, (pBuffer->pBuffer + relMinorBlockPos), 512 - relMinorBlockPos);
+				memcpy(buffer, (pBuffer->pBuffer + relMinorBlockPos), pFile->pIoman->BlkSize - relMinorBlockPos);
 			}
 			FF_ReleaseBuffer(pFile->pIoman, pBuffer);
 
-			buffer += (512 - relMinorBlockPos);
+			buffer += (pFile->pIoman->BlkSize - relMinorBlockPos);
 			fileLBA += 1;	// Next Copy just be from the Next LBA.
 			// CARE ABOUT CLUSTER BOUNDARIES!
-			Bytes -= 512 - relMinorBlockPos;
-			BytesRead += 512 - relMinorBlockPos;
-			pFile->FilePointer += 512 - relMinorBlockPos;
+			Bytes -= pFile->pIoman->BlkSize - relMinorBlockPos;
+			BytesRead += pFile->pIoman->BlkSize - relMinorBlockPos;
+			pFile->FilePointer += pFile->pIoman->BlkSize - relMinorBlockPos;
 		}
 		
-		// Direct Copy :D Remaining Bytes > 512
+		// Direct Copy :D Remaining Bytes > IOMAN BlkSIze
 
 		while(Bytes > bytesPerCluster) {
 			// Direct Copy Size Remaining Cluster's!
 			numClusters		 = Bytes / bytesPerCluster;
-			relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
+			relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
 			majorBlockNum	 = relClusterPos / pPart->BlkSize;
 			relMajorBlockPos = relClusterPos % pPart->BlkSize;
-			minorBlockNum	 = relMajorBlockPos / 512;
-			relMinorBlockPos = relMajorBlockPos % 512;
+			minorBlockNum	 = relMajorBlockPos / pFile->pIoman->BlkSize;
+			relMinorBlockPos = relMajorBlockPos % pFile->pIoman->BlkSize;
 
 			if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
@@ -739,7 +739,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 			fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
-			Sectors = (bytesPerCluster - relClusterPos) / 512;
+			Sectors = (bytesPerCluster - relClusterPos) / pFile->pIoman->BlkSize;
 
 			pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
 			buffer += (bytesPerCluster - relClusterPos);
@@ -748,11 +748,11 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			BytesRead += (bytesPerCluster - relClusterPos);
 		}
 
-		relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
+		relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
 		majorBlockNum	 = relClusterPos / pPart->BlkSize;
 		relMajorBlockPos = relClusterPos % pPart->BlkSize;
-		minorBlockNum	 = relMajorBlockPos / 512;
-		relMinorBlockPos = relMajorBlockPos % 512;
+		minorBlockNum	 = relMajorBlockPos / pFile->pIoman->BlkSize;
+		relMinorBlockPos = relMajorBlockPos % pFile->pIoman->BlkSize;
 
 		if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 			fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
@@ -770,13 +770,13 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 
-		if(Bytes >= 512) {
-			Sectors = Bytes / 512;
+		if(Bytes >= pFile->pIoman->BlkSize) {
+			Sectors = Bytes / pFile->pIoman->BlkSize;
 			pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
-			Bytes -= Sectors * 512;
-			buffer += Sectors * 512;
-			BytesRead += Sectors * 512;
-			pFile->FilePointer += Sectors * 512;
+			Bytes -= Sectors * pFile->pIoman->BlkSize;
+			buffer += Sectors * pFile->pIoman->BlkSize;
+			BytesRead += Sectors * pFile->pIoman->BlkSize;
+			pFile->FilePointer += Sectors * pFile->pIoman->BlkSize;
 			fileLBA += Sectors;
 		}
 
@@ -818,14 +818,14 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 		These can be replaced with the ff_blk.c functions! 
 		Will be done for the 1.0 release.
 	*/
-	FF_T_UINT32 clusterNum		= pFile->FilePointer / ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
-	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * 512);
+	FF_T_UINT32 clusterNum		= pFile->FilePointer / ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
+	FF_T_UINT32 relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
 	
 	FF_T_UINT32 majorBlockNum	= relClusterPos / pPart->BlkSize;
 	FF_T_UINT32 relMajorBlockPos = relClusterPos % pPart->BlkSize;
 	
-	FF_T_UINT32 minorBlockNum = relMajorBlockPos / 512;
-	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % 512;
+	FF_T_UINT32 minorBlockNum = relMajorBlockPos / pFile->pIoman->BlkSize;
+	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % pFile->pIoman->BlkSize;
 
 	if(!pFile) {
 		return -2;

@@ -41,10 +41,7 @@
 #include "ff_safety.h"	// Provide critical regions
 #include "ff_memory.h"
 
-
-
-#define	FF_MAX_PARTITION_NAME	5	///< Partition name length.
-
+#define	FF_MAX_PARTITION_NAME				5	///< Partition name length.
 
 #define FF_ERR_IOMAN_NULL_POINTER			-10	///< Null Pointer return error code.
 #define FF_ERR_IOMAN_DEV_ALREADY_REGD		-11 ///< Device was already registered.
@@ -67,8 +64,8 @@
  *	Provide access to any Block Device via the following interfaces.
  *	Returns the number of blocks actually read or written.
  **/
-typedef FF_T_UINT32 (*FF_WRITE_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 Sector, FF_T_UINT32 NumSectors, void *pParam);
-typedef FF_T_UINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 Sector, FF_T_UINT32 NumSectors, void *pParam);
+typedef FF_T_UINT32 (*FF_WRITE_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
+typedef FF_T_UINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
 
 /**
  *	@public
@@ -77,6 +74,7 @@ typedef FF_T_UINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 Sector, 
 typedef struct {
 	FF_WRITE_BLOCKS	fnWriteBlocks;	///< Function Pointer, to write a block(s) from a block device.
 	FF_READ_BLOCKS	fnReadBlocks;	///< Function Pointer, to read a block(s) from a block device.
+	FF_T_UINT16		devBlkSize;		///< Block size that the driver deals with.
 	void			*pParam;		///< Pointer to some parameters e.g. for a Low-Level Driver Handle
 } FF_BLK_DEVICE;
 
@@ -134,6 +132,7 @@ typedef struct {
 	FF_PARTITION	*pPartition;	///< Pointer to a partition description.
 	FF_BUFFER		*pBuffers;		///< Pointer to the first buffer description.
 	FF_T_INT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
+	FF_T_UINT16		BlkSize;		///< The Block size that IOMAN is configured to.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
 	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
 	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
@@ -150,8 +149,8 @@ typedef struct {
 //---------- PROTOTYPES (in order of appearance)
 
 // PUBLIC (Interfaces):
-FF_IOMAN	*FF_CreateIOMAN		(FF_T_UINT8	*pCacheMem,	FF_T_UINT32 Size);
-FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN	*pIoman);
+FF_IOMAN	*FF_CreateIOMAN		(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize);
+FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN *pIoman);
 FF_T_SINT8	FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
 FF_T_SINT8	FF_MountPartition	(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
 #ifdef FF_64_NUM_SUPPORT

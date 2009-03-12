@@ -52,13 +52,17 @@
  *	@return	Returns a pointer to an FF_IOMAN type object.
  *
  **/
-FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size) {
+FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize) {
 
 	FF_IOMAN	*pIoman = NULL;
 	FF_T_UINT32 *pLong = NULL;	// Force malloc to malloc memory on a 32-bit boundary.
 
-	if((Size % 512) != 0 || Size == 0) {
-		return NULL;	// Memory Size not a multiple of 512 > 0
+	if((BlkSize % 512) != 0 || Size == 0) {
+		return NULL;	// BlkSize Size not a multiple of 512 > 0
+	}
+
+	if((Size % BlkSize) != 0 || Size == 0) {
+		return NULL;	// Memory Size not a multiple of BlkSize > 0
 	}
 
 	pIoman = (FF_IOMAN *) malloc(sizeof(FF_IOMAN));
@@ -95,7 +99,6 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size) {
 	// Organise the memory provided, or create our own!
 	if(pCacheMem) {
 		pIoman->pCacheMem = pCacheMem;
-		pIoman->CacheSize = (FF_T_UINT8) (Size / 512);
 	}else {	// No-Cache buffer provided (malloc)
 		pLong = (FF_T_UINT32 *) malloc(Size);
 		pIoman->pCacheMem = (FF_T_INT8 *) pLong;
@@ -104,8 +107,10 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size) {
 			return NULL;
 		}
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFFERS;
-		pIoman->CacheSize = (FF_T_UINT8) (Size / 512);
 	}
+
+	pIoman->BlkSize		= BlkSize;
+	pIoman->CacheSize	= (FF_T_UINT8) (Size / BlkSize);
 
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
 		but uses buffer objects instead. Allows us to provide thread safety.
@@ -179,14 +184,16 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
  **/
 void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	int i;
+	FF_BUFFER *pBuffer = pIoman->pBuffers;
 	for(i = 0; i < pIoman->CacheSize; i++) {
-		pIoman->pBuffers->ID 			= (FF_T_UINT16) i;
-		pIoman->pBuffers->ContextID		= 0;
-		pIoman->pBuffers->Mode			= 0;
-		pIoman->pBuffers->NumHandles 	= 0;
-		pIoman->pBuffers->Persistance 	= 0;
-		pIoman->pBuffers->Sector 		= 0;
-		pIoman->pBuffers->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + 512 * i);
+		pBuffer->ID 			= (FF_T_UINT16) i;
+		pBuffer->ContextID		= 0;
+		pBuffer->Mode			= 0;
+		pBuffer->NumHandles 	= 0;
+		pBuffer->Persistance 	= 0;
+		pBuffer->Sector 		= 0;
+		pBuffer->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + pIoman->BlkSize * i);
+		pBuffer++;
 	}
 }
 
@@ -475,7 +482,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	pPart->SectorsPerCluster = FF_getChar(pBuffer->pBuffer, FF_FAT_SECTORS_PER_CLUS);
 
-	pPart->BlkFactor = (FF_T_UINT8) (pPart->BlkSize / 512);    // Set the BlockFactor (How many real-blocks in a fake block!).
+	pPart->BlkFactor = (FF_T_UINT8) (pPart->BlkSize / pIoman->BlkSize);    // Set the BlockFactor (How many real-blocks in a fake block!).
 
 	if(pPart->SectorsPerFAT == 0) {	// FAT32
 		pPart->SectorsPerFAT	= FF_getLong(pBuffer->pBuffer, FF_FAT_32_SECTORS_PER_FAT);
