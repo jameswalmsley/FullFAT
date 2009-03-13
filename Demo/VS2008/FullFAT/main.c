@@ -52,11 +52,10 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	8192*2	// Increase This for Faster File Copies
 
-void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test2(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test_512(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test_2048(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -76,9 +75,8 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f,*fDest;
-	FF_FILE *fSource;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
-	
+	FF_FILE *fSource, *f1, *f2, *f3, *f4;
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
 	char commandShadow[2600];
@@ -89,7 +87,7 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	float time, transferRate;
-	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
@@ -98,12 +96,29 @@ int main(void) {
 	printf("Use the command help for more information\n\n");
 
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, (void *)f);
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) test_512, (FF_READ_BLOCKS) test_512, (void *)f);
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT Couldn't mount the specified parition!\n");
 			getchar();
 			return -1;
+		}
+
+		f1 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
+		f2 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
+		f3 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
+		f4 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
+		i = 0;
+		while(1) {
+			FF_Seek(f1, 547838, SEEK_SET);
+			FF_Read(f1, 1024, 1, buffer);
+			FF_Seek(f2, 564789, SEEK_SET);
+			FF_Read(f2, 1024, 1, buffer);
+			FF_Seek(f3, -564789, SEEK_END);
+			FF_Read(f3, 1024, 1, buffer);
+			FF_Read(f4, 1024, 1, buffer);
+			FF_Seek(f4, 0, SEEK_SET);
+			printf("Sucessful Iteration %d\r", i++);
 		}
 
 		while(1) {

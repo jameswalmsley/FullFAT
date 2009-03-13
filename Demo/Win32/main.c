@@ -51,11 +51,11 @@
 #include <conio.h>
 #include "../../src/fullfat.h"
 
-#define PARTITION_NUMBER	1		///< Change this to the primary partition to be mounted (0 to 3)
+#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
 
-void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test_512(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test_2048(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -76,7 +76,7 @@ int main(void) {
 	LARGE_INTEGER start_ticks, end_ticks, cputime;
 	FILE *f, *fDest;
 	FF_FILE *fSource;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096, 512);
 
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
@@ -89,7 +89,7 @@ int main(void) {
 	FF_DIRENT mydir;
 	float time, transferRate;
 	//f = fopen("c:\\driveimage", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 
 	QueryPerformanceFrequency(&ticksPerSecond);
 
@@ -97,7 +97,7 @@ int main(void) {
 	printf("Use the command help for more information\n\n");
 
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, f);
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) test_512, (FF_READ_BLOCKS) test_512, f);
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT couldn't mount the specified partition\n");
