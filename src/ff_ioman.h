@@ -49,6 +49,7 @@
 #define FF_ERR_IOMAN_INVALID_FORMAT			-13
 #define FF_ERR_IOMAN_INVALID_PARTITION_NUM	-14
 #define FF_ERR_IOMAN_NOT_FAT_FORMATTED		-15
+#define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE	-16 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -151,7 +152,7 @@ typedef struct {
 // PUBLIC (Interfaces):
 FF_IOMAN	*FF_CreateIOMAN		(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize);
 FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN *pIoman);
-FF_T_SINT8	FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
+FF_T_SINT8	FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
 FF_T_SINT8	FF_MountPartition	(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
 #ifdef FF_64_NUM_SUPPORT
 FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman);

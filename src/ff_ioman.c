@@ -48,6 +48,7 @@
  *
  *	@param	pCacheMem		Pointer to a buffer for the cache. (NULL if ok to Malloc).
  *	@param	Size			The size of the provided buffer, or size of the cache to be created.
+ *	@param	BlkSize			The block size of devices to be attached. If in doubt use 512.
  *
  *	@return	Returns a pointer to an FF_IOMAN type object.
  *
@@ -328,15 +329,24 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
  *	FF_WRITE_BLOCKS and FF_READ_BLOCKS.
  *
  *	@param	pIoman			FF_IOMAN object.
+ *	@param	BlkSize			Block Size that the driver deals in. (Minimum 512, larger values must be a multiple of 512).
  *	@param	fnWriteBlocks	Pointer to the Write Blocks to device function, as described by FF_WRITE_BLOCKS.
  *	@param	fnReadBlocks	Pointer to the Read Blocks from device function, as described by FF_READ_BLOCKS.
  *	@param	pParam			Pointer to a parameter for use in the functions.
  *
  *	@return	0 on success, FF_ERR_IOMAN_DEV_ALREADY_REGD if a device was already hooked, FF_ERR_IOMAN_NULL_POINTER if a pIoman object wasn't provided.
  **/
-FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
+FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
 	if(!pIoman) {	// We can't do anything without an IOMAN object.
 		return FF_ERR_IOMAN_NULL_POINTER;
+	}
+
+	if((BlkSize % 512) != 0 || BlkSize == 0) {
+		return FF_ERR_IOMAN_DEV_INVALID_BLKSIZE;	// BlkSize Size not a multiple of IOMAN's Expected BlockSize > 0
+	}
+
+	if((BlkSize % pIoman->BlkSize) != 0 || BlkSize == 0) {
+		return FF_ERR_IOMAN_DEV_INVALID_BLKSIZE;	// BlkSize Size not a multiple of IOMAN's Expected BlockSize > 0
 	}
 
 	// Ensure that a device cannot be re-registered "mid-flight"
@@ -438,7 +448,7 @@ FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
  *
  **/
 FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
-	FF_PARTITION	*pPart	 = pIoman->pPartition;
+	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer = 0;
 
 	if(!pIoman) {
@@ -448,6 +458,8 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	if(PartitionNumber > 3) {
 		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
 	}
+
+	pPart = pIoman->pPartition;
 
 	pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_READ);
 

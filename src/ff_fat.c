@@ -568,6 +568,8 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 
 	i = (FF_T_UINT16) strlen(path);
 
+	//mypath = malloc(i);
+	//strcpy(mypath, path);
 	while(i > 0) {
 		if(path[i] == '\\' || path[i] == '/') {
 			break;
@@ -575,15 +577,16 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 		i--;
 	}
 
-
 	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
 
-	mypath = (FF_T_INT8 *) &path;	// Allows us to modify a constant path, without an exception
+	mypath = (FF_T_INT8 *) path;
 
-	mypath[i + 1] = '\0';
+	*(mypath + i + 1) = '\0';
 				
 	DirCluster = FF_FindDir(pIoman, mypath);
 	
+	free(mypath);
+
 	if(DirCluster) {
 		FileCluster = FF_FindEntry(pIoman, DirCluster, filename, 0x00, &Object);
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
