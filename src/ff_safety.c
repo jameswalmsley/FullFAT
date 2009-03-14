@@ -89,6 +89,11 @@ void FF_Yield(void) {
 	// If this doesn't work, then a deadlock will occur	
 }
 
+void FF_Sleep(FF_T_UINT32 TimeMs) {
+	// Call your OS's thread sleep function,
+	// Sleep for TimeMs milliseconds
+}
+
 /**
  *	Notes on implementation.
  *

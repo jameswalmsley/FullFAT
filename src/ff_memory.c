@@ -106,51 +106,47 @@ void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 			break;
 	}
 }
-/**
- *	@private
- **/
-FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_UINT16 *iteration, FF_T_UINT16 *modded) {
-	FF_T_INT32 i,x;
-	/* Find working token!! (iteration number!!) */
-	i = strlen(string);
-	
-	/*
-		Strips Trailing / or \ from a path. 
-		Otherwise a NULL pointer may not be returned.
-	*/
-	if(string[i-1] == '\\' || string[i-1] == '/') {
-		string[i-1] = '\0';
-	}
-	
-	if(*modded == 1) {
-		return NULL;
-	}
+
+
+FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last) {
+	FF_T_UINT16 strLen = (FF_T_UINT16) strlen(string);
+	FF_T_UINT16 i,y, tokenStart, tokenEnd = 0;
 
 	i = 0;
+	y = 0;
 
 	if(string[i] == '\\' || string[i] == '/') {
 		i++;
 	}
 
-	for(x = *iteration; x > 0; i++) {
-		if(string[i] == '\0') {
-			x--;
+	tokenStart = i;
+
+	for(i; i < strLen; i++) {
+		if(string[i] == '\\' || string[i] == '/') {
+			y++;
+			if(y == *tokenNumber) {
+				tokenStart = i + 1;
+			}
+			if(y == (*tokenNumber + 1)) {
+				tokenEnd = i;
+				break;
+			}
 		}
 	}
 
-	for(x = i; string[x] != '\0'; x++) {
-		if(string[x] == '\\' || string[x] == '/') {
-			*iteration += 1;
-			string[x] = '\0';
-			return &string[i];
+	if(!tokenEnd) {
+		if(*last == FF_TRUE) {
+			return NULL;
+		} else {
+			*last = FF_TRUE;
 		}
+		tokenEnd = i;
 	}
+	
+	memcpy(token, (string + tokenStart), tokenEnd - tokenStart);
+	token[tokenEnd - tokenStart] = '\0';
+	*tokenNumber += 1;
 
-	if(string[x] == '\0') {
-		*modded = 1;
-		return &string[i];
-	}
-
-	return NULL; // A default case!
+	return token;	
 }
 

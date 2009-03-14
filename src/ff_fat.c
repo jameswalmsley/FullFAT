@@ -87,7 +87,7 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 /**
  *	@private
  **/
-FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
+FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 
 	FF_BUFFER 	*pBuffer;
 	FF_T_UINT32 FatOffset;
@@ -121,12 +121,18 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return FF_ERR_DEVICE_DRIVER_FAILED;
+				}
 				F12short[0] = FF_getChar(pBuffer->pBuffer, (pIoman->BlkSize - 1));				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			// Second Buffer get the first Byte in buffer (second byte of out address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return FF_ERR_DEVICE_DRIVER_FAILED;
+				}
 				F12short[1] = FF_getChar(pBuffer->pBuffer, 0);				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
@@ -143,6 +149,9 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	
 	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 	{
+		if(!pBuffer) {
+			return FF_ERR_DEVICE_DRIVER_FAILED;
+		}
 		if(pIoman->pPartition->Type == FF_T_FAT32) {
 			FatEntry = FF_getLong(pBuffer->pBuffer, relClusterEntry);
 			FatEntry &= 0x0fffffff;	// Clear the top 4 bits.
@@ -243,9 +252,11 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 	FF_T_UINT32 dirCluster = pIoman->pPartition->RootDirCluster;
-	FF_T_INT8 mypath[260];
-	FF_T_INT8 *token;
-	FF_T_UINT16	it = 0, mod = 0;		// Re-entrancy Variables for FF_strtok()
+	FF_T_UINT32 lastDirCluster;
+	FF_T_INT8	mytoken[FF_MAX_FILENAME];
+	FF_T_INT8	*token;
+	FF_T_UINT16	it = 0;		// Re-entrancy Variables for FF_strtok()
+	FF_T_BOOL	last = FF_FALSE;
 	FF_T_UINT32 pathLength = strlen(path);
 	FF_DIRENT MyDir;
 
@@ -254,16 +265,23 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	if(pathLength == 1) {	// Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
 	}
-	strcpy(mypath, path);
 
-	token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
+	token = FF_strtok(path, mytoken, &it, &last);
+	//token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
 
-	while(token != NULL) {
-		dirCluster = FF_FindEntry(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
+	 do{
+		lastDirCluster = dirCluster;
+		dirCluster = FF_FindEntry(pIoman, dirCluster, token, 0x00, &MyDir);
 		if(dirCluster == 0 && MyDir.CurrentItem == 2) {	// .. Dir Entry pointing to root dir.
 			dirCluster = pIoman->pPartition->RootDirCluster;
 		}
-		token = FF_strtok(mypath, &it, &mod);
+		token = FF_strtok(path, mytoken, &it, &last);
+	}while(token != NULL);
+
+	if(dirCluster) {
+		if((MyDir.Attrib & FF_FAT_ATTR_DIR) != FF_FAT_ATTR_DIR) {
+			dirCluster = lastDirCluster;
+		}
 	}
 
 	return dirCluster;
@@ -282,8 +300,8 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 	FF_T_UINT16		i,y;
 	FF_T_UINT32		CurrentCluster;
 	FF_T_UINT32		fatEntry;
-	FF_T_UINT8		*buffer = pBuffer->pBuffer;
-	FF_T_UINT32		Sector = pBuffer->Sector;
+	FF_T_UINT8		*buffer		= pBuffer->pBuffer;
+	FF_T_UINT32		Sector		= pBuffer->Sector;
 	FF_T_UINT32		Entry		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
 
 	tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(Entry * 32));
@@ -293,7 +311,10 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 		if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
-			
+			if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+				return FF_ERR_DEVICE_DRIVER_FAILED;
+			}
+
 			if(FF_isEndOfChain(pIoman, fatEntry)) {
 				CurrentCluster = pDirent->DirCluster;
 				// ERROR THIS SHOULD NOT OCCUR!
@@ -302,6 +323,9 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 			}
 
 			pBuffer = FF_GetBuffer(pIoman, FF_getRealLBA(pIoman, FF_Cluster2LBA(pIoman, CurrentCluster)), FF_MODE_READ);
+			if(!pBuffer) {
+				return FF_ERR_DEVICE_DRIVER_FAILED;
+			}
 			Entry = 0;	
 		}
 
@@ -309,6 +333,9 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			Sector += 1;
 			pBuffer = FF_GetBuffer(pIoman, Sector, FF_MODE_READ);
+			if(!pBuffer) {
+				return FF_ERR_DEVICE_DRIVER_FAILED;
+			}
 			Entry = 0;
 		}
 
@@ -391,13 +418,16 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	FF_T_UINT32		itemLBA;
 	FF_BUFFER		*pBuffer;	///< Buffer for acquired sector.
 	FF_T_UINT8		i;
-	FF_T_UINT32 minorBlockEntry		= FF_getMinorBlockEntry(pIoman, nEntry, 32);
+	FF_T_UINT32		minorBlockEntry	= FF_getMinorBlockEntry(pIoman, nEntry, 32);
 	
 	// Lets follow the chain to find its real number
 	
 	if(FF_getClusterChainNumber(pIoman, nEntry, 32) > pDirent->CurrentCluster) {
 
 		fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
+		if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+			return -2;
+		}
 		
 		if(FF_isEndOfChain(pIoman, fatEntry)) {
 			CurrentCluster = DirCluster;
@@ -416,7 +446,10 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
 	{
-		for(;minorBlockEntry < (pIoman->BlkSize / 32); minorBlockEntry++) {
+		if(!pBuffer) {
+			return FF_ERR_DEVICE_DRIVER_FAILED;
+		}
+		for(;minorBlockEntry < (FF_T_UINT32)(pIoman->BlkSize / 32); minorBlockEntry++) {
 			tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(minorBlockEntry * 32));
 			if(tester != 0xE5 && tester != 0x00) {
 				
@@ -425,7 +458,9 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 					numLFNs = (tester & ~0x40);
 #ifdef FF_LFN_SUPPORT
 					// May Get the Next Buffer if it needs to!
-					FF_getLFN(pIoman, pBuffer, pDirent, pDirent->FileName);
+					if(FF_getLFN(pIoman, pBuffer, pDirent, pDirent->FileName)) {
+						return -2;	// Return -2 (LFN Failed due to a device error, we should finish accessing device.
+					}
 					pDirent->ProcessedLFN = FF_TRUE;
 #else
 					pDirent->CurrentItem += numLFNs;
@@ -492,8 +527,14 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
  *	@param	pDirent		FF_DIRENT object to store the entry information.
  *	@param	path		String to of the path to the Dir being listed.
  *
+ *	@return	0 on success
+ *	@return	FF_ERR_DEVICE_DRIVER_FAILED if device access failed.
+ *	@return -2 if Dir was not found.
+ *
  **/
 FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
+
+	FF_T_SINT32 retVal;
 
 	if(!pIoman) {
 		return FF_ERR_FAT_NULL_POINTER;
@@ -510,7 +551,11 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 	pDirent->CurrentItem = 0;	// Set current item to 0
 	pDirent->ProcessedLFN = FF_FALSE;
 
-	FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent);
+	retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent);
+
+	if(retVal == FF_ERR_DEVICE_DRIVER_FAILED) {
+		return (FF_T_SINT8) retVal;
+	}
 
 	return 0;
 }
@@ -525,6 +570,8 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
  *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
  *	@param	pDirent		FF_DIRENT object to store the entry information.
  *
+ *	@return FF_ERR_DEVICE_DRIVER_FAILED is device access failed.
+ *
  **/
 FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 
@@ -534,6 +581,7 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	}
 	do {
 		retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent);
+		// Device error will be passed upwards!
 	}while(retVal == -1);
 	
 	return retVal;
@@ -556,8 +604,6 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 
 	FF_T_UINT16	i;
 
-	FF_T_INT8 *mypath;
-
 	if(!pIoman) {
 		return (FF_FILE *)NULL;
 	}
@@ -568,8 +614,6 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 
 	i = (FF_T_UINT16) strlen(path);
 
-	//mypath = malloc(i);
-	//strcpy(mypath, path);
 	while(i > 0) {
 		if(path[i] == '\\' || path[i] == '/') {
 			break;
@@ -579,13 +623,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 
 	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
 
-	mypath = (FF_T_INT8 *) path;
-
-	*(mypath + i + 1) = '\0';
-				
-	DirCluster = FF_FindDir(pIoman, mypath);
 	
-	free(mypath);
+	DirCluster = FF_FindDir(pIoman, path);
+	
 
 	if(DirCluster) {
 		FileCluster = FF_FindEntry(pIoman, DirCluster, filename, 0x00, &Object);
@@ -664,12 +704,17 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 	FF_T_UINT32 Sectors = Bytes / pFile->pIoman->BlkSize;
 
+	FF_T_INT32	retVal = 0;
+
 	if(FF_isEOF(pFile)) {
 		return 0;
 	}
 
 	if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+		if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+			return 0;
+		}
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			// ERROR THIS SHOULD NOT OCCUR!
@@ -692,6 +737,9 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 		{
+			if(!pBuffer) {
+				return 0;
+			}
 			memcpy(buffer, (pBuffer->pBuffer + relMinorBlockPos), Bytes);
 		}
 		FF_ReleaseBuffer(pFile->pIoman, pBuffer);
@@ -704,6 +752,9 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		// Read Across Multiple Clusters
 			pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return 0;
+				}
 				memcpy(buffer, (pBuffer->pBuffer + relMinorBlockPos), pFile->pIoman->BlkSize - relMinorBlockPos);
 			}
 			FF_ReleaseBuffer(pFile->pIoman, pBuffer);
@@ -729,10 +780,13 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 			if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+				if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+					return BytesRead;
+				}
 				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 					pFile->AddrCurrentCluster = pFile->ObjectCluster;
 					// ERROR THIS SHOULD NOT OCCUR!
-					return 0;
+					return BytesRead;
 				} else {
 					pFile->AddrCurrentCluster = fatEntry;
 					pFile->CurrentCluster += 1;
@@ -743,12 +797,25 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 			Sectors = (bytesPerCluster - relClusterPos) / pFile->pIoman->BlkSize;
+	
+			do{
+				if(pFile->pIoman->pBlkDevice->fnReadBlocks) {
+					retVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
+				}
+				if(retVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(DRIVER_BUSY_SLEEP);
+				}
+			} while(retVal == FF_ERR_DRIVER_BUSY);
 
-			pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
-			buffer += (bytesPerCluster - relClusterPos);
-			Bytes -= (bytesPerCluster - relClusterPos);
+			if(retVal < 0) {
+				return BytesRead;
+			}
+
+			buffer	+= (bytesPerCluster - relClusterPos);
+			Bytes	-= (bytesPerCluster - relClusterPos);
 			pFile->FilePointer += (bytesPerCluster - relClusterPos);
-			BytesRead += (bytesPerCluster - relClusterPos);
+			BytesRead += (retVal * pFile->pIoman->BlkSize);	// Return value of the driver function is sectors written.
 		}
 
 		relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
@@ -759,10 +826,13 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 			fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+			if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+				return BytesRead;
+			}
 			if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 				pFile->AddrCurrentCluster = pFile->ObjectCluster;
 				// ERROR THIS SHOULD NOT OCCUR!
-				return 0;
+				return BytesRead;
 			} else {
 				pFile->AddrCurrentCluster = fatEntry;
 				pFile->CurrentCluster += 1;
@@ -775,7 +845,20 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		if(Bytes >= pFile->pIoman->BlkSize) {
 			Sectors = Bytes / pFile->pIoman->BlkSize;
-			pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
+			 do{
+				if(pFile->pIoman->pBlkDevice->fnReadBlocks) {
+					retVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, fileLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
+				}
+				if(retVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(DRIVER_BUSY_SLEEP);
+				}
+			} while(retVal == FF_ERR_DRIVER_BUSY);
+			
+			if(retVal < 0) {
+				return BytesRead;
+			}
+
 			Bytes -= Sectors * pFile->pIoman->BlkSize;
 			buffer += Sectors * pFile->pIoman->BlkSize;
 			BytesRead += Sectors * pFile->pIoman->BlkSize;
@@ -786,6 +869,9 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		if(Bytes > 0) {// Memcpy the remaining Bytes
 			pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return BytesRead;
+				}
 				memcpy(buffer, (pBuffer->pBuffer), Bytes);
 			}
 			FF_ReleaseBuffer(pFile->pIoman, pBuffer);
@@ -808,6 +894,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
  *
  *	@return The character that was read (cast as a 32-bit interger). -1 on EOF.
  *	@return -2 If a null file pointer was provided.
+ *	@return -3 Device access failed.
  *
  **/
 FF_T_INT32 FF_GetC(FF_FILE *pFile) {
@@ -840,6 +927,9 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	
 	if(clusterNum > pFile->CurrentCluster) {
 		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+		if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+			return -3;
+		}
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			// ERROR THIS SHOULD NOT OCCUR!
@@ -856,6 +946,9 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 
 	pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 	{
+		if(!pBuffer) {
+			return -3;
+		}
 		retChar = pBuffer->pBuffer[relMinorBlockPos];
 	}
 	FF_ReleaseBuffer(pFile->pIoman, pBuffer);

@@ -50,5 +50,6 @@ void		FF_PendSemaphore		(void *pSemaphore);
 void		FF_ReleaseSemaphore		(void *pSemaphore);
 void		FF_DestroySemaphore		(void *pSemaphore);
 void		FF_Yield				(void);
+void		FF_Sleep				(FF_T_UINT32 TimeMs);
 
 #endif

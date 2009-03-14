@@ -102,7 +102,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		pIoman->pCacheMem = pCacheMem;
 	}else {	// No-Cache buffer provided (malloc)
 		pLong = (FF_T_UINT32 *) malloc(Size);
-		pIoman->pCacheMem = (FF_T_INT8 *) pLong;
+		pIoman->pCacheMem = (FF_T_UINT8 *) pLong;
 		if(!pIoman->pCacheMem) {
 			FF_DestroyIOMAN(pIoman);
 			return NULL;
@@ -226,10 +226,27 @@ FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-void FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+	FF_T_SINT32 retVal = 0;
 	if(pIoman->pBlkDevice->fnReadBlocks) {	// Make sure we don't execute a NULL.
-		pIoman->pBlkDevice->fnReadBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
+		 do{
+			retVal = pIoman->pBlkDevice->fnReadBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
+			if(retVal == FF_ERR_DRIVER_BUSY) {
+				FF_Yield();
+				FF_Sleep(DRIVER_BUSY_SLEEP);
+			}
+		} while(retVal == FF_ERR_DRIVER_BUSY);
+		if(retVal < 0) {
+			return -1;		// FF_ERR_DRIVER_FATAL_ERROR was returned Fail!
+		} else {
+			if(retVal == 1) {
+				return 0;		// 1 Block was sucessfully read.
+			} else {
+				return -1;		// 0 Blocks we're read, Error!
+			}
+		}
 	}
+	return -1;	// error no device diver registered.
 }
 
 
@@ -246,7 +263,10 @@ void FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuff
  **/
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 
-	int i;
+	FF_T_UINT16 i;
+	
+	FF_T_SINT32 retVal;
+	
 
 	if(!pIoman) {
 		return NULL;	// No NULL pointer modification.
@@ -280,11 +300,15 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->NumHandles == 0) {
+				retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+				if(retVal) { // Buffer was not filled!
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return NULL;
+				}
 				(pIoman->pBuffers + i)->Mode = Mode;
 				(pIoman->pBuffers + i)->NumHandles = 1;
 				(pIoman->pBuffers + i)->Sector = Sector;
 				// Fill the buffer with data from the device.
-				FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
 				FF_ReleaseSemaphore(pIoman->pSemaphore);
 				return (pIoman->pBuffers + i);
 			}
@@ -386,6 +410,9 @@ FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 #ifdef FF_FAT_CHECK
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return -2;
+				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
@@ -401,6 +428,9 @@ FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 #ifdef FF_FAT_CHECK
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return -2;
+				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
@@ -416,6 +446,9 @@ FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 #ifdef FF_FAT_CHECK
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
+				if(!pBuffer) {
+					return -2;
+				}
 				testLong = FF_getLong(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
@@ -462,7 +495,9 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart = pIoman->pPartition;
 
 	pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_READ);
-
+	if(!pBuffer) {
+		return FF_ERR_DEVICE_DRIVER_FAILED;
+	}
 	pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
 
 	if(pPart->BlkSize == 512 || pPart->BlkSize == 1024 || pPart->BlkSize == 2048 || pPart->BlkSize == 4096) {
@@ -478,7 +513,9 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		}
 		// Now we get the Partition sector.
 		pBuffer = FF_GetBuffer(pIoman, pPart->BeginLBA, FF_MODE_READ);
-
+		if(!pBuffer) {
+			return FF_ERR_DEVICE_DRIVER_FAILED;
+		}
 		pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
 		if(pPart->BlkSize != 512 && pPart->BlkSize != 1024 && pPart->BlkSize != 2048 && pPart->BlkSize != 4096) {
 			FF_ReleaseBuffer(pIoman, pBuffer);

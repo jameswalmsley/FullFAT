@@ -50,6 +50,7 @@
 #define FF_ERR_IOMAN_INVALID_PARTITION_NUM	-14
 #define FF_ERR_IOMAN_NOT_FAT_FORMATTED		-15
 #define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE	-16 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
+#define FF_ERR_DEVICE_DRIVER_FAILED			-17
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -65,9 +66,12 @@
  *	Provide access to any Block Device via the following interfaces.
  *	Returns the number of blocks actually read or written.
  **/
-typedef FF_T_UINT32 (*FF_WRITE_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
-typedef FF_T_UINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
+typedef FF_T_SINT32 (*FF_WRITE_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
+typedef FF_T_SINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
 
+#define FF_ERR_DRIVER_BUSY			-10
+#define FF_ERR_DRIVER_FATAL_ERROR	-11
+#define DRIVER_BUSY_SLEEP			200	///< In Milliseconds. How long FullFAT should sleep the thread for in ms, if FF_ERR_DRIVER_BUSY is recieved.
 /**
  *	@public
  *	@brief	Describes the block device driver interface to FullFAT.
@@ -132,7 +136,7 @@ typedef struct {
 	FF_BLK_DEVICE	*pBlkDevice;	///< Pointer to a Block device description.
 	FF_PARTITION	*pPartition;	///< Pointer to a partition description.
 	FF_BUFFER		*pBuffers;		///< Pointer to the first buffer description.
-	FF_T_INT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
+	FF_T_UINT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT16		BlkSize;		///< The Block size that IOMAN is configured to.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
 	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
