@@ -76,7 +76,7 @@ int main(void) {
 	LARGE_INTEGER start_ticks, end_ticks, cputime;
 	FILE *f, *fDest;
 	FF_FILE *fSource;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096, 512);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
@@ -128,7 +128,7 @@ int main(void) {
 					sprintf(commandShadow, "%s", (commandLine + 3));
 				}
 
-				if(FF_FindDir(pIoman, commandShadow)) {
+				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
 					sprintf(workingDir, "%s", commandShadow);
 				} else {
 					printf("Path %s Not Found\n", commandShadow);

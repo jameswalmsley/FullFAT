@@ -52,7 +52,7 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8192*2	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	8192	// Increase This for Faster File Copies
 
 void test_512(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void test_2048(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -104,12 +104,12 @@ int main(void) {
 			return -1;
 		}
 
-		f1 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
+		/*f1 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
 		f2 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
 		f3 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
-		f4 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
+		f4 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);*/
 		i = 0;
-		while(1) {
+		/*while(1) {
 			FF_Seek(f1, 547838, SEEK_SET);
 			FF_Read(f1, 1024, 1, buffer);
 			FF_Seek(f2, 564789, SEEK_SET);
@@ -119,7 +119,7 @@ int main(void) {
 			FF_Read(f4, 1024, 1, buffer);
 			FF_Seek(f4, 0, SEEK_SET);
 			printf("Sucessful Iteration %d\r", i++);
-		}
+		}*/
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
@@ -144,7 +144,7 @@ int main(void) {
 					sprintf(commandShadow, "%s", (commandLine + 3));
 				}
 
-				if(FF_FindDir(pIoman, commandShadow)) {
+				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
 					sprintf(workingDir, "%s", commandShadow);
 				} else {
 					printf("Path %s Not Found\n", commandShadow);
