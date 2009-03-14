@@ -290,11 +290,27 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 					// Buffer is suitable, ensure we don't overflow its handle count.
 					//if((pIoman->pBuffers + i)->NumHandles < FF_BUF_MAX_HANDLES) {	// 	TODO!!:|260|warning: comparison is always true due to limited range of data type|
 						(pIoman->pBuffers + i)->NumHandles ++;
-						//(pIoman->pBuffers + i)->Persistance ++;
+						(pIoman->pBuffers + i)->Persistance ++;
 						FF_ReleaseSemaphore(pIoman->pSemaphore);
 						return (pIoman->pBuffers + i);
 					//}
 				}
+			}
+		}
+
+		for(i = 0; i < pIoman->CacheSize; i++) {
+			if((pIoman->pBuffers + i)->Persistance == 0) {
+				retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+				if(retVal) { // Buffer was not filled!
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return NULL;
+				}
+				(pIoman->pBuffers + i)->Mode = Mode;
+				(pIoman->pBuffers + i)->NumHandles = 1;
+				(pIoman->pBuffers + i)->Sector = Sector;
+				// Fill the buffer with data from the device.
+				FF_ReleaseSemaphore(pIoman->pSemaphore);
+				return (pIoman->pBuffers + i);
 			}
 		}
 
