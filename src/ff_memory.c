@@ -121,7 +121,7 @@ FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumb
 
 	tokenStart = i;
 
-	for(i; i < strLen; i++) {
+	while(i < strLen) {
 		if(string[i] == '\\' || string[i] == '/') {
 			y++;
 			if(y == *tokenNumber) {
@@ -132,6 +132,7 @@ FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumb
 				break;
 			}
 		}
+		i++;
 	}
 
 	if(!tokenEnd) {

@@ -500,7 +500,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	}
 	pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
 
-	if(pPart->BlkSize == 512 || pPart->BlkSize == 1024 || pPart->BlkSize == 2048 || pPart->BlkSize == 4096) {
+	if((pPart->BlkSize % 512) == 0) {
 		// Volume is not partitioned (MBR Found)
 		pPart->BeginLBA = 0;
 	} else {
@@ -517,7 +517,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 			return FF_ERR_DEVICE_DRIVER_FAILED;
 		}
 		pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
-		if(pPart->BlkSize != 512 && pPart->BlkSize != 1024 && pPart->BlkSize != 2048 && pPart->BlkSize != 4096) {
+		if((pPart->BlkSize % 512) != 0) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			return FF_ERR_IOMAN_INVALID_FORMAT;
 		}
