@@ -71,7 +71,7 @@ typedef FF_T_SINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAd
 
 #define FF_ERR_DRIVER_BUSY			-10
 #define FF_ERR_DRIVER_FATAL_ERROR	-11
-#define DRIVER_BUSY_SLEEP			200	///< In Milliseconds. How long FullFAT should sleep the thread for in ms, if FF_ERR_DRIVER_BUSY is recieved.
+#define FF_DRIVER_BUSY_SLEEP		200	///< In Milliseconds. How long FullFAT should sleep the thread for in ms, if FF_ERR_DRIVER_BUSY is recieved.
 /**
  *	@public
  *	@brief	Describes the block device driver interface to FullFAT.

@@ -802,7 +802,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				}
 				if(retVal == FF_ERR_DRIVER_BUSY) {
 					FF_Yield();
-					FF_Sleep(DRIVER_BUSY_SLEEP);
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 				}
 			} while(retVal == FF_ERR_DRIVER_BUSY);
 
@@ -849,7 +849,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				}
 				if(retVal == FF_ERR_DRIVER_BUSY) {
 					FF_Yield();
-					FF_Sleep(DRIVER_BUSY_SLEEP);
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 				}
 			} while(retVal == FF_ERR_DRIVER_BUSY);
 			

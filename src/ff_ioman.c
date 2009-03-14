@@ -233,7 +233,7 @@ FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 
 			retVal = pIoman->pBlkDevice->fnReadBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
 			if(retVal == FF_ERR_DRIVER_BUSY) {
 				FF_Yield();
-				FF_Sleep(DRIVER_BUSY_SLEEP);
+				FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 			}
 		} while(retVal == FF_ERR_DRIVER_BUSY);
 		if(retVal < 0) {
