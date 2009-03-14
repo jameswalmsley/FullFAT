@@ -609,7 +609,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 
 	i = (FF_T_UINT16) strlen(path);
 
-	while(i > 0) {
+	while(i != 0) {
 		if(path[i] == '\\' || path[i] == '/') {
 			break;
 		}
@@ -618,6 +618,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 
 	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
 
+	if(i == 0) {
+		i = 1;
+	}
 	
 	DirCluster = FF_FindDir(pIoman, path, i);
 	
