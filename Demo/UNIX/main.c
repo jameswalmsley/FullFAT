@@ -92,7 +92,7 @@ int main(void) {
 	FILE *fDev,*fDest;
 	int f;
 	FF_FILE *fSource;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096, 512);
 	
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
@@ -115,7 +115,7 @@ int main(void) {
 	printf("Use the command help for more information\n\n");
 	
 	if(fDev) {
-		FF_RegisterBlkDevice(pIoman, (FF_WRITE_BLOCKS) test, (FF_READ_BLOCKS) test, fDev);
+		FF_RegisterBlkDevice(pIoman, 512,(FF_WRITE_BLOCKS) test_512, (FF_READ_BLOCKS) test_512, fDev);
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT couldn't mount the specified partition\n");
@@ -146,7 +146,7 @@ int main(void) {
 					sprintf(commandShadow, "%s", (commandLine + 3));
 				}
 
-				if(FF_FindDir(pIoman, commandShadow)) {
+				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
 					sprintf(workingDir, "%s", commandShadow);
 				} else {
 					printf("Path %s Not Found\n", commandShadow);
