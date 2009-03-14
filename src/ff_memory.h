@@ -48,6 +48,6 @@ FF_T_UINT16		FF_getShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
 FF_T_UINT32		FF_getLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
 
 void			FF_tolower	(FF_T_INT8 *string, FF_T_UINT32 strLen);
-FF_T_INT8		*FF_strtok	(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last);
+FF_T_INT8		*FF_strtok	(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length);
 
 #endif

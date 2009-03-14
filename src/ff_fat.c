@@ -249,40 +249,35 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 /**
  *	@private
  **/
-FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
+FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
 
 	FF_T_UINT32 dirCluster = pIoman->pPartition->RootDirCluster;
-	FF_T_UINT32 lastDirCluster;
 	FF_T_INT8	mytoken[FF_MAX_FILENAME];
 	FF_T_INT8	*token;
 	FF_T_UINT16	it = 0;		// Re-entrancy Variables for FF_strtok()
 	FF_T_BOOL	last = FF_FALSE;
-	FF_T_UINT32 pathLength = strlen(path);
-	FF_DIRENT MyDir;
+	FF_DIRENT	MyDir;
 
 	MyDir.CurrentCluster = 0;
 
-	if(pathLength == 1) {	// Must be the root dir! (/ or \)
+	if(pathLen == 1) {	// Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
 	}
 
-	token = FF_strtok(path, mytoken, &it, &last);
+	token = FF_strtok(path, mytoken, &it, &last, pathLen);
 	//token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
 
 	 do{
-		lastDirCluster = dirCluster;
-		dirCluster = FF_FindEntry(pIoman, dirCluster, token, 0x00, &MyDir);
+		//lastDirCluster = dirCluster;
+		MyDir.CurrentItem = 0;
+		dirCluster = FF_FindEntry(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
 		if(dirCluster == 0 && MyDir.CurrentItem == 2) {	// .. Dir Entry pointing to root dir.
 			dirCluster = pIoman->pPartition->RootDirCluster;
 		}
-		token = FF_strtok(path, mytoken, &it, &last);
+		token = FF_strtok(path, mytoken, &it, &last, pathLen);
 	}while(token != NULL);
 
-	if(dirCluster) {
-		if((MyDir.Attrib & FF_FAT_ATTR_DIR) != FF_FAT_ATTR_DIR) {
-			dirCluster = lastDirCluster;
-		}
-	}
+
 
 	return dirCluster;
 }
@@ -540,7 +535,7 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 		return FF_ERR_FAT_NULL_POINTER;
 	}
 
-	pDirent->DirCluster = FF_FindDir(pIoman, path);	// Get the directory cluster, if it exists.
+	pDirent->DirCluster = FF_FindDir(pIoman, path, (FF_T_UINT16)strlen(path));	// Get the directory cluster, if it exists.
 
 	if(pDirent->DirCluster == 0) {
 		return -2;
@@ -624,7 +619,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
 
 	
-	DirCluster = FF_FindDir(pIoman, path);
+	DirCluster = FF_FindDir(pIoman, path, i);
 	
 
 	if(DirCluster) {
