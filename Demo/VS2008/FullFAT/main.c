@@ -75,7 +75,7 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f,*fDest;
-	FF_FILE *fSource, *f1, *f2, *f3, *f4;
+	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
@@ -103,23 +103,6 @@ int main(void) {
 			getchar();
 			return -1;
 		}
-
-		/*f1 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
-		f2 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
-		f3 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);
-		f4 = FF_Open(pIoman, "\\gs.avi", FF_MODE_READ);*/
-		i = 0;
-		/*while(1) {
-			FF_Seek(f1, 547838, SEEK_SET);
-			FF_Read(f1, 1024, 1, buffer);
-			FF_Seek(f2, 564789, SEEK_SET);
-			FF_Read(f2, 1024, 1, buffer);
-			FF_Seek(f3, -564789, SEEK_END);
-			FF_Read(f3, 1024, 1, buffer);
-			FF_Read(f4, 1024, 1, buffer);
-			FF_Seek(f4, 0, SEEK_SET);
-			printf("Sucessful Iteration %d\r", i++);
-		}*/
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
