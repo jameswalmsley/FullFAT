@@ -1,29 +1,32 @@
-/******************************************************************************
- *   FullFAT - Embedded FAT File-System
- *
- *   Provides a full, thread-safe, implementation of the FAT file-system
- *   suitable for low-power embedded systems.
- *
- *   Written by James Walmsley, james@worm.me.uk, www.worm.me.uk/fullfat/
- *
- *   Copyright 2009 James Walmsley
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- *
- *   Commercial support is available for FullFAT, for more information
- *   please contact the author, james@worm.me.uk
- *
- *   Removing the above notice is illegal and will invalidate this license.
+/*****************************************************************************
+ *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ *                                                                           *
+ *  IMPORTANT NOTICE:                                                        *
+ *  =================                                                        *
+ *  Alternative Licensing is available directly from the Copyright holder,   *
+ *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
+ *  a Commercial license.                                                    *
+ *                                                                           *
+ *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *                                                                           *
+ *  Removing the above notice is illegal and will invalidate this license.   *
+ *****************************************************************************
+ *  See http://worm.me.uk/fullfat for more information.                      *
+ *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
 /**
@@ -184,7 +187,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
  *
  **/
 void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
-	int i;
+	FF_T_UINT16 i;
 	FF_BUFFER *pBuffer = pIoman->pBuffers;
 	for(i = 0; i < pIoman->CacheSize; i++) {
 		pBuffer->ID 			= (FF_T_UINT16) i;
@@ -250,6 +253,57 @@ FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 
 }
 
 
+/**
+ *	@private
+ *	@brief	Flushes a buffer to the device driver.
+ *
+ *	@param	pIoman	FF_IOMAN object.
+ *	@param	Sector	LBA address of the sector to fetch.
+ *	@param	pBuffer	Pointer to a byte-wise buffer to store the fetched data.
+ *
+ *	@return	FF_TRUE when valid, else FF_FALSE.
+ **/
+FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+	FF_T_SINT32 retVal = 0;
+	if(pIoman->pBlkDevice->fnWriteBlocks) {	// Make sure we don't execute a NULL.
+		 do{
+			retVal = pIoman->pBlkDevice->fnWriteBlocks(pBuffer, Sector, 1, pIoman->pBlkDevice->pParam);
+			if(retVal == FF_ERR_DRIVER_BUSY) {
+				FF_Yield();
+				FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+			}
+		} while(retVal == FF_ERR_DRIVER_BUSY);
+		if(retVal < 0) {
+			return -1;		// FF_ERR_DRIVER_FATAL_ERROR was returned Fail!
+		} else {
+			if(retVal == 1) {
+				return 0;		// 1 Block was sucessfully written.
+			} else {
+				return -1;		// 0 Blocks we're written, Error!
+			}
+		}
+	}
+	return -1;	// error no device diver registered.
+}
+
+FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
+	
+	FF_T_UINT16 i,x;
+
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		for(i = 0; i < pIoman->CacheSize; i++) {
+			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->Mode == FF_MODE_WRITE) {
+				FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
+				(pIoman->pBuffers + i)->Mode = FF_MODE_READ;
+			}
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return 0;
+}
+
 
 /**
  *	@private
@@ -264,7 +318,6 @@ FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 
 	FF_T_UINT16 i;
-	
 	FF_T_SINT32 retVal;
 	
 
@@ -296,32 +349,39 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 					//}
 				}
 			}
-		}
 
-		for(i = 0; i < pIoman->CacheSize; i++) {
-			if((pIoman->pBuffers + i)->Persistance == 0) {
-				retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
-				if(retVal) { // Buffer was not filled!
+			for(i = 0; i < pIoman->CacheSize; i++) {
+				if((pIoman->pBuffers + i)->Persistance == 0) {
+					retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+					if(retVal) { // Buffer was not filled!
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+						return NULL;
+					}
+					(pIoman->pBuffers + i)->Mode = Mode;
+					(pIoman->pBuffers + i)->NumHandles = 1;
+					(pIoman->pBuffers + i)->Sector = Sector;
+					// Fill the buffer with data from the device.
 					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return NULL;
+					return (pIoman->pBuffers + i);
 				}
-				(pIoman->pBuffers + i)->Mode = Mode;
-				(pIoman->pBuffers + i)->NumHandles = 1;
-				(pIoman->pBuffers + i)->Sector = Sector;
-				// Fill the buffer with data from the device.
-				FF_ReleaseSemaphore(pIoman->pSemaphore);
-				return (pIoman->pBuffers + i);
 			}
 		}
+
+		
 
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->NumHandles == 0) {
+				if((pIoman->pBuffers + i)->Mode == FF_MODE_WRITE) {
+					// Sector must be flushed to the disk!
+					FF_IOMAN_FlushBuffer(pIoman, Sector, (pIoman->pBuffers + i)->pBuffer);
+				}
 				retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
 				if(retVal) { // Buffer was not filled!
 					FF_ReleaseSemaphore(pIoman->pSemaphore);
 					return NULL;
 				}
 				(pIoman->pBuffers + i)->Mode = Mode;
+				(pIoman->pBuffers + i)->Persistance = 0;
 				(pIoman->pBuffers + i)->NumHandles = 1;
 				(pIoman->pBuffers + i)->Sector = Sector;
 				// Fill the buffer with data from the device.
@@ -330,7 +390,6 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
 			}
 		}
 
-		// TODO: Think of a better way to deal with this situation.
 		FF_ReleaseSemaphore(pIoman->pSemaphore);	// Important that we free access!
 		FF_Yield();		// Yield Thread, so that further iterations can gain resources.
 	}
@@ -403,6 +462,7 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_
 
 	// Here we shall just set the values.
 	// FullFAT checks before using any of these values.
+	pIoman->pBlkDevice->devBlkSize		= BlkSize;
 	pIoman->pBlkDevice->fnReadBlocks	= fnReadBlocks;
 	pIoman->pBlkDevice->fnWriteBlocks	= fnWriteBlocks;
 	pIoman->pBlkDevice->pParam			= pParam;

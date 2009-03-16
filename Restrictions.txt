@@ -1,0 +1,9 @@
+Further to the License provided in License.txt the following restrictions also apply:
+
+You may not use FullFAT in any project, or to support any project in any way or means,
+that assists or directly involves the development, design,  and or manufacture or
+production of nuclear, missiles, or chemical or biological weapons.
+
+Furthermore this clause extends to the production, design, or use of any device used
+to harm, others.
+

@@ -1,0 +1,9 @@
+Commercial licensing is available for FullFAT from the Copyright holder (James Walmsley).
+
+For more information on how to use FullFAT commercially, please contact James:
+
+james@worm.me.uk
+
+Or see http://worm.me.uk/fullfat/ 
+
+All situations considered, and some causes may even be granted a Free Commercial license.

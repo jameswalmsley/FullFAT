@@ -30,29 +30,45 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_safety.h
+ *	@file		ff_file.h
  *	@author		James Walmsley
- *	@ingroup	SAFETY
+ *	@ingroup	FILEIO
  **/
+#ifndef _FF_FILE_H_
+#define _FF_FILE_H_
 
-#ifndef _FF_SAFETY_H_
-#define	_FF_SAFETY_H_
-
-#include <stdlib.h>
+#include "ff_config.h"
 #include "ff_types.h"
+#include "ff_ioman.h"
+#include "ff_dir.h"
 
 
-//---------- PROTOTYPES (in order of appearance)
 
-// PUBLIC:
+#define FF_SEEK_SET	1
+#define FF_SEEK_CUR	2
+#define FF_SEEK_END	3
 
+typedef struct {
+	FF_IOMAN	*pIoman;		///< Ioman Pointer!
+	FF_T_UINT32 Filesize;		///< File's Size.
+	FF_T_UINT32 ObjectCluster;	///< File's Start Cluster.
+	FF_T_UINT32 FilePointer;	///< Current Position Pointer.
+	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
+	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
+	FF_T_UINT32 AddrCurrentCluster;
+} FF_FILE;
 
-// PRIVATE:
-void		*FF_CreateSemaphore		(void);
-void		FF_PendSemaphore		(void *pSemaphore);
-void		FF_ReleaseSemaphore		(void *pSemaphore);
-void		FF_DestroySemaphore		(void *pSemaphore);
-void		FF_Yield				(void);
-void		FF_Sleep				(FF_T_UINT32 TimeMs);
+//---------- PROTOTYPES
+// PUBLIC (Interfaces):
+FF_T_SINT8	 FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path);
+FF_T_SINT8	 FF_FindNext	(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
+FF_T_UINT32	 FF_FindDir		(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen);
+
+FF_FILE		*FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode);
+FF_T_SINT8	 FF_Close	(FF_FILE *pFile);
+FF_T_INT32	 FF_GetC	(FF_FILE *pFile);
+FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
+FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
+FF_T_SINT8	 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin);
 
 #endif

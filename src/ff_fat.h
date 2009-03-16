@@ -1,29 +1,32 @@
-/******************************************************************************
- *   FullFAT - Embedded FAT File-System
- *
- *   Provides a full, thread-safe, implementation of the FAT file-system
- *   suitable for low-power embedded systems.
- *
- *   Written by James Walmsley, james@worm.me.uk, www.worm.me.uk/fullfat/
- *
- *   Copyright 2009 James Walmsley
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- *
- *   Commercial support is available for FullFAT, for more information
- *   please contact the author, james@worm.me.uk
- *
- *   Removing the above notice is illegal and will invalidate this license.
+/*****************************************************************************
+ *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ *                                                                           *
+ *  IMPORTANT NOTICE:                                                        *
+ *  =================                                                        *
+ *  Alternative Licensing is available directly from the Copyright holder,   *
+ *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
+ *  a Commercial license.                                                    *
+ *                                                                           *
+ *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *                                                                           *
+ *  Removing the above notice is illegal and will invalidate this license.   *
+ *****************************************************************************
+ *  See http://worm.me.uk/fullfat for more information.                      *
+ *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
 /**
@@ -38,58 +41,22 @@
 #include "fat.h"
 #include "ff_ioman.h"
 #include "ff_blk.h"
-
-#define FF_SEEK_SET	1
-#define FF_SEEK_CUR	2
-#define FF_SEEK_END	3
-
-typedef struct {
-	FF_IOMAN	*pIoman;		///< Ioman Pointer!
-	FF_T_UINT32 Filesize;		///< File's Size.
-	FF_T_UINT32 ObjectCluster;	///< File's Start Cluster.
-	FF_T_UINT32 FilePointer;	///< Current Position Pointer.
-	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
-	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
-	FF_T_UINT32 AddrCurrentCluster;
-} FF_FILE;
-
-
-typedef struct {
-	
-#ifdef FF_LFN_SUPPORT
-	FF_T_INT8	FileName[256];
-#else
-	FF_T_INT8	FileName[13];
-#endif
-	FF_T_UINT8	Attrib;
-	FF_T_UINT32 Filesize;
-	FF_T_UINT32	ObjectCluster;
-
-	//---- Book Keeping for FF_Find Functions
-	FF_T_UINT32	CurrentItem;	
-	FF_T_UINT32	DirCluster;
-	FF_T_UINT32	CurrentCluster;
-	FF_T_BOOL	ProcessedLFN;
-} FF_DIRENT;
-
+#include "ff_types.h"
 
 //---------- ERROR CODES
 
-#define FF_ERR_FAT_NULL_POINTER	-2
 
 //---------- PROTOTYPES
-// PUBLIC (Interfaces):
-FF_T_SINT8	 FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path);
-FF_T_SINT8	 FF_FindNext	(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
-FF_T_UINT32	 FF_FindDir		(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen);
 
-FF_FILE		*FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode);
-FF_T_SINT8	 FF_Close	(FF_FILE *pFile);
-FF_T_INT32	 FF_GetC	(FF_FILE *pFile);
-FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
-FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
-FF_T_SINT8	 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin);
+FF_T_UINT32 FF_getRealLBA			(FF_IOMAN *pIoman, FF_T_UINT32 LBA);
+FF_T_UINT32 FF_Cluster2LBA			(FF_IOMAN *pIoman, FF_T_UINT32 Cluster);
+FF_T_UINT32 FF_LBA2Cluster			(FF_IOMAN *pIoman, FF_T_UINT32 Address);
+FF_T_SINT32 FF_getFatEntry			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster);
+FF_T_BOOL	FF_isEndOfChain			(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry);
+FF_T_SINT8	FF_putFatEntry			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Value);
+FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
+FF_T_SINT8	FF_ExtendClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count);
+FF_T_SINT8	FF_UnlinkClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count);
 
-FF_T_SINT8	 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 
 #endif

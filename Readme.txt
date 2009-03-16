@@ -1,7 +1,8 @@
-Welcome to the FullFAT SVN Repository on Google Code!
-======================================================
+FullFAT - High Performance, Thread-Safe Embedded FAT File-System
 
-I will start releasing files onto the repository as soon
-as FullFAT reaches a usable state.
+Before use, see License.txt, Licensing.txt and Exceptions.txt.
 
-I will then also be looking for people to help improve.
+Integration information is available in the doc folder,
+however more up-to-date information can be found on the FullFAT
+wiki on http://fullfat.googlecode.com/
+

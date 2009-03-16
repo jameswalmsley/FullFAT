@@ -186,7 +186,15 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\src\ff_dir.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_fat.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_file.c"
 					>
 				</File>
 				<File
@@ -224,7 +232,19 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\src\ff_dir.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_error.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_fat.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_file.h"
 					>
 				</File>
 				<File

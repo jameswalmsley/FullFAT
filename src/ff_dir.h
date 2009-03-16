@@ -30,29 +30,41 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_safety.h
+ *	@file		ff_dir.h
  *	@author		James Walmsley
- *	@ingroup	SAFETY
+ *	@ingroup	DIR
  **/
+#ifndef _FF_DIR_H_
+#define _FF_DIR_H_
 
-#ifndef _FF_SAFETY_H_
-#define	_FF_SAFETY_H_
-
-#include <stdlib.h>
 #include "ff_types.h"
+#include "ff_config.h"
+#include "ff_error.h"
+#include "ff_ioman.h"
+#include "ff_blk.h"
+#include "ff_fat.h"
+#include "fat.h"
+#include <string.h>
 
+typedef struct {
+	
+#ifdef FF_LFN_SUPPORT
+	FF_T_INT8	FileName[FF_MAX_FILENAME];
+#else
+	FF_T_INT8	FileName[FF_MAX_FILENAME];
+#endif
+	FF_T_UINT8	Attrib;
+	FF_T_UINT32 Filesize;
+	FF_T_UINT32	ObjectCluster;
 
-//---------- PROTOTYPES (in order of appearance)
+	//---- Book Keeping for FF_Find Functions
+	FF_T_UINT32	CurrentItem;	
+	FF_T_UINT32	DirCluster;
+	FF_T_UINT32	CurrentCluster;
+	FF_T_BOOL	ProcessedLFN;
+} FF_DIRENT;
 
-// PUBLIC:
-
-
-// PRIVATE:
-void		*FF_CreateSemaphore		(void);
-void		FF_PendSemaphore		(void *pSemaphore);
-void		FF_ReleaseSemaphore		(void *pSemaphore);
-void		FF_DestroySemaphore		(void *pSemaphore);
-void		FF_Yield				(void);
-void		FF_Sleep				(FF_T_UINT32 TimeMs);
+FF_T_SINT8	FF_GetEntry	(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted);
+FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
 
 #endif

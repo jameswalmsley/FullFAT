@@ -1,29 +1,32 @@
-/******************************************************************************
- *   FullFAT - Embedded FAT File-System
- *
- *   Provides a full, thread-safe, implementation of the FAT file-system
- *   suitable for low-power embedded systems.
- *
- *   Written by James Walmsley, james@worm.me.uk, www.worm.me.uk/fullfat/
- *
- *   Copyright 2009 James Walmsley
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- *
- *   Commercial support is available for FullFAT, for more information
- *   please contact the author, james@worm.me.uk
- *
- *   Removing the above notice is illegal and will invalidate this license.
+/*****************************************************************************
+ *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ *                                                                           *
+ *  IMPORTANT NOTICE:                                                        *
+ *  =================                                                        *
+ *  Alternative Licensing is available directly from the Copyright holder,   *
+ *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
+ *  a Commercial license.                                                    *
+ *                                                                           *
+ *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *                                                                           *
+ *  Removing the above notice is illegal and will invalidate this license.   *
+ *****************************************************************************
+ *  See http://worm.me.uk/fullfat for more information.                      *
+ *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
 /**
@@ -43,6 +46,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,10 +56,13 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8192	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	8192*4	// Increase This for Faster File Copies
 
-void test_512(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test_2048(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+void test_2048		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -75,6 +82,7 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f,*fDest;
+	int f1;
 	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 	char buffer[COPY_BUFFER_SIZE];
@@ -86,23 +94,28 @@ int main(void) {
 	unsigned long BytesRead;
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
+	FF_BUFFER *mybuffer;
 	float time, transferRate;
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	//f = fopen("c:\\ramdisk.dat", "ab+");
+	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
 	//f = fopen("c:\\ramdisk.dat", "rb");
-	
+	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
+	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	QueryPerformanceFrequency(&ticksPerSecond);
 
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) test_512, (FF_READ_BLOCKS) test_512, (void *)f);
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT Couldn't mount the specified parition!\n");
 			getchar();
 			return -1;
 		}
+
+		//FF_CreateDirent(pIoman, 1,&mydir);
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
@@ -239,6 +252,7 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
+				close(f1);
 				return 0;
 			}
 		}

@@ -28,31 +28,11 @@
  *  See http://worm.me.uk/fullfat for more information.                      *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
+#ifndef _FF_ERROR_H_
+#define _FF_ERROR_H_
 
-/**
- *	@file		ff_safety.h
- *	@author		James Walmsley
- *	@ingroup	SAFETY
- **/
+// Global Error Codes
+#define FF_ERR_NULL_POINTER		-2
 
-#ifndef _FF_SAFETY_H_
-#define	_FF_SAFETY_H_
-
-#include <stdlib.h>
-#include "ff_types.h"
-
-
-//---------- PROTOTYPES (in order of appearance)
-
-// PUBLIC:
-
-
-// PRIVATE:
-void		*FF_CreateSemaphore		(void);
-void		FF_PendSemaphore		(void *pSemaphore);
-void		FF_ReleaseSemaphore		(void *pSemaphore);
-void		FF_DestroySemaphore		(void *pSemaphore);
-void		FF_Yield				(void);
-void		FF_Sleep				(FF_T_UINT32 TimeMs);
 
 #endif
