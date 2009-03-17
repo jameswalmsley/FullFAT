@@ -146,7 +146,7 @@ FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumb
 		if(string[i] == '\\' || string[i] == '/') {
 			y++;
 			if(y == *tokenNumber) {
-				tokenStart = i + 1;
+				tokenStart = (FF_T_UINT16) (i + 1);
 			}
 			if(y == (*tokenNumber + 1)) {
 				tokenEnd = i;
@@ -165,7 +165,7 @@ FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumb
 		tokenEnd = i;
 	}
 	
-	memcpy(token, (string + tokenStart), tokenEnd - tokenStart);
+	memcpy(token, (string + tokenStart), (FF_T_UINT32)(tokenEnd - tokenStart));
 	token[tokenEnd - tokenStart] = '\0';
 	*tokenNumber += 1;
 

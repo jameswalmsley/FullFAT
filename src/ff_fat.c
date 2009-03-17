@@ -110,11 +110,11 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 		FatOffset = nCluster + (nCluster / 2);
 	}
 	
-	FatSector = pIoman->pPartition->FatBeginLBA + (FatOffset / pIoman->pPartition->BlkSize);
-	FatSectorEntry = FatOffset % pIoman->pPartition->BlkSize;
+	FatSector		= pIoman->pPartition->FatBeginLBA + (FatOffset / pIoman->pPartition->BlkSize);
+	FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
 	
-	LBAadjust = (FF_T_UINT8) (FatSectorEntry / pIoman->BlkSize);
-	relClusterEntry = FatSectorEntry % pIoman->BlkSize;
+	LBAadjust		= (FF_T_UINT8)	(FatSectorEntry / pIoman->BlkSize);
+	relClusterEntry = (FF_T_UINT16) (FatSectorEntry % pIoman->BlkSize);
 	
 	FatSector = FF_getRealLBA(pIoman, FatSector);
 	
@@ -127,7 +127,7 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
-				F12short[0] = FF_getChar(pBuffer->pBuffer, (pIoman->BlkSize - 1));				
+				F12short[0] = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(pIoman->BlkSize - 1));				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			// Second Buffer get the first Byte in buffer (second byte of out address)!
@@ -146,7 +146,7 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 				FatEntry = FatEntry >> 4;
 			} 
 			FatEntry &= 0x0FFF;
-			return FatEntry;
+			return (FF_T_SINT32) FatEntry;
 		}
 	}
 	
@@ -170,7 +170,7 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
-	return FatEntry;
+	return (FF_T_SINT32) FatEntry;
 }
 
 /**
@@ -197,6 +197,9 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 		if(fatEntry >= 0x00000ff8) {
 			result = FF_TRUE;
 		}	
+	}
+	if(fatEntry == 0x00000000) {
+		result = FF_TRUE;	//Perhaps trying to read a deleted file!
 	}
 	return result;
 }
@@ -244,7 +247,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 
 #ifdef FF_FAT12_SUPPORT	
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
-		if(relClusterEntry == (pIoman->BlkSize - 1)) {
+		if(relClusterEntry == (FF_T_UINT16) (pIoman->BlkSize - 1)) {
 			// Fat Entry SPANS a Sector!
 			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
@@ -261,11 +264,11 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
-				F12short[1] = FF_getChar(pBuffer->pBuffer, 0);				
+				F12short[1] = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16) 0x0000);				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			
-			FatEntry = FF_getShort((FF_T_UINT8*)&F12short, 0);	// Guarantee correct Endianess!
+			FatEntry = FF_getShort((FF_T_UINT8*)&F12short, (FF_T_UINT16) 0x0000);	// Guarantee correct Endianess!
 
 			if(nCluster & 0x0001) {
 				FatEntry   &= 0x000F;
@@ -276,7 +279,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 				Value		&= 0x0FFF;
 			}
 
-			FF_putShort(&FatEntry, 0x0000, Value);
+			FF_putShort((FF_T_UINT8 *)&FatEntry, 0x0000, (FF_T_UINT16)Value);
 
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
 			{
@@ -325,7 +328,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
-	return FatEntry;
+	return 0;
 }
 
 
@@ -407,7 +410,28 @@ FF_T_SINT8 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
  *
  **/
 FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
+	
+	FF_T_UINT32 fatEntry;
+	FF_T_UINT32 currentCluster, chainLength = 0;
 
+	fatEntry = StartCluster;
+
+	if(Count == 0) {
+		// Free all clusters in the chain!
+		currentCluster = StartCluster;
+		fatEntry = currentCluster;
+        do {
+			fatEntry = FF_getFatEntry(pIoman, fatEntry);
+			FF_putFatEntry(pIoman, currentCluster, 0x00000000);
+			currentCluster = fatEntry;
+		}while(!FF_isEndOfChain(pIoman, fatEntry));
+	} else {
+		// Truncation - This is quite hard, because we can only do it backwards.
+		do {
+			fatEntry = FF_getFatEntry(pIoman, fatEntry);
+			chainLength++;
+		}while(!FF_isEndOfChain(pIoman, fatEntry));
+	}
 
 	return 0;
 }

@@ -38,6 +38,8 @@
 #ifndef _FF_TYPES_H_
 #define _FF_TYPES_H_
 
+#include "ff_config.h"
+
 //---------------- BOOLEAN TYPES
 typedef	char			FF_T_BOOL;		///< This can be a char if your compiler isn't C99
 
@@ -55,13 +57,17 @@ typedef	unsigned short	FF_T_UINT16;
 typedef	signed short	FF_T_SINT16;
 
 //---------------- 32 BIT INTEGERS
-typedef	int				FF_T_INT32;
-typedef	unsigned int	FF_T_UINT32;
-typedef	signed int		FF_T_SINT32;
+typedef	long			FF_T_INT32;
+typedef	unsigned long	FF_T_UINT32;
+typedef	signed long		FF_T_SINT32;
 
+#ifdef FF_64_NUM_SUPPORT
 //---------------- 64 BIT INTEGERS			// If you cannot define these, then make sure you see ff_config.h
-//typedef long long			FF_T_INT64;		// about 64-bit number support.
-//typedef unsigned long long	FF_T_UINT64;	// It means that FF_GetVolumeSize() cannot return a size
-//typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64-bits integers.
+typedef long long			FF_T_INT64;		// about 64-bit number support.
+typedef unsigned long long	FF_T_UINT64;	// It means that FF_GetVolumeSize() cannot return a size
+typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64-bits integers.
 											// No other function makes use of 64-bit numbers.
 #endif
+
+#endif // end of include guard
+

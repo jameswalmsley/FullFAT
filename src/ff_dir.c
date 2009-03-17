@@ -68,14 +68,14 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 		if((MyDir.Attrib & pa_Attrib) == pa_Attrib){
 			strcpy(Filename, MyDir.FileName);
 			fnameLen = (FF_T_UINT16) strlen(Filename);
-			FF_tolower(Filename, fnameLen);
-			FF_tolower(name, nameLen);
+			FF_tolower(Filename, (FF_T_UINT32) fnameLen);
+			FF_tolower(name, (FF_T_UINT32) nameLen);
 			if(nameLen > fnameLen) {
 				compareLength = nameLen;
 			} else {
 				compareLength = fnameLen;
 			}
-			if(strncmp(name, Filename, compareLength) == 0) {
+			if(strncmp(name, Filename, (FF_T_UINT32) compareLength) == 0) {
 				// Object found!!
 				if(pDirent) {
 					memcpy(pDirent, &MyDir, sizeof(FF_DIRENT));
@@ -142,7 +142,7 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 	FF_T_UINT32		Entry		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
 
 	tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(Entry * 32));
-	numLFNs = tester & ~0x40;
+	numLFNs = (FF_T_UINT8) (tester & ~0x40);
 
 	while(numLFNs > 0) {
 		if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
@@ -248,14 +248,13 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
  **/
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted) {
 	
-	FF_T_UINT8		tester;			///< Unsigned byte for testing if dir is deleted
-	FF_T_SINT8		retVal = 0;		///< Return Value for Function
+	FF_T_UINT8		tester,numLFNs, i;		///< Unsigned byte for testing if dir is deleted
+	FF_T_SINT8		retVal = 0;				///< Return Value for Function
 	FF_T_UINT32		CurrentCluster = DirCluster;
-	FF_T_UINT16		myShort, numLFNs;	///< 16 bits for calculating item cluster.
-	FF_T_UINT32		fatEntry = 0;	///< Used for following Cluster Chain
+	FF_T_UINT16		myShort, ;				///< 16 bits for calculating item cluster.
+	FF_T_UINT32		fatEntry = 0;			///< Used for following Cluster Chain
 	FF_T_UINT32		itemLBA;
-	FF_BUFFER		*pBuffer;	///< Buffer for acquired sector.
-	FF_T_UINT8		i;
+	FF_BUFFER		*pBuffer;				///< Buffer for acquired sector.
 	FF_T_UINT32		minorBlockEntry	= FF_getMinorBlockEntry(pIoman, nEntry, 32);
 	
 	// Lets follow the chain to find its real number
@@ -293,7 +292,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 				
 				pDirent->Attrib = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB + (32 * minorBlockEntry)));
 				if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
-					numLFNs = (tester & ~0x40);
+					numLFNs = (FF_T_UINT8)(tester & ~0x40);
 #ifdef FF_LFN_SUPPORT
 					// May Get the Next Buffer if it needs to!
 					if(FF_getLFN(pIoman, pBuffer, pDirent, pDirent->FileName)) {

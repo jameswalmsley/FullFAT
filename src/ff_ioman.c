@@ -313,8 +313,10 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 				// Search for other buffers that used this sector, and mark them as modified
 				// So that further requests will result in the new sector being fetched.
 				for(x = 0; x < pIoman->CacheSize; x++) {
-					if((pIoman->pBuffers + x)->Sector == (pIoman->pBuffers + i)->Sector && (pIoman->pBuffers + x)->Mode == FF_MODE_READ) {
-						(pIoman->pBuffers + x)->Modified = FF_TRUE;
+					if(x != i) {
+						if((pIoman->pBuffers + x)->Sector == (pIoman->pBuffers + i)->Sector && (pIoman->pBuffers + x)->Mode == FF_MODE_READ) {
+							(pIoman->pBuffers + x)->Modified = FF_TRUE;
+						}
 					}
 				}
 			}
@@ -336,7 +338,7 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
  *
  *	@return	Pointer to the Buffer description.
  **/
-FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode) {
+FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 
 	FF_T_UINT16 i,x;
 	FF_T_SINT32 retVal;
@@ -652,7 +654,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		pPart->BeginLBA = 0;
 	} else {
 		// Primary Partitions to deal with!
-		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber));
+		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber)));
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		if(!pPart->BeginLBA) {

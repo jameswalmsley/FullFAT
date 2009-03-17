@@ -71,6 +71,7 @@ void FF_PendSemaphore(void *pSemaphore) {
 	// becomes available. (No timeout!)
 	// If your OS doesn't do it for you, you should sleep
 	// this thread until the Semaphore is available.
+	pSemaphore;
 }
 
 void FF_ReleaseSemaphore(void *pSemaphore) {
@@ -78,6 +79,7 @@ void FF_ReleaseSemaphore(void *pSemaphore) {
 	//
 
 	//
+	pSemaphore;
 }
 
 void FF_DestroySemaphore(void *pSemaphore) {
@@ -85,6 +87,7 @@ void FF_DestroySemaphore(void *pSemaphore) {
 	//
 
 	//
+	pSemaphore;
 }
 
 void FF_Yield(void) {
@@ -95,6 +98,7 @@ void FF_Yield(void) {
 void FF_Sleep(FF_T_UINT32 TimeMs) {
 	// Call your OS's thread sleep function,
 	// Sleep for TimeMs milliseconds
+	TimeMs;
 }
 
 /**

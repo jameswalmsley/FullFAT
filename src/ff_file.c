@@ -150,6 +150,26 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 }
 
 
+FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
+	FF_FILE *file;
+	FF_T_SINT8 Error;
+
+	file = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+
+	if(!file) {
+		return Error;	// File in use or File not found!
+	}
+
+	FF_UnlinkClusterChain(pIoman, file->ObjectCluster, 0);	// 0 to delete the entire chain!
+	
+	// Edit the Directory Entry! (So it appears as deleted);
+	
+	FF_Close(file); // Free the file pointer resources
+	// File is now lost!
+	return 0;
+}
+
+
 /**
  *	@public
  *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.

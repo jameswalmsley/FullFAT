@@ -36,8 +36,8 @@
 #define FF_ERR_NOT_ENOUGH_MEMORY	-3	///< malloc() failed!
 
 
-#define FF_ERR_FILE_ALREADY_OPEN	-20
-#define FF_ERR_FILE_NOT_FOUND		-21
+#define FF_ERR_FILE_ALREADY_OPEN	-20	///< File is in use.
+#define FF_ERR_FILE_NOT_FOUND		-21	///< File was not found.
 
 
 #endif

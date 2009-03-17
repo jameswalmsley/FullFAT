@@ -28,8 +28,8 @@
  *  See http://worm.me.uk/fullfat for more information.                      *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
-//#ifndef _FF_CONFIG_H_
-//#define _FF_CONFIG_H_
+#ifndef _FF_CONFIG_H_
+#define _FF_CONFIG_H_
 /*
 	Here you can change the configuration of FullFAT as appropriate to your
 	platform.
@@ -53,10 +53,12 @@
 #define FF_FAT_CHECK	// This is experimental, so if FullFAT won't mount your volume, comment this out
 						// Also report the problem to james@worm.me.uk
 
-//#endif
 
 #ifdef FF_LFN_SUPPORT
 #define FF_MAX_FILENAME		260
 #else
 #define	FF_MAX_FILENAME		13
+#endif
+
+
 #endif
