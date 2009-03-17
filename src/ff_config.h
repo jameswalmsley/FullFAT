@@ -21,7 +21,7 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
@@ -44,7 +44,7 @@
 #define FF_LFN_SUPPORT
 
 //---------- 64-Bit Number Support
-#define FF_64_NUM_SUPPORT
+//#define FF_64_NUM_SUPPORT
 
 //---------- Actively Determine if partition is FAT
 #define FF_FAT_CHECK	// This is experimental, so if FullFAT won't mount your volume, comment this out

@@ -21,7 +21,7 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
@@ -97,23 +97,24 @@ int main(void) {
 	FF_BUFFER *mybuffer;
 	float time, transferRate;
 	//f = fopen("c:\\ramdisk.dat", "ab+");
-	f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	//f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
-	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
+	f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	QueryPerformanceFrequency(&ticksPerSecond);
 
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
-	if(f) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+	if(f1) {
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnNewWrite_512, (FF_READ_BLOCKS) fnNewRead_512, f1);
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT Couldn't mount the specified parition!\n");
 			getchar();
 			return -1;
 		}
+
 
 		//FF_CreateDirent(pIoman, 1,&mydir);
 

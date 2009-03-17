@@ -21,7 +21,7 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
@@ -307,7 +307,16 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
  *	@return 0 on error.
  **/
 FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
+	FF_T_UINT32 nCluster;
+	FF_T_UINT32 fatEntry;
 
+	for(nCluster = 0; nCluster < pIoman->pPartition->NumClusters; nCluster++) {
+		fatEntry = FF_getFatEntry(pIoman, nCluster);
+		if(fatEntry == 0x00000000) {
+			return nCluster;
+		}
+	}
+	 
 	return 0;
 }
 
@@ -322,10 +331,24 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
  *
  **/
 FF_T_SINT8 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
+	
+	FF_T_UINT32 fatEntry = StartCluster;
+	FF_T_UINT32 currentCluster;
+	FF_T_UINT32 clusEndOfChain;
+	FF_T_UINT16 i;
 
+	do {
+		currentCluster = fatEntry;
+		fatEntry = FF_getFatEntry(pIoman, currentCluster);
+	}while(!FF_isEndOfChain(pIoman, fatEntry));
+
+	clusEndOfChain = currentCluster;
+	
+	for(i = 0; i < Count; i++) {
+		currentCluster = FF_FindFreeCluster(pIoman);	// Find Free clusters!
+	}
 
 	return 0;
-
 }
 
 

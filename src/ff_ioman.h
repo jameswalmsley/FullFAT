@@ -21,7 +21,7 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
@@ -38,7 +38,7 @@
 #ifndef _FF_IOMAN_H_
 #define _FF_IOMAN_H_
 
-#include <stdlib.h>		// Use of malloc()
+#include <stdlib.h>		/* Use of malloc() */
 #include "ff_config.h"
 #include "ff_types.h"
 #include "ff_safety.h"	// Provide critical regions
@@ -178,3 +178,4 @@ void		FF_IOMAN_InitBufferDescriptors	(FF_IOMAN *pIoman);
 
 
 #endif
+

@@ -21,7 +21,7 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
@@ -60,8 +60,8 @@ typedef	unsigned int	FF_T_UINT32;
 typedef	signed int		FF_T_SINT32;
 
 //---------------- 64 BIT INTEGERS			// If you cannot define these, then make sure you see ff_config.h
-typedef long long			FF_T_INT64;		// about 64-bit number support.
-typedef unsigned long long	FF_T_UINT64;	// It means that FF_GetVolumeSize() cannot return a size
-typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64-bits integers.
+//typedef long long			FF_T_INT64;		// about 64-bit number support.
+//typedef unsigned long long	FF_T_UINT64;	// It means that FF_GetVolumeSize() cannot return a size
+//typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64-bits integers.
 											// No other function makes use of 64-bit numbers.
 #endif
