@@ -51,8 +51,9 @@
  *	@param	Mode		Access Mode required.
  *
  **/
-FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
+FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError) {
 	FF_FILE		*pFile;
+	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
 	FF_T_UINT32 DirCluster, FileCluster;
 	FF_T_INT8	filename[FF_MAX_FILENAME];
@@ -60,10 +61,16 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 	FF_T_UINT16	i;
 
 	if(!pIoman) {
+		if(pError) {
+			*pError = FF_ERR_NULL_POINTER;
+		}
 		return (FF_FILE *)NULL;
 	}
 	pFile = malloc(sizeof(FF_FILE));
 	if(!pFile) {
+		if(pError) {
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+		}
 		return (FF_FILE *)NULL;
 	}
 
@@ -103,10 +110,42 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode) {
 			pFile->CurrentCluster = 0;
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			pFile->Mode = Mode;
+			pFile->Next = NULL;
+			/*
+				Add pFile onto the end of our linked list of FF_FILE objects.
+			*/
+			FF_PendSemaphore(pIoman->pSemaphore);
+			{
+				if(!pIoman->FirstFile) {
+					pIoman->FirstFile = pFile;
+				} else {
+					pFileChain = (FF_FILE *) pIoman->FirstFile;
+					do {
+						if(pFileChain->ObjectCluster == pFile->ObjectCluster) {
+							// File is already open! DON'T ALLOW IT!
+							FF_ReleaseSemaphore(pIoman->pSemaphore);
+							free(pFile);
+							if(pError) {
+								*pError = FF_ERR_FILE_ALREADY_OPEN;
+							}
+							return (FF_FILE *) NULL;
+						}
+						if(!pFileChain->Next) {
+							pFileChain->Next = pFile;
+							break;
+						}
+						pFileChain = (FF_FILE *) pFileChain->Next;
+					}while(pFileChain != NULL);
+				}
+			}
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
+
 			return pFile;
 		}
 	}
-
+	if(pError) {
+		*pError = FF_ERR_FILE_NOT_FOUND;
+	}
 	return (FF_FILE *)NULL;
 }
 
@@ -485,9 +524,31 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
  **/
 FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 
+	FF_FILE *pFileChain;
+
 	if(!pFile) {
-		return -1;
+		return FF_ERR_NULL_POINTER;	
 	}
+
+	if(pFile->Mode == FF_MODE_WRITE) {
+		FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
+	}
+	
+	// Handle Linked list!
+	FF_PendSemaphore(pFile->pIoman->pSemaphore);
+	{	// Semaphore is required, or linked list could become corrupted.
+		if(pFile->pIoman->FirstFile == pFile) {
+			pFile->pIoman->FirstFile = pFile->Next;
+		} else {
+			pFileChain = (FF_FILE *) pFile->pIoman->FirstFile;
+			while(pFileChain->Next != pFile) {
+				pFileChain = pFileChain->Next;
+			}
+			pFileChain->Next = pFile->Next;
+		}
+	}	// Semaphore released, linked list was shortened!
+	FF_ReleaseSemaphore(pFile->pIoman->pSemaphore);
+
 	// If file written, flush to disk
 	free(pFile);
 	// Simply free the pointer!

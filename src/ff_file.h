@@ -42,8 +42,6 @@
 #include "ff_ioman.h"
 #include "ff_dir.h"
 
-
-
 #define FF_SEEK_SET	1
 #define FF_SEEK_CUR	2
 #define FF_SEEK_END	3
@@ -56,6 +54,7 @@ typedef struct {
 	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
 	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
 	FF_T_UINT32 AddrCurrentCluster;
+	void		*Next;
 } FF_FILE;
 
 //---------- PROTOTYPES
@@ -64,7 +63,7 @@ FF_T_SINT8	 FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path)
 FF_T_SINT8	 FF_FindNext	(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
 FF_T_UINT32	 FF_FindDir		(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen);
 
-FF_FILE		*FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode);
+FF_FILE		*FF_Open	(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError);
 FF_T_SINT8	 FF_Close	(FF_FILE *pFile);
 FF_T_INT32	 FF_GetC	(FF_FILE *pFile);
 FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);

@@ -32,7 +32,12 @@
 #define _FF_ERROR_H_
 
 // Global Error Codes
-#define FF_ERR_NULL_POINTER		-2
+#define FF_ERR_NULL_POINTER			-2	///< pIoman was NULL
+#define FF_ERR_NOT_ENOUGH_MEMORY	-3	///< malloc() failed!
+
+
+#define FF_ERR_FILE_ALREADY_OPEN	-20
+#define FF_ERR_FILE_NOT_FOUND		-21
 
 
 #endif

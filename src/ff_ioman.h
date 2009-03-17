@@ -98,6 +98,8 @@ typedef struct {
 	FF_T_UINT16		ContextID;		///< Context Identifier.
 	FF_T_UINT16		NumHandles;		///< Number of objects using this buffer.
 	FF_T_UINT16		Persistance;	///< For the persistance algorithm.
+	FF_T_BOOL		Modified;		///< If the sector was modified since read.
+	FF_T_BOOL		isIOMANediting;	///< FF_TRUE if the buffer manager is currently editing this.
 	FF_T_UINT8		*pBuffer;		///< Pointer to the cache block.
 } FF_BUFFER;
 
@@ -129,6 +131,8 @@ typedef struct {
 	FF_T_UINT32		RootDirCluster;		///< Cluster number of the root directory entry.
 } FF_PARTITION;
 
+
+
 /**
  *	@public
  *	@brief	FF_IOMAN Object description.
@@ -144,6 +148,7 @@ typedef struct {
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
 	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
 	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
+	void			*FirstFile;		///< Pointer to the first File object.
 } FF_IOMAN;
 
 // Bit-Masks for Memory Allocation testing.
