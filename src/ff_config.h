@@ -43,6 +43,9 @@
 // Comment this out if you don't want to worry about Patent Issues.
 #define FF_LFN_SUPPORT
 
+//---------- FAT12 SUPPORT
+#define FF_FAT12_SUPPORT
+
 //---------- 64-Bit Number Support
 //#define FF_64_NUM_SUPPORT
 
