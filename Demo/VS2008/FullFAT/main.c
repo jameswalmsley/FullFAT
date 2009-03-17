@@ -56,7 +56,7 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8192*4	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	8192	// Increase This for Faster File Copies
 
 void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -83,7 +83,7 @@ int main(void) {
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f,*fDest;
 	int f1;
-	FF_FILE *fSource;
+	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
@@ -95,19 +95,20 @@ int main(void) {
 	FF_T_UINT32 i;
 	FF_DIRENT mydir;
 	FF_BUFFER *mybuffer;
+	FF_T_SINT8 Error;
 	float time, transferRate;
 	//f = fopen("c:\\ramdisk.dat", "ab+");
-	//f = fopen("\\\\.\\PHYSICALDRIVE2", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
-	f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
+	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	QueryPerformanceFrequency(&ticksPerSecond);
 
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
-	if(f1) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnNewWrite_512, (FF_READ_BLOCKS) fnNewRead_512, f1);
+	if(f) {
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT Couldn't mount the specified parition!\n");
@@ -115,8 +116,11 @@ int main(void) {
 			return -1;
 		}
 
-
-		//FF_CreateDirent(pIoman, 1,&mydir);
+		ff1 = FF_Open(pIoman, "\\talk.mp3", FF_MODE_READ, &Error);
+		ff2 = FF_Open(pIoman, "\\1FILE", FF_MODE_READ, &Error);
+		ff3 = FF_Open(pIoman, "\\HELLO.txt", FF_MODE_READ, &Error);
+		ff4 = FF_Open(pIoman, "\\3.txt", FF_MODE_READ, &Error);
+		FF_Close(ff1);
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
@@ -168,7 +172,7 @@ int main(void) {
 					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
 				}
 				
-				fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
+				fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
 				if(fSource) {
 					for(i = 0; i < fSource->Filesize; i++) {
 						printf("%c", FF_GetC(fSource));
@@ -176,7 +180,13 @@ int main(void) {
 
 					FF_Close(fSource);
 				}else {
-					printf("File Not Found!\n");
+					if(Error == FF_ERR_FILE_NOT_FOUND) {
+						printf("File Not Found!\n");
+					} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
+						printf("File In Use!\n");
+					} else {
+						printf("Couldn't Open file! Unknown Error \n");
+					}
 				}
 			}
 
@@ -226,7 +236,7 @@ int main(void) {
 				
 				fDest = fopen(destination, "wb");
 				if(fDest) {
-					fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
+					fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
 					if(fSource) {
 						QueryPerformanceCounter(&start_ticks);  
 						do{
@@ -243,7 +253,13 @@ int main(void) {
 						FF_Close(fSource);
 					} else {
 						fclose(fDest);
-						printf("Error Opening Source\n");
+						if(Error == FF_ERR_FILE_NOT_FOUND) {
+							printf("File Not Found!\n");
+						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
+							printf("File In Use!\n");
+						} else {
+							printf("Couldn't Open file! Unknown Error \n");
+						}
 					}
 				} else {
 					printf("Error Opening Destination\n");
@@ -253,7 +269,7 @@ int main(void) {
 			}
 
 			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
-				close(f1);
+				fclose(f);
 				return 0;
 			}
 		}
