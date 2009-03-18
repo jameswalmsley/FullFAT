@@ -174,7 +174,7 @@ FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman);
 FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman);
 #endif
 // PUBLIC  (To FullFAT Only):
-FF_BUFFER	*FF_GetBuffer		(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_INT8 Mode);
+FF_BUFFER	*FF_GetBuffer		(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);
 void		FF_ReleaseBuffer	(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
 
 // PRIVATE (For this module only!):

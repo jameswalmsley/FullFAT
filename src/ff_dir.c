@@ -251,7 +251,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	FF_T_UINT8		tester,numLFNs, i;		///< Unsigned byte for testing if dir is deleted
 	FF_T_SINT8		retVal = 0;				///< Return Value for Function
 	FF_T_UINT32		CurrentCluster = DirCluster;
-	FF_T_UINT16		myShort, ;				///< 16 bits for calculating item cluster.
+	FF_T_UINT16		myShort;				///< 16 bits for calculating item cluster.
 	FF_T_UINT32		fatEntry = 0;			///< Used for following Cluster Chain
 	FF_T_UINT32		itemLBA;
 	FF_BUFFER		*pBuffer;				///< Buffer for acquired sector.
@@ -443,7 +443,7 @@ FF_T_UINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UIN
 	do {
 		retVal = FF_GetEntry(pIoman, mydir.CurrentItem, DirCluster, &mydir, FF_TRUE);
 	}while(retVal != -10);
-
+	Sequential;
 	return mydir.CurrentItem;
 }
 

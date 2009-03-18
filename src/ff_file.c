@@ -500,7 +500,7 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 
 	switch(Origin) {
 		case FF_SEEK_SET:
-			if(Offset <= pFile->Filesize && Offset >= 0) {
+			if((FF_T_UINT32) Offset <= pFile->Filesize && Offset >= 0) {
 				pFile->FilePointer = Offset;
 			} else {
 				return -2;
