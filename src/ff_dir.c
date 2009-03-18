@@ -399,7 +399,7 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 	do {
 		retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent, FF_FALSE);
 		// Device error will be passed upwards!
-	}while(retVal == -1);
+	}while(retVal == -1 || pDirent->Attrib == FF_FAT_ATTR_VOLID);
 
 	if(retVal == FF_ERR_DEVICE_DRIVER_FAILED) {
 		return (FF_T_SINT8) retVal;
