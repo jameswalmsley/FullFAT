@@ -229,7 +229,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 	if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-		if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+		if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
 			return 0;
 		}
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
@@ -297,7 +297,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 			if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-				if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+				if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
 					return BytesRead;
 				}
 				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
@@ -343,7 +343,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		if(FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) > pFile->CurrentCluster) {
 			fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-			if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+			if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
 				return BytesRead;
 			}
 			if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
@@ -444,7 +444,7 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	
 	if(clusterNum > pFile->CurrentCluster) {
 		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-		if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+		if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
 			return -3;
 		}
 		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {

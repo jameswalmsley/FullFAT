@@ -106,6 +106,10 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
 	if(pathLen == 1) {	// Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
 	}
+	
+	if(path[pathLen-1] == '\\' || path[pathLen-1] == '/') {
+		pathLen--;	
+	}
 
 	token = FF_strtok(path, mytoken, &it, &last, pathLen);
 	//token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
@@ -148,7 +152,7 @@ FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, F
 		if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
-			if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+			if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
 				return FF_ERR_DEVICE_DRIVER_FAILED;
 			}
 
@@ -220,9 +224,9 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 		name[i] = shortName[i];
 	}
 
-	if(i == 7) {
+	/*if(i == 7) {
 		i++;
-	}
+	}*/
 
 	if(shortName[8] != 0x20){
 		name[i] = '.';
@@ -262,7 +266,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	if(FF_getClusterChainNumber(pIoman, nEntry, 32) > pDirent->CurrentCluster) {
 
 		fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
-		if(fatEntry == FF_ERR_DEVICE_DRIVER_FAILED) {
+		if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
 			return -2;
 		}
 		
@@ -392,7 +396,10 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 	pDirent->CurrentItem = 0;	// Set current item to 0
 	pDirent->ProcessedLFN = FF_FALSE;
 
-	retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent, FF_FALSE);
+	do {
+		retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent, FF_FALSE);
+		// Device error will be passed upwards!
+	}while(retVal == -1);
 
 	if(retVal == FF_ERR_DEVICE_DRIVER_FAILED) {
 		return (FF_T_SINT8) retVal;
