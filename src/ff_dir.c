@@ -224,10 +224,6 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 		name[i] = shortName[i];
 	}
 
-	/*if(i == 7) {
-		i++;
-	}*/
-
 	if(shortName[8] != 0x20){
 		name[i] = '.';
 		name[i+1] = shortName[8];
@@ -243,7 +239,6 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 	} else {
 		name[i] = '\0';
 	}
-
 
 }
 
