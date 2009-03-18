@@ -43,15 +43,15 @@
  *
  *	If your application has no OS and is therefore single threaded, simply
  *	have:
- *	
+ *
  *	FF_CreateSemaphore() return NULL.
- *	
+ *
  *	FF_PendSemaphore() should do nothing.
  *
  *	FF_ReleaseSemaphore() should do nothing.
  *
  *	FF_DestroySemaphore() should do nothing.
- *	
+ *
  **/
 
 #include "ff_safety.h"	// Íncludes ff_types.h
@@ -59,7 +59,7 @@
 void *FF_CreateSemaphore(void) {
 	// Call your OS's CreateSemaphore function
 	//
-	
+
 	// return pointer to semaphore
 	return NULL;	// Comment this out for your implementation.
 }
@@ -71,7 +71,7 @@ void FF_PendSemaphore(void *pSemaphore) {
 	// becomes available. (No timeout!)
 	// If your OS doesn't do it for you, you should sleep
 	// this thread until the Semaphore is available.
-	pSemaphore;
+	pSemaphore = 0;
 }
 
 void FF_ReleaseSemaphore(void *pSemaphore) {
@@ -79,7 +79,7 @@ void FF_ReleaseSemaphore(void *pSemaphore) {
 	//
 
 	//
-	pSemaphore;
+	pSemaphore = 0;
 }
 
 void FF_DestroySemaphore(void *pSemaphore) {
@@ -87,24 +87,24 @@ void FF_DestroySemaphore(void *pSemaphore) {
 	//
 
 	//
-	pSemaphore;
+	pSemaphore = 0;
 }
 
 void FF_Yield(void) {
-	// Call your OS's thread Yield function. 
-	// If this doesn't work, then a deadlock will occur	
+	// Call your OS's thread Yield function.
+	// If this doesn't work, then a deadlock will occur
 }
 
 void FF_Sleep(FF_T_UINT32 TimeMs) {
 	// Call your OS's thread sleep function,
 	// Sleep for TimeMs milliseconds
-	TimeMs;
+	TimeMs = 0;
 }
 
 /**
  *	Notes on implementation.
  *
- *		
+ *
  *
  **/
- 
+
