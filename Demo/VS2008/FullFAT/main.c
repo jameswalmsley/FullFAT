@@ -56,7 +56,7 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8192	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	8192*8	// Increase This for Faster File Copies
 
 void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -84,7 +84,7 @@ int main(void) {
 	FILE *f,*fDest;
 	int f1;
 	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 512, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
 	char commandShadow[2600];
@@ -97,8 +97,8 @@ int main(void) {
 	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
 	float time, transferRate;
-	//f = fopen("c:\\ramdisk.dat", "ab+");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	f = fopen("c:\\bsp.img", "rb");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -115,12 +115,6 @@ int main(void) {
 			getchar();
 			return -1;
 		}
-
-		ff1 = FF_Open(pIoman, "\\talk.mp3", FF_MODE_READ, &Error);
-		ff2 = FF_Open(pIoman, "\\1FILE", FF_MODE_READ, &Error);
-		ff3 = FF_Open(pIoman, "\\HELLO.txt", FF_MODE_READ, &Error);
-		ff4 = FF_Open(pIoman, "\\3.txt", FF_MODE_READ, &Error);
-		FF_Close(ff1);
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
