@@ -208,7 +208,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32		Bytes = ElementSize * Count;
 	FF_T_UINT32		BytesRead = 0;
 	FF_PARTITION	*pPart = pFile->pIoman->pPartition;
-	FF_T_UINT32		fileLBA, fatEntry;
+	FF_T_UINT32		fileLBA, fatEntry, nextfatEntry;
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT32		numClusters;
 	FF_T_UINT32		relClusterPos	= pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);
@@ -220,7 +220,7 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32		relMinorBlockPos = relMajorBlockPos % pFile->pIoman->BlkSize;
 
 	FF_T_UINT32		Sectors = Bytes / pFile->pIoman->BlkSize;
-
+	FF_T_UINT32		i;
 	FF_T_INT32		retVal = 0;
 
 	if(FF_isEOF(pFile)) {
@@ -309,11 +309,26 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 					pFile->CurrentCluster += 1;
 				}
 			}
+			// Find the number of continuous clusters!
+
+			nextfatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
+			if(Bytes % 512 == 0) {
+				for(i = 1; i < (Bytes / bytesPerCluster); i++) {
+					fatEntry = nextfatEntry;
+					nextfatEntry = FF_getFatEntry(pFile->pIoman, fatEntry);
+					if(nextfatEntry != (fatEntry + 1)) {
+						break;
+					}
+				}
+			}else {
+				i = 1;
+			}
 			
 			fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 			fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 			Sectors = (bytesPerCluster - relClusterPos) / pFile->pIoman->BlkSize;
+			Sectors *= i;
 	
 			do{
 				if(pFile->pIoman->pBlkDevice->fnReadBlocks) {
@@ -329,10 +344,12 @@ FF_T_UINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				return BytesRead;
 			}
 
-			buffer	+= (bytesPerCluster - relClusterPos);
-			Bytes	-= (bytesPerCluster - relClusterPos);
-			pFile->FilePointer += (bytesPerCluster - relClusterPos);
+			buffer	+= ((bytesPerCluster*i) - relClusterPos);
+			Bytes	-= ((bytesPerCluster*i) - relClusterPos);
+			pFile->FilePointer += ((bytesPerCluster*i) - relClusterPos);
 			BytesRead += (retVal * pFile->pIoman->BlkSize);	// Return value of the driver function is sectors written.
+			pFile->CurrentCluster = (pFile->FilePointer / bytesPerCluster);
+			pFile->AddrCurrentCluster = nextfatEntry;
 		}
 
 		relClusterPos	 = pFile->FilePointer % ((pPart->SectorsPerCluster * pPart->BlkFactor) * pFile->pIoman->BlkSize);

@@ -53,18 +53,20 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 	FF_T_UINT16		fnameLen;
 	FF_T_UINT16		compareLength;
 	FF_T_UINT16		nameLen = (FF_T_UINT16) strlen(name);
-	
-	MyDir.CurrentItem = 0;		// Starting at the first Dir Entry
-	MyDir.CurrentCluster = 0;	// Set to Zero so that traversing across dir's > than 1 cluster in size works.
-	MyDir.ProcessedLFN = FF_FALSE;
-	MyDir.DirCluster = DirCluster;
+	/*
+		Initialise the MyDir object so that it can traverse Dirs > 1 Cluster.
+	*/
+	MyDir.CurrentItem		= 0;
+	MyDir.CurrentCluster	= 0;
+	MyDir.ProcessedLFN		= FF_FALSE;
+	MyDir.DirCluster		= DirCluster;
 
 	while(1) {	
-		do {
+		do { /* Skip past all deleted entries */
 			retVal = FF_GetEntry(pIoman, MyDir.CurrentItem, MyDir.DirCluster, &MyDir, FF_FALSE);
 		}while(retVal == -1);
 
-		if(retVal == -2) {
+		if(retVal == -2) {	/* -2 was returned because the end of directory was reached. */
 			break;
 		}
 		if((MyDir.Attrib & pa_Attrib) == pa_Attrib){
@@ -85,9 +87,7 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 				return MyDir.ObjectCluster;	// Return the cluster number
 			}
 		}
-		
 	}
-
 	return 0;
 }
 
@@ -114,7 +114,6 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
 	}
 
 	token = FF_strtok(path, mytoken, &it, &last, pathLen);
-	//token = FF_strtok(mypath, &it, &mod); // Tokenise Path, thread-safely
 
 	 do{
 		//lastDirCluster = dirCluster;
@@ -125,8 +124,6 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
 		}
 		token = FF_strtok(path, mytoken, &it, &last, pathLen);
 	}while(token != NULL);
-
-
 
 	return dirCluster;
 }
