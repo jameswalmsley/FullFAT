@@ -56,10 +56,12 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 	
 	MyDir.CurrentItem = 0;		// Starting at the first Dir Entry
 	MyDir.CurrentCluster = 0;	// Set to Zero so that traversing across dir's > than 1 cluster in size works.
+	MyDir.ProcessedLFN = FF_FALSE;
+	MyDir.DirCluster = DirCluster;
 
 	while(1) {	
 		do {
-			retVal = FF_GetEntry(pIoman, MyDir.CurrentItem, DirCluster, &MyDir, FF_FALSE);
+			retVal = FF_GetEntry(pIoman, MyDir.CurrentItem, MyDir.DirCluster, &MyDir, FF_FALSE);
 		}while(retVal == -1);
 
 		if(retVal == -2) {
