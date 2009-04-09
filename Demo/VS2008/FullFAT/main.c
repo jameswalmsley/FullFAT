@@ -55,7 +55,7 @@
 #include <conio.h>
 #include "../../../src/fullfat.h"
 
-#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
+#define PARTITION_NUMBER	1		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8192*8	// Increase This for Faster File Copies
 
 void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -63,6 +63,7 @@ void fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, vo
 signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 void test_2048		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -82,14 +83,16 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f,*fDest;
+	FF_BUFFER *myBuf, *myBuf2;
 	int f1;
 	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 512, 512);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 1024, 512);
 	char buffer[COPY_BUFFER_SIZE];
-	char commandLine[1024];
+	char commandLine[10][1024];
 	char commandShadow[2600];
 	char source[260], destination[260];
 	char workingDir[2600] = "\\";
+	char cmdHistory = 0;
 	char tester;
 	unsigned long BytesRead;
 	FF_T_UINT32 i;
@@ -97,13 +100,16 @@ int main(void) {
 	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
 	float time, transferRate;
-	f = fopen("c:\\bsp.img", "rb");
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	//f = fopen("c:\\bsp.img", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	QueryPerformanceFrequency(&ticksPerSecond);
 
+	for(i = 0; i < 10; i++) {
+		strcpy(commandLine[i], "No Commands");
+	}
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
@@ -116,27 +122,73 @@ int main(void) {
 			return -1;
 		}
 
+		/*ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
+
+		FF_Seek(ff1, 0, FF_SEEK_END);
+
+		FF_PutC(ff1, 'J');
+		FF_PutC(ff1, 'A');
+		FF_PutC(ff1, 'M');
+		FF_PutC(ff1, 'E');
+		FF_PutC(ff1, 'S');
+
+		myBuf = FF_GetBuffer(pIoman, 587, FF_MODE_READ);
+		FF_ReleaseBuffer(pIoman, myBuf);
+		myBuf = FF_GetBuffer(pIoman, 1453867, FF_MODE_READ);
+//		FF_ReleaseBuffer(pIoman, myBuf);
+		FF_Close(ff1);*/
+
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
 			for(i = 0; i < 1024; i++) {
-				commandLine[i] = (char) _getch();
-				_putch(commandLine[i]);
-				if(commandLine[i] == '\r') {
+				commandLine[cmdHistory][i] = (char) _getch();
+				if(commandLine[cmdHistory][i] == 'à') {
+					commandLine[cmdHistory][i] = (char) _getch();
+					if(commandLine[cmdHistory][i] == 'K') {
+						printf("Left\n");
+					}
+					if(commandLine[cmdHistory][i] == 'M') {
+						printf("Right\n");
+					}
+					if(commandLine[cmdHistory][i] == 'H') {
+						if(cmdHistory > 0) {
+							cmdHistory -= 1;
+						} else {
+							cmdHistory = 9;
+						}
+						printf("\rFullFAT:%s>%s", workingDir, commandLine[cmdHistory]);
+						i = strlen(commandLine[cmdHistory]);
+
+					}
+					if(commandLine[cmdHistory][i] == 'P') {
+						cmdHistory += 1;
+						if(cmdHistory > 9) {
+							cmdHistory = 0;
+						}
+						printf("\rFullFAT:%s>%s", workingDir, commandLine[cmdHistory]);
+						i = strlen(commandLine[cmdHistory]);
+					}
+				} else if(commandLine[cmdHistory][i] == 0x08) {
+					printf("Del\n");
+				}else {
+					_putch(commandLine[cmdHistory][i]);
+				}
+				if(commandLine[cmdHistory][i] == '\r') {
 					_putch('\n');
-					commandLine[i] = '\0';
+					commandLine[cmdHistory][i] = '\0';
 					break;
 				}
 			}
-			if(strstr(commandLine, "cd")) {
+			if(strstr(commandLine[cmdHistory], "cd")) {
 				
-				if(commandLine[3] != '\\' && commandLine[3] != '/') {
+				if(commandLine[cmdHistory][3] != '\\' && commandLine[cmdHistory][3] != '/') {
 					if(strlen(workingDir) == 1) {
-						sprintf(commandShadow, "\\%s", (commandLine + 3));
+						sprintf(commandShadow, "\\%s", (commandLine[cmdHistory] + 3));
 					} else {
-						sprintf(commandShadow, "%s\\%s", workingDir, (commandLine + 3));
+						sprintf(commandShadow, "%s\\%s", workingDir, (commandLine[cmdHistory] + 3));
 					}
 				} else {
-					sprintf(commandShadow, "%s", (commandLine + 3));
+					sprintf(commandShadow, "%s", (commandLine[cmdHistory] + 3));
 				}
 
 				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
@@ -146,7 +198,7 @@ int main(void) {
 				}
 			}
 
-			if(strstr(commandLine, "ls") || strstr(commandLine, "dir")) {
+			if(strstr(commandLine[cmdHistory], "ls") || strstr(commandLine[cmdHistory], "dir")) {
 				i = 0;
 				tester = 0;
 				tester = FF_FindFirst(pIoman, &mydir, workingDir);
@@ -159,11 +211,11 @@ int main(void) {
 				putchar('\n');
 			}
 
-			if(strstr(commandLine, "view")) {
+			if(strstr(commandLine[cmdHistory], "view")) {
 				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (commandLine+5)); 
+					sprintf(buffer, "\\%s", (commandLine[cmdHistory]+5)); 
 				} else {
-					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine[cmdHistory]+5));
 				}
 				
 				fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
@@ -184,11 +236,11 @@ int main(void) {
 				}
 			}
 
-			if(strstr(commandLine, "pwd")) {
+			if(strstr(commandLine[cmdHistory], "pwd")) {
 				printf("%s\n", workingDir);
 			}
 
-			if(strstr(commandLine, "help")) {
+			if(strstr(commandLine[cmdHistory], "help")) {
 				printf("The following commands are available:\n\n");
 				printf("pwd \t\t- Print the working directory\n");
 				printf("ls or dir \t- List the contents of the working directory\n");
@@ -200,7 +252,7 @@ int main(void) {
 				printf("\nVisit www.worm.me.uk/fullfat for more information, and contact details\n\n");
 			}
 
-			if(strstr(commandLine, "info")) {
+			if(strstr(commandLine[cmdHistory], "info")) {
 				switch(pIoman->pPartition->Type) {
 					case FF_T_FAT32:
 						printf("FAT32 Formatted Drive\n"); break;
@@ -219,8 +271,8 @@ int main(void) {
 #endif
 			}
 
-			if(strstr(commandLine, "cp")) {
-				sscanf((commandLine + 3), "%s %s", source, destination);
+			if(strstr(commandLine[cmdHistory], "cp")) {
+				sscanf((commandLine[cmdHistory] + 3), "%s %s", source, destination);
 				
 				if(strlen(workingDir) == 1) {
 					sprintf(buffer, "\\%s", (source)); 
@@ -262,9 +314,18 @@ int main(void) {
 				strcpy(destination, "");
 			}
 
-			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
+			if(strstr(commandLine[cmdHistory], "flush")) {
+				FF_FlushCache(pIoman);
+			}
+
+			if(strstr(commandLine[cmdHistory], "exit") || strstr(commandLine[cmdHistory], "quit")) {
 				fclose(f);
 				return 0;
+			}
+
+			cmdHistory++;
+			if(cmdHistory >= 10) {
+				cmdHistory = 0;
 			}
 		}
 		

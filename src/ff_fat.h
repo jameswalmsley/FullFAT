@@ -57,6 +57,6 @@ FF_T_SINT8	FF_putFatEntry			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32
 FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
 FF_T_SINT8	FF_ExtendClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count);
 FF_T_SINT8	FF_UnlinkClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count);
-
+FF_T_UINT32	FF_TraverseFAT			(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Count);
 
 #endif

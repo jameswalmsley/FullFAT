@@ -111,6 +111,8 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 			pFile->AddrCurrentCluster = pFile->ObjectCluster;
 			pFile->Mode = Mode;
 			pFile->Next = NULL;
+			pFile->DirCluster = Object.DirCluster;
+			pFile->DirEntry = Object.CurrentItem - 1;
 			/*
 				Add pFile onto the end of our linked list of FF_FILE objects.
 			*/
@@ -452,7 +454,7 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32 relMinorBlockPos = relMajorBlockPos % pFile->pIoman->BlkSize;
 
 	if(!pFile) {
-		return -2;
+		return FF_ERR_NULL_POINTER;
 	}
 	
 	if(pFile->FilePointer >= pFile->Filesize) {
@@ -492,7 +494,44 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	return (FF_T_INT32) retChar;
 }
 
+FF_T_SINT8 FF_PutC(FF_FILE *pFile, FF_T_UINT8 Value) {
+	FF_BUFFER	*pBuffer;
+	FF_DIRENT	OriginalEntry;
+	FF_T_UINT32 itemLBA;
+	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pFile->pIoman, pFile->FilePointer, 1);
+	FF_T_UINT32 clusterAddress;
+	FF_T_UINT32 relPos			= FF_getMinorBlockEntry		(pFile->pIoman, pFile->FilePointer, 1);
+	FF_T_UINT32 relClusterEntry	= pFile->FilePointer % (pFile->pIoman->BlkSize * (pFile->pIoman->pPartition->SectorsPerCluster * pFile->pIoman->pPartition->BlkFactor) / 1);
+	
+	if(!pFile) {	// Ensure we don't have a Null file pointer on a Public interface.
+		return FF_ERR_NULL_POINTER;
+	}
+	
 
+	clusterAddress = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, clusterNum);
+
+
+	if(relClusterEntry > (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster)) {
+		// Need To Extend the File Physically.
+	}
+
+	itemLBA = FF_Cluster2LBA(pFile->pIoman, clusterAddress)	+ FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
+	itemLBA = FF_getRealLBA	(pFile->pIoman, itemLBA)		+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
+	
+	
+	pBuffer = FF_GetBuffer(pFile->pIoman, itemLBA, FF_MODE_WRITE);
+	{
+		FF_putChar(pBuffer->pBuffer, relPos, Value);
+	}
+	FF_ReleaseBuffer(pFile->pIoman, pBuffer);
+
+	pFile->FilePointer += 1;
+	if(pFile->Filesize < (pFile->FilePointer)) {
+		pFile->Filesize += 1;
+	}
+
+	return 0;
+}
 
 
 
@@ -562,9 +601,19 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 
 	FF_FILE *pFileChain;
+	FF_DIRENT OriginalEntry;
 
 	if(!pFile) {
 		return FF_ERR_NULL_POINTER;	
+	}
+
+	// UpDate Dirent if File-size has changed?
+
+	// Update the Dirent!
+	FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry, FF_FALSE);
+	if(pFile->Filesize != OriginalEntry.Filesize) {
+		OriginalEntry.Filesize = pFile->Filesize;
+		FF_PutEntry(pFile->pIoman, pFile->DirCluster, pFile->DirEntry, &OriginalEntry);
 	}
 
 	if(pFile->Mode == FF_MODE_WRITE) {

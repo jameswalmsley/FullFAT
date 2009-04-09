@@ -54,6 +54,8 @@ typedef struct {
 	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
 	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
 	FF_T_UINT32 AddrCurrentCluster;
+	FF_T_UINT32 DirCluster;		///< Cluster Number that the Dirent is in.
+	FF_T_UINT32 DirEntry;		///< Dirent Entry Number describing this file.
 	void		*Next;
 } FF_FILE;
 

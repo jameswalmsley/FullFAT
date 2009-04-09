@@ -54,12 +54,11 @@
  *	@param	BlkSize			The block size of devices to be attached. If in doubt use 512.
  *
  *	@return	Returns a pointer to an FF_IOMAN type object.
- *
  **/
 FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize) {
 
 	FF_IOMAN	*pIoman = NULL;
-	FF_T_UINT32 *pLong = NULL;	// Force malloc to malloc memory on a 32-bit boundary.
+	FF_T_UINT32 *pLong	= NULL;	// Force malloc to malloc memory on a 32-bit boundary.
 
 	if((BlkSize % 512) != 0 || Size == 0) {
 		return NULL;	// BlkSize Size not a multiple of 512 > 0
@@ -186,6 +185,8 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
  *	@private
  *	@brief	Initialises Buffer Descriptions as part of the FF_IOMAN object initialisation.
  *
+ *	@param	pIoman		IOMAN Object.
+ *
  **/
 void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	FF_T_UINT16 i;
@@ -213,11 +214,9 @@ void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
 FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
-
 	if(Mode == FF_MODE_READ || Mode == FF_MODE_WRITE) {
 		return FF_TRUE;
 	}
-
 	return FF_FALSE;
 }
 
@@ -289,6 +288,14 @@ FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8
 	return -1;	// error no device diver registered.
 }
 
+
+/**
+ *	@private
+ *	@brief		Flushes all Write cache buffers with no active Handles.
+ *
+ *	@param		pIoman		IOMAN Object.
+ *
+ **/
 FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	
 	FF_T_UINT16 i,x;
@@ -343,7 +350,6 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 	FF_T_UINT16 i,x;
 	FF_T_SINT32 retVal;
 	
-
 	if(!pIoman) {
 		return NULL;	// No NULL pointer modification.
 	}
@@ -447,6 +453,9 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) {
 				
 				(pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
+				if((pIoman->pBuffers + i)->Mode == FF_MODE_WRITE) {
+					FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
+				}
 				FF_ReleaseSemaphore(pIoman->pSemaphore);
 				{
 					retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
@@ -654,7 +663,11 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		pPart->BeginLBA = 0;
 	} else {
 		// Primary Partitions to deal with!
+
 		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber)));
+		if(PartitionNumber > 0) {
+			pPart->BeginLBA += FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * 0)));
+		}
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		if(!pPart->BeginLBA) {

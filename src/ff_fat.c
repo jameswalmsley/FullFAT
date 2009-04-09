@@ -173,6 +173,43 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	return (FF_T_SINT32) FatEntry;
 }
 
+
+/**
+ *	@private
+ *	@brief	Returns the Cluster address of the Cluster numbber from the beginning of a chain.
+ *	
+ *	@param	pIoman		FF_IOMAN Object
+ *	@param	Start		Cluster address of the first cluster in the chain.
+ *	@param	Count		Number of Cluster in the chain, 
+ *
+ *	@return	FF_TRUE if it is an end of chain, otherwise FF_FALSE.
+ *
+ **/
+FF_T_UINT32 FF_TraverseFAT(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Count) {
+	
+	FF_T_UINT32 i;
+	FF_T_UINT32 fatEntry, currentCluster = Start;
+
+	if(Count == 0) {
+		return Start;
+	}
+
+	for(i = 0; i < Count; i++) {
+		fatEntry = FF_getFatEntry(pIoman, currentCluster);
+		if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
+			return 0;
+		}
+
+		if(FF_isEndOfChain(pIoman, fatEntry)) {
+			return 0;
+		} else {
+			currentCluster = fatEntry;
+		}	
+	}
+	
+	return fatEntry;
+}
+
 /**
  *	@private
  *	@brief	Tests if the fatEntry is an End of Chain Marker.
