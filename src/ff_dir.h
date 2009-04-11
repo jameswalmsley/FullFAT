@@ -44,6 +44,7 @@
 #include "ff_blk.h"
 #include "ff_fat.h"
 #include "fat.h"
+#include "ff_memory.h"
 #include <string.h>
 
 typedef struct {
@@ -65,6 +66,8 @@ typedef struct {
 } FF_DIRENT;
 
 FF_T_SINT8	FF_GetEntry	(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted);
+FF_T_SINT8  FF_PutEntry (FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 Entry, FF_DIRENT *pDirent);
 FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
 
 #endif
+

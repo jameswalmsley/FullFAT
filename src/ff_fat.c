@@ -86,7 +86,6 @@ FF_T_UINT32 FF_LBA2Cluster(FF_IOMAN *pIoman, FF_T_UINT32 Address) {
 	return cluster;
 }
 
-
 /**
  *	@private
  **/
@@ -149,7 +148,6 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			return (FF_T_SINT32) FatEntry;
 		}
 	}
-	
 	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 	{
 		if(!pBuffer) {
@@ -188,11 +186,7 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 FF_T_UINT32 FF_TraverseFAT(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Count) {
 	
 	FF_T_UINT32 i;
-	FF_T_UINT32 fatEntry, currentCluster = Start;
-
-	if(Count == 0) {
-		return Start;
-	}
+	FF_T_UINT32 fatEntry = Start, currentCluster = Start;
 
 	for(i = 0; i < Count; i++) {
 		fatEntry = FF_getFatEntry(pIoman, currentCluster);
@@ -278,7 +272,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 	FatSectorEntry = FatOffset % pIoman->pPartition->BlkSize;
 	
 	LBAadjust = (FF_T_UINT8) (FatSectorEntry / pIoman->BlkSize);
-	relClusterEntry = FatSectorEntry % pIoman->BlkSize;
+	relClusterEntry = (FF_T_UINT16)(FatSectorEntry % pIoman->BlkSize);
 	
 	FatSector = FF_getRealLBA(pIoman, FatSector);
 
@@ -292,7 +286,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
-				F12short[0] = FF_getChar(pBuffer->pBuffer, (pIoman->BlkSize - 1));				
+				F12short[0] = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(pIoman->BlkSize - 1));				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			// Second Buffer get the first Byte in buffer (second byte of out address)!
@@ -323,7 +317,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
-				FF_putChar(pBuffer->pBuffer, (pIoman->BlkSize - 1), F12short[0]);				
+				FF_putChar(pBuffer->pBuffer, (FF_T_UINT16)(pIoman->BlkSize - 1), F12short[0]);				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			// Second Buffer get the first Byte in buffer (second byte of out address)!
@@ -391,6 +385,17 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 	}
 	 
 	return 0;
+}
+
+/**
+ * @private
+ * @brief	Create's a Cluster Chain
+ **/
+FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
+	FF_T_UINT32	iStartCluster;
+	iStartCluster = FF_FindFreeCluster(pIoman);
+	FF_putFatEntry(pIoman, iStartCluster, 0xFFFFFFFF); // Mark the cluster as EOC
+	return iStartCluster;
 }
 
 /**
@@ -472,3 +477,4 @@ FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 
 	return 0;
 }
+

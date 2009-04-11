@@ -96,13 +96,30 @@ FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 }
 
 FF_T_UINT16 FF_getShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-	return (FF_T_UINT16) ((pBuffer[offset] & 0xFF00)  << 8) | ((FF_T_UINT16) (pBuffer[offset+1]) & 0x00FF);
+    /* RTED: Using efficient function for SH2A core architecture */
+    FF_T_UINT16 usResult;
+    swapIndirectShort(&usResult, (FF_T_UINT16*)(pBuffer + offset));
+	return usResult;
 }
 
 FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-	return (FF_T_UINT32) ((pBuffer[offset] << 24) & 0xFF0000) | ((FF_T_UINT32) (pBuffer[offset+1] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+2] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+3]) & 0x000000FF);
+    /* RTED: Using efficient function for SH2A core architecture */
+    FF_T_UINT32 ulResult;
+    swapIndirectLong(&ulResult, (FF_T_UINT32*)(pBuffer + offset));
+	return ulResult;
 }
 
+void FF_putChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value) {
+	pBuffer[offset] = Value;
+}
+
+void FF_putShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT16 Value) {
+    swapIndirectShort((PUSHORT)(pBuffer + offset), &Value);
+}
+
+void FF_putLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT32 Value) {
+    swapIndirectLong((PULONG)(pBuffer + offset), &Value);
+}
 #endif
 
 /*
@@ -146,7 +163,7 @@ FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumb
 		if(string[i] == '\\' || string[i] == '/') {
 			y++;
 			if(y == *tokenNumber) {
-				tokenStart = (FF_T_UINT16) (i + 1);
+				tokenStart = (FF_T_UINT16)(i + 1);
 			}
 			if(y == (*tokenNumber + 1)) {
 				tokenEnd = i;

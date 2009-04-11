@@ -188,7 +188,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
  *	@param	pIoman		IOMAN Object.
  *
  **/
-void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
+static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	FF_T_UINT16 i;
 	FF_BUFFER *pBuffer = pIoman->pBuffers;
 	for(i = 0; i < pIoman->CacheSize; i++) {
@@ -213,7 +213,7 @@ void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
+static FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
 	if(Mode == FF_MODE_READ || Mode == FF_MODE_WRITE) {
 		return FF_TRUE;
 	}
@@ -231,7 +231,7 @@ FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+static FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
 	FF_T_SINT32 retVal = 0;
 	if(pIoman->pBlkDevice->fnReadBlocks) {	// Make sure we don't execute a NULL.
 		 do{
@@ -265,7 +265,7 @@ FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+static FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
 	FF_T_SINT32 retVal = 0;
 	if(pIoman->pBlkDevice->fnWriteBlocks) {	// Make sure we don't execute a NULL.
 		 do{
@@ -555,7 +555,7 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_
 /**
  *	@private
  **/
-FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
+static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer;
@@ -663,11 +663,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		pPart->BeginLBA = 0;
 	} else {
 		// Primary Partitions to deal with!
-
 		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber)));
-		if(PartitionNumber > 0) {
-			pPart->BeginLBA += FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * 0)));
-		}
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		if(!pPart->BeginLBA) {

@@ -46,7 +46,7 @@
 #define FF_SEEK_CUR	2
 #define FF_SEEK_END	3
 
-typedef struct {
+typedef struct _FF_FILE {
 	FF_IOMAN	*pIoman;		///< Ioman Pointer!
 	FF_T_UINT32 Filesize;		///< File's Size.
 	FF_T_UINT32 ObjectCluster;	///< File's Start Cluster.
@@ -56,8 +56,9 @@ typedef struct {
 	FF_T_UINT32 AddrCurrentCluster;
 	FF_T_UINT32 DirCluster;		///< Cluster Number that the Dirent is in.
 	FF_T_UINT32 DirEntry;		///< Dirent Entry Number describing this file.
-	void		*Next;
-} FF_FILE;
+	struct _FF_FILE *Next;
+} FF_FILE,
+*PFF_FILE;
 
 //---------- PROTOTYPES
 // PUBLIC (Interfaces):
@@ -71,5 +72,9 @@ FF_T_INT32	 FF_GetC	(FF_FILE *pFile);
 FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
 FF_T_SINT8	 FF_Seek	(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin);
+FF_T_SINT8	 FF_PutC    (FF_FILE *pFile, FF_T_UINT8 Value);
+
+// Private :
 
 #endif
+

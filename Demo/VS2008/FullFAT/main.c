@@ -55,7 +55,7 @@
 #include <conio.h>
 #include "../../../src/fullfat.h"
 
-#define PARTITION_NUMBER	1		///< Change this to the primary partition to be mounted (0 to 3)
+#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8192*8	// Increase This for Faster File Copies
 
 void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -99,6 +99,9 @@ int main(void) {
 	FF_DIRENT mydir;
 	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
+
+	FF_FILE *myfile;
+
 	float time, transferRate;
 	//f = fopen("c:\\bsp.img", "rb");
 	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
@@ -121,6 +124,11 @@ int main(void) {
 			getchar();
 			return -1;
 		}
+
+		myfile = FF_Open(pIoman, "\\test.txt", FF_MODE_WRITE, NULL);
+		FF_PutC(myfile, 'J');
+
+		FF_Close(myfile);
 
 		/*ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
 
