@@ -50,6 +50,8 @@ typedef struct _FF_FILE {
 	FF_IOMAN	*pIoman;		///< Ioman Pointer!
 	FF_T_UINT32 Filesize;		///< File's Size.
 	FF_T_UINT32 ObjectCluster;	///< File's Start Cluster.
+	FF_T_UINT32	iChainLength;	///< Total Length of the File's cluster chain.
+	FF_T_UINT32 iEndOfChain;
 	FF_T_UINT32 FilePointer;	///< Current Position Pointer.
 	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
 	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
@@ -69,7 +71,8 @@ FF_T_UINT32	 FF_FindDir		(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen
 FF_FILE		*FF_Open	(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError);
 FF_T_SINT8	 FF_Close	(FF_FILE *pFile);
 FF_T_INT32	 FF_GetC	(FF_FILE *pFile);
-FF_T_UINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
+FF_T_SINT32	 FF_Read	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
+FF_T_SINT32	 FF_Write	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
 FF_T_SINT8	 FF_Seek	(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin);
 FF_T_SINT8	 FF_PutC    (FF_FILE *pFile, FF_T_UINT8 Value);

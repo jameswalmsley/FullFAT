@@ -86,7 +86,7 @@ int main(void) {
 	FF_BUFFER *myBuf, *myBuf2;
 	int f1;
 	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 1024, 512);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
 	char commandShadow[2600];
@@ -95,16 +95,18 @@ int main(void) {
 	char cmdHistory = 0;
 	char tester;
 	unsigned long BytesRead;
-	FF_T_UINT32 i;
+	FF_T_UINT32 i,x;
 	FF_DIRENT mydir;
 	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
+
+	char mystring[] = "RUTH";
 
 	FF_FILE *myfile;
 
 	float time, transferRate;
 	//f = fopen("c:\\bsp.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -118,33 +120,13 @@ int main(void) {
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+		
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);
 			printf("FullFAT Couldn't mount the specified parition!\n");
 			getchar();
 			return -1;
 		}
-
-		myfile = FF_Open(pIoman, "\\test.txt", FF_MODE_WRITE, NULL);
-		FF_PutC(myfile, 'J');
-
-		FF_Close(myfile);
-
-		/*ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
-
-		FF_Seek(ff1, 0, FF_SEEK_END);
-
-		FF_PutC(ff1, 'J');
-		FF_PutC(ff1, 'A');
-		FF_PutC(ff1, 'M');
-		FF_PutC(ff1, 'E');
-		FF_PutC(ff1, 'S');
-
-		myBuf = FF_GetBuffer(pIoman, 587, FF_MODE_READ);
-		FF_ReleaseBuffer(pIoman, myBuf);
-		myBuf = FF_GetBuffer(pIoman, 1453867, FF_MODE_READ);
-//		FF_ReleaseBuffer(pIoman, myBuf);
-		FF_Close(ff1);*/
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
@@ -322,6 +304,49 @@ int main(void) {
 				strcpy(destination, "");
 			}
 
+			if(strstr(commandLine[cmdHistory], "copy")) {
+				sscanf((commandLine[cmdHistory] + 5), "%s %s", source, destination);
+				
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (destination)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (destination));
+				}
+				
+				fDest = fopen(source, "rb");
+				if(fDest) {
+					fSource = FF_Open(pIoman, buffer, FF_MODE_WRITE, &Error);
+					if(fSource) {
+						QueryPerformanceCounter(&start_ticks);  
+						do{
+							BytesRead = fread(buffer, 1, COPY_BUFFER_SIZE, fDest);
+							FF_Write(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
+							QueryPerformanceCounter(&end_ticks); 
+							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
+							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+							transferRate = (fSource->FilePointer / time) / 1024;
+							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+						}while(BytesRead > 0);
+						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+						fclose(fDest);
+						FF_Close(fSource);
+					} else {
+						fclose(fDest);
+						if(Error == FF_ERR_FILE_NOT_FOUND) {
+							printf("File Not Found!\n");
+						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
+							printf("File In Use!\n");
+						} else {
+							printf("Couldn't Open file! Unknown Error \n");
+						}
+					}
+				} else {
+					printf("Error Opening Destination\n");
+				}
+				strcpy(source, "");
+				strcpy(destination, "");
+			}
+
 			if(strstr(commandLine[cmdHistory], "flush")) {
 				FF_FlushCache(pIoman);
 			}
@@ -343,5 +368,5 @@ int main(void) {
 		printf("Run Visual Studio as an Administrator!\n");
 		getchar();
 	}
-
 }
+

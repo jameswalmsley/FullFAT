@@ -174,7 +174,7 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 
 /**
  *	@private
- *	@brief	Returns the Cluster address of the Cluster numbber from the beginning of a chain.
+ *	@brief	Returns the Cluster address of the Cluster number from the beginning of a chain.
  *	
  *	@param	pIoman		FF_IOMAN Object
  *	@param	Start		Cluster address of the first cluster in the chain.
@@ -203,6 +203,27 @@ FF_T_UINT32 FF_TraverseFAT(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Coun
 	
 	return fatEntry;
 }
+
+FF_T_UINT32 FF_FindEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 Start) {
+
+	FF_T_UINT32 fatEntry = Start, currentCluster = Start;
+
+	while(!FF_isEndOfChain(pIoman, fatEntry)) {
+		fatEntry = FF_getFatEntry(pIoman, currentCluster);
+		if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
+			return 0;
+		}
+
+		if(FF_isEndOfChain(pIoman, fatEntry)) {
+			return currentCluster;
+		} else {
+			currentCluster = fatEntry;
+		}	
+	}
+	
+	return fatEntry;
+}
+
 
 /**
  *	@private
@@ -398,6 +419,15 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
 	return iStartCluster;
 }
 
+FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
+	FF_T_UINT32 iLength = 0;
+	while(!FF_isEndOfChain(pIoman, pa_nStartCluster)) {
+		pa_nStartCluster = FF_getFatEntry(pIoman, pa_nStartCluster);
+		iLength++;
+	}
+	return iLength;
+}
+
 /**
  *	@private
  *	@brief Extend a Cluster chain by Count number of Clusters
@@ -432,7 +462,7 @@ FF_T_SINT8 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 		}
 
 		nextCluster = FF_FindFreeCluster(pIoman);
-		FF_putFatEntry(pIoman, currentCluster, nextCluster);
+		FF_putFatEntry(pIoman, currentCluster, ++nextCluster);
 	}
 	return 0;
 }
