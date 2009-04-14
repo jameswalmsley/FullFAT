@@ -55,8 +55,30 @@ signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned
 	if(!retVal) {
 		retVal = GetLastError();
 	} 
-	ERROR_HANDLE_EOF 
-	return (signed int) ReadBytes;	
+
+	return (signed int) (ReadBytes / 512);	
+}
+
+
+signed int fnVistaWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev) {
+	LARGE_INTEGER li;
+	DWORD	WrittenBytes;
+	DWORD	BytesReturned;
+	DWORD	retVal;
+	li.QuadPart = (sector * 512);
+	li.LowPart = SetFilePointer(hDev, li.LowPart, &li.HighPart, FILE_BEGIN);
+	
+	retVal = DeviceIoControl(hDev, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+	retVal = DeviceIoControl(hDev, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+	
+	retVal = WriteFile(hDev, buffer, (DWORD) (sectors * 512), &WrittenBytes, NULL);
+	if(!retVal) {
+		retVal = GetLastError();
+	} 
+	
+	retVal = DeviceIoControl(hDev, FSCTL_UNLOCK_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+
+	return (signed int) (WrittenBytes / 512);	
 }
 
 signed int fnRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {

@@ -59,12 +59,13 @@
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	8192*8	// Increase This for Faster File Copies
 
-void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
-void fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnVistaWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
+signed int fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test_2048		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int test_2048		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
@@ -84,7 +85,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
-	FILE *f,*fDest;
+	FILE *f = NULL, *fDest = NULL;
 	FF_BUFFER *myBuf, *myBuf2;
 	int f1;
 	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
@@ -112,9 +113,7 @@ int main(void) {
 	float time, transferRate;
 
 
-	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH, NULL);
-	jim = DeviceIoControl(hDev, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
-	jim = DeviceIoControl(hDev, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive4"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
 
 
 	if(hDev == INVALID_HANDLE_VALUE) {
@@ -135,10 +134,15 @@ int main(void) {
 	printf("Use the command help for more information\n\n");
 
 	if(hDev) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnVistaRead_512, (FF_READ_BLOCKS) fnVistaRead_512, hDev);
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnVistaWrite_512, (FF_READ_BLOCKS) fnVistaRead_512, hDev);
 		
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
-			fclose(f);
+			if(f) {
+				fclose(f);
+			}
+			if(hDev) {
+				CloseHandle(hDev);
+			}
 			printf("FullFAT Couldn't mount the specified parition!\n");
 			getchar();
 			return -1;
@@ -368,7 +372,13 @@ int main(void) {
 			}
 
 			if(strstr(commandLine[cmdHistory], "exit") || strstr(commandLine[cmdHistory], "quit")) {
-				fclose(f);
+				if(f) {
+					fclose(f);
+				}
+
+				if(hDev) {
+					CloseHandle(hDev);
+				}
 				return 0;
 			}
 
