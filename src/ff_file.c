@@ -537,10 +537,30 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	} else {
 		if((pFile->FilePointer + Bytes) > (pFile->iChainLength * iBytesPerCluster)) {
 			// Need To Extend the File Physically.
+			// 3 Properties of a cluster chain are known!
+			// pFile->ObjectCluster (the very beginning of a chain)
+			// pFile->iChainLength (the number of clusters in the chain)
+			// pFile->iEndOfChain (the end cluster of the chain)
+			// These 3 properties should be handled correctly to ensure maximum performance.
+			// On larger files, FAT traversal is a massive performance hinderance.
+			// Using and managing the above correctly can remove this bottle neck.
+			//
+			// The IOMAN needs to become smart! Fix the persistance regression, 
+			// Sectors from the FAT table score higher, to keep them cached.
+			//
+			// FAT sectors should be semaphored (for writing), and their access limited.
+			// Operations should be as quick as possible.
+			//
 			FF_ExtendClusterChain(pFile->pIoman, pFile->iEndOfChain, (FF_T_UINT16)((Bytes / iBytesPerCluster) + 1));
 			pFile->iChainLength = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster);
 			pFile->iEndOfChain = FF_FindEndOfChain(pFile->pIoman, pFile->iEndOfChain);
 		}
+		/*
+			MASSIVE PERFORMANCE
+		*/
+		// pFile-> Should have a currentCluster and AddressCurrent Cluster field.
+		// This can make this traversal much faster.
+		// Of course, any seeks will need to update them too.
 		iClusterAddress = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, iClusterNum);
 	}
 
