@@ -43,6 +43,15 @@
 // Comment this out if you don't want to worry about Patent Issues.
 #define FF_LFN_SUPPORT
 
+
+//---------- USE MACROS
+// Increases Code Size, but provides greater performance for partition mounting. And directory listing.
+//#define FF_USE_MACROS
+
+//---------- USE INLINE FUNCTIONS (Requires inline Keyword!)
+// Increases Code Size, but provides greater performance for partition mounting. And directory listing.
+//#define FF_INLINE
+
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT
 

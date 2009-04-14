@@ -1,5 +1,5 @@
-FullFAT.exe: main.o ff_ioman.o ff_memory.o ff_safety.o ff_fat.o ff_blk.o testdriver_win32.o
-	gcc main.o ff_ioman.o ff_memory.o ff_safety.o ff_fat.o ff_blk.o testdriver_win32.o -o FullFAT
+FullFAT.exe: main.o ff_ioman.o ff_memory.o ff_safety.o ff_fat.o ff_blk.o ff_file.o ff_dir.o testdriver_win32.o
+	gcc -Wall -O3 main.o ff_ioman.o ff_memory.o ff_safety.o ff_fat.o ff_blk.o ff_file.o ff_dir.o testdriver_win32.o -o FullFAT
     
     # Compilation commands:
 main.o: main.c
@@ -19,6 +19,12 @@ ff_fat.o: ../../src/ff_fat.c ../../src/ff_fat.h
 
 ff_blk.o: ../../src/ff_blk.c ../../src/ff_blk.h
 	gcc -Wall -c ../../src/ff_blk.c -o ff_blk.o
+	
+ff_file.o: ../../src/ff_file.c ../../src/ff_file.h
+	gcc -Wall -c ../../src/ff_file.c -o ff_file.o
+	
+ff_dir.o: ../../src/ff_dir.c ../../src/ff_dir.h
+	gcc -Wall -c ../../src/ff_dir.c -o ff_dir.o
 
 testdriver_win32.o: testdriver_win32.c
 	gcc -Wall -c testdriver_win32.c -o testdriver_win32.o

@@ -46,6 +46,7 @@
  **/
 
 #include "ff_memory.h"
+#include "ff_config.h"
 #include <string.h>
 
 #ifdef FF_LITTLE_ENDIAN
@@ -54,6 +55,7 @@
  *	@public
  *	@brief	8 bit memory access routines. 
  **/
+#ifndef FF_INLINE
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT8) (pBuffer[offset]);
 }
@@ -65,7 +67,7 @@ FF_T_UINT16 FF_getShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT32) (pBuffer[offset] & 0x000000FF) | ((FF_T_UINT32) (pBuffer[offset+1] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+2] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+3] << 24) & 0xFF000000);
 }
-
+#endif
 void FF_putChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value) {
 	pBuffer[offset] = Value;
 }

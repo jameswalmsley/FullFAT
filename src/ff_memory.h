@@ -41,18 +41,40 @@
 #include "ff_config.h"
 #include "ff_types.h"
 
+
 //---------- PROTOTYPES (in order of appearance)
 
 // PUBLIC:
 
 // PRIVATE:
+
+#ifdef FF_INLINE
+inline FF_T_UINT8		FF_getChar	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
+inline FF_T_UINT16		FF_getShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
+inline FF_T_UINT32		FF_getLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
+inline FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
+	return (FF_T_UINT8) (pBuffer[offset]);
+}
+
+inline FF_T_UINT16 FF_getShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
+	return (FF_T_UINT16) (pBuffer[offset] & 0x00FF) | ((FF_T_UINT16) (pBuffer[offset+1] << 8) & 0xFF00);
+}
+
+inline FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
+	return (FF_T_UINT32) (pBuffer[offset] & 0x000000FF) | ((FF_T_UINT32) (pBuffer[offset+1] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+2] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+3] << 24) & 0xFF000000);
+}
+
+#else
+
 FF_T_UINT8		FF_getChar	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
 FF_T_UINT16		FF_getShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
 FF_T_UINT32		FF_getLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
+#endif
 
 void			FF_putChar	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value);
 void			FF_putShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT16 Value);
 void			FF_putLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT32 Value);
+
 
 
 void			FF_tolower	(FF_T_INT8 *string, FF_T_UINT32 strLen);

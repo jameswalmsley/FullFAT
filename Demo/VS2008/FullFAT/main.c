@@ -52,6 +52,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <winbase.h>
+#include <winioctl.h>
 #include <conio.h>
 #include "../../../src/fullfat.h"
 
@@ -59,6 +60,7 @@
 #define COPY_BUFFER_SIZE	8192*8	// Increase This for Faster File Copies
 
 void fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
 void fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
@@ -100,13 +102,27 @@ int main(void) {
 	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
 
+	HANDLE hDev;
+	DWORD	BytesReturned;
+	BOOL jim;
+
 	char mystring[] = "RUTH";
 
 	FF_FILE *myfile;
-
 	float time, transferRate;
-	//f = fopen("c:\\bsp.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+
+
+	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH, NULL);
+	jim = DeviceIoControl(hDev, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+	jim = DeviceIoControl(hDev, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+
+
+	if(hDev == INVALID_HANDLE_VALUE) {
+		printf("Vista!\n");
+	}
+
+	//f = fopen("c:\\driveimage", "rb+");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -118,8 +134,8 @@ int main(void) {
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
-	if(f) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+	if(hDev) {
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnVistaRead_512, (FF_READ_BLOCKS) fnVistaRead_512, hDev);
 		
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			fclose(f);

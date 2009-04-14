@@ -397,7 +397,7 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 	}while((retVal == -1) || (pDirent->Attrib == FF_FAT_ATTR_VOLID));
 
 	if(retVal == -2) {
-		return retVal;
+		return (FF_T_SINT8) retVal;
 	}
 
 	if(retVal == FF_ERR_DEVICE_DRIVER_FAILED) {
@@ -484,7 +484,7 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 	FF_T_UINT32 FreeEntry;
 	FF_T_UINT32 itemLBA;
 	FF_T_UINT32 currentCluster;
-	FF_T_UINT8 relItem;
+	FF_T_UINT8	relItem;
 
 	FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, 1);
 
@@ -493,7 +493,7 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 	itemLBA = FF_Cluster2LBA(pIoman, DirCluster) + FF_getMajorBlockNumber(pIoman, FreeEntry, 32);
 	itemLBA = FF_getRealLBA(pIoman, itemLBA) + FF_getMinorBlockNumber(pIoman, FreeEntry, 32);
 
-	relItem = FF_getMinorBlockEntry(pIoman, FreeEntry, 32);
+	relItem = (FF_T_UINT8) FF_getMinorBlockEntry(pIoman, FreeEntry, 32);
 
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_WRITE);
 	{

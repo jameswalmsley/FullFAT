@@ -139,7 +139,7 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			
-			FatEntry = FF_getShort((FF_T_UINT8*)&F12short, 0);	// Guarantee correct Endianess!
+			FatEntry = (FF_T_UINT32) FF_getShort((FF_T_UINT8*)&F12short, 0);	// Guarantee correct Endianess!
 
 			if(nCluster & 0x0001) {
 				FatEntry = FatEntry >> 4;

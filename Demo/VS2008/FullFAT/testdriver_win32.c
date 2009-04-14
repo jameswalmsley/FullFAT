@@ -32,10 +32,33 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+#include <windows.h>
+#include <winbase.h>
+#include <winioctl.h>
+#include <conio.h>
 
 /*
 	This driver can inteface with Hard drives up to 2TB in size.
 */
+
+
+signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev) {
+	LARGE_INTEGER li;
+	DWORD	ReadBytes;
+	DWORD	retVal;
+	li.QuadPart = (sector * 512);
+	li.LowPart = SetFilePointer(hDev, li.LowPart, &li.HighPart, FILE_BEGIN);
+	retVal = ReadFile(hDev, buffer, (DWORD) (sectors * 512), &ReadBytes, NULL);
+	if(!retVal) {
+		retVal = GetLastError();
+	} 
+	ERROR_HANDLE_EOF 
+	return (signed int) ReadBytes;	
+}
+
 signed int fnRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 	unsigned long long address;
 	address = (unsigned long long) sector * 512;

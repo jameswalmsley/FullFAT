@@ -518,7 +518,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_DIRENT	OriginalEntry;
 	FF_T_UINT32 Bytes				= ElementSize * Count;
 	FF_T_UINT32	BytesWritten		= 0;
-	FF_T_UINT32 iNumClusters;
 	FF_T_UINT32	iSectors;
 	FF_T_INT32	retVal = 0;
 
@@ -591,9 +590,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			iRelClusterEntry	= pFile->FilePointer % (pFile->pIoman->BlkSize * (pFile->pIoman->pPartition->SectorsPerCluster * pFile->pIoman->pPartition->BlkFactor) / 1);
 
 			iClusterAddress		= FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, iClusterNum);
-			if(iClusterAddress == 0) {
-				printf("oh");
-			}
 
 			iItemLBA = FF_Cluster2LBA(pFile->pIoman, iClusterAddress);
 			iItemLBA = FF_getRealLBA(pFile->pIoman, iItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);

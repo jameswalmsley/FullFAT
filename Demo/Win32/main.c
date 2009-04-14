@@ -71,7 +71,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
 
-	printf("%s %12u %s\n", attr, pDirent->Filesize, pDirent->FileName);
+	printf("%s %12u %s\n", attr, (unsigned int)pDirent->Filesize, pDirent->FileName);
 }
 
 int main(void) {
@@ -80,6 +80,8 @@ int main(void) {
 	FILE *f, *fDest;
 	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
+
+	char Error;
 
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[1024];
@@ -147,26 +149,34 @@ int main(void) {
 					i++;
 					tester = FF_FindNext(pIoman, &mydir);
 				}
-				printf("\n%d Items\n", i);
+				printf("\n%d Items\n", (int)i);
 				putchar('\n');
 			}
 
+
+
 			if(strstr(commandLine, "view")) {
 				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (commandLine+5)); 
+					sprintf(buffer, "\\%s", (commandLine+5));
 				} else {
 					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
 				}
-				
-				fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
+
+				fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
 				if(fSource) {
 					for(i = 0; i < fSource->Filesize; i++) {
-						printf("%c", FF_GetC(fSource));
+						printf("%c", (char)FF_GetC(fSource));
 					}
 
 					FF_Close(fSource);
 				}else {
-					printf("File Not Found!\n");
+					if(Error == FF_ERR_FILE_NOT_FOUND) {
+						printf("File Not Found!\n");
+					} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
+						printf("File In Use!\n");
+					} else {
+						printf("Couldn't Open file! Unknown Error \n");
+					}
 				}
 			}
 
@@ -201,39 +211,45 @@ int main(void) {
 #ifdef FF_64_NUM_SUPPORT
 				printf("Volume Size: %llu (%u MB)\n", FF_GetVolumeSize(pIoman), (unsigned int)(FF_GetVolumeSize(pIoman) / 1048576));
 #else
-				printf("Volume Size: %d (%u MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+				printf("Volume Size: %u (%u MB)\n", (unsigned int) FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
 #endif
 			}
 
 			if(strstr(commandLine, "cp")) {
 				sscanf((commandLine + 3), "%s %s", source, destination);
-				
+
 				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (source)); 
+					sprintf(buffer, "\\%s", (source));
 				} else {
 					sprintf(buffer, "%s\\%s", workingDir, (source));
 				}
-				
+
 				fDest = fopen(destination, "wb");
 				if(fDest) {
-					fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
+					fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
 					if(fSource) {
-						QueryPerformanceCounter(&start_ticks);  
+						QueryPerformanceCounter(&start_ticks);
 						do{
 							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
 							fwrite(buffer, BytesRead, 1, fDest);
-							QueryPerformanceCounter(&end_ticks); 
+							QueryPerformanceCounter(&end_ticks);
 							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
 							transferRate = (fSource->FilePointer / time) / 1024;
-							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+							printf("%3.0f%% - %10u Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), (unsigned int) fSource->FilePointer, transferRate);
 						}while(BytesRead > 0);
-						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+						printf("%3.0f%% - %10u Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), (unsigned int) fSource->FilePointer, transferRate);
 						fclose(fDest);
 						FF_Close(fSource);
 					} else {
 						fclose(fDest);
-						printf("Error Opening Source\n");
+						if(Error == FF_ERR_FILE_NOT_FOUND) {
+							printf("File Not Found!\n");
+						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
+							printf("File In Use!\n");
+						} else {
+							printf("Couldn't Open file! Unknown Error \n");
+						}
 					}
 				} else {
 					printf("Error Opening Destination\n");
