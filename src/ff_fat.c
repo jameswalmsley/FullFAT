@@ -195,7 +195,7 @@ FF_T_UINT32 FF_TraverseFAT(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Coun
 		}
 
 		if(FF_isEndOfChain(pIoman, fatEntry)) {
-			return 0;
+			return currentCluster;
 		} else {
 			currentCluster = fatEntry;
 		}	
@@ -398,9 +398,10 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 	FF_T_UINT32 nCluster;
 	FF_T_UINT32 fatEntry;
 
-	for(nCluster = 0; nCluster < pIoman->pPartition->NumClusters; nCluster++) {
+	for(nCluster = pIoman->pPartition->LastFreeCluster; nCluster < pIoman->pPartition->NumClusters; nCluster++) {
 		fatEntry = FF_getFatEntry(pIoman, nCluster);
 		if(fatEntry == 0x00000000) {
+			pIoman->pPartition->LastFreeCluster = nCluster;
 			return nCluster;
 		}
 	}
@@ -421,10 +422,29 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
 
 FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
 	FF_T_UINT32 iLength = 0;
+	
+	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
+	{
+		while(pIoman->FatProtector) {
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
+			FF_Yield();						// Keep Releasing and Yielding until we have the Fat protector.
+			FF_PendSemaphore(pIoman->pSemaphore);
+		}
+		pIoman->FatProtector = 1;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+	
 	while(!FF_isEndOfChain(pIoman, pa_nStartCluster)) {
 		pa_nStartCluster = FF_getFatEntry(pIoman, pa_nStartCluster);
 		iLength++;
 	}
+	
+	FF_PendSemaphore(pIoman->pSemaphore);	// Return the FatProtector back to 0
+	{
+		pIoman->FatProtector = 0;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
 	return iLength;
 }
 
@@ -437,7 +457,7 @@ FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
  *	@param	Count			Number of clusters to extend the chain with.
  *
  **/
-FF_T_SINT8 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
+FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
 	
 	FF_T_UINT32 fatEntry = StartCluster;
 	FF_T_UINT32 currentCluster, nextCluster;
@@ -464,7 +484,7 @@ FF_T_SINT8 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 		nextCluster = FF_FindFreeCluster(pIoman);
 		FF_putFatEntry(pIoman, currentCluster, ++nextCluster);
 	}
-	return 0;
+	return currentCluster;
 }
 
 

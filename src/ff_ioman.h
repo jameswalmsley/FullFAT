@@ -129,6 +129,7 @@ typedef struct {
 	FF_T_UINT32		ClusterBeginLBA;	///< LBA of first cluster.
 	FF_T_UINT32		NumClusters;		///< Number of clusters.
 	FF_T_UINT32		RootDirCluster;		///< Cluster number of the root directory entry.
+	FF_T_UINT32		LastFreeCluster;
 } FF_PARTITION;
 
 
@@ -143,10 +144,11 @@ typedef struct {
 	FF_BLK_DEVICE	*pBlkDevice;	///< Pointer to a Block device description.
 	FF_PARTITION	*pPartition;	///< Pointer to a partition description.
 	FF_BUFFER		*pBuffers;		///< Pointer to the first buffer description.
-	FF_T_UINT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT16		BlkSize;		///< The Block size that IOMAN is configured to.
+	FF_T_UINT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
 	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
+	FF_T_UINT8		FatProtector;	///< 
 	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
 	void			*FirstFile;		///< Pointer to the first File object.
 } FF_IOMAN;

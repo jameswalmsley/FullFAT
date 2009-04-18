@@ -80,6 +80,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	pIoman->pPartition	= (FF_PARTITION  *) malloc(sizeof(FF_PARTITION));
 	if(pIoman->pPartition) {	// If succeeded, flag that allocation.
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_PART;
+		pIoman->pPartition->LastFreeCluster = 0;
 	} else {
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
@@ -112,9 +113,10 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFFERS;
 	}
 
-	pIoman->BlkSize		= BlkSize;
-	pIoman->CacheSize	= (FF_T_UINT8) (Size / BlkSize);
-	pIoman->FirstFile	= NULL;
+	pIoman->BlkSize		 = BlkSize;
+	pIoman->CacheSize	 = (FF_T_UINT8) (Size / BlkSize);
+	pIoman->FirstFile	 = NULL;
+	pIoman->FatProtector = 0;
 
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
 		but uses buffer objects instead. Allows us to provide thread safety.
@@ -303,7 +305,7 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
 		for(i = 0; i < pIoman->CacheSize; i++) {
-			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->Mode == FF_MODE_WRITE) {
+			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->Modified == FF_TRUE) {
 				//Prepare and Do some work on this buffer!
 				(pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
 				FF_ReleaseSemaphore(pIoman->pSemaphore);	// Release Semaphore while 
@@ -316,6 +318,7 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 				
 				// Buffer has now been flushed, set mark it as a read buffer!
 				(pIoman->pBuffers + i)->Mode = FF_MODE_READ;
+				(pIoman->pBuffers + i)->Modified = FF_FALSE;
 
 				// Search for other buffers that used this sector, and mark them as modified
 				// So that further requests will result in the new sector being fetched.
@@ -334,155 +337,99 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	return 0;
 }
 
-
-/**
- *	@private
- *	@brief	Return's a pointer to a valid buffer resource
- *
- *	@param	pIoman	FF_IOMAN object.
- *	@param	Sector	LBA address of the sector to fetch.
- *	@param	Mode	FF_READ or FF_WRITE access modes.
- *
- *	@return	Pointer to the Buffer description.
- **/
-FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
-
-	FF_T_UINT16 i,x;
-	FF_T_SINT32 retVal;
-	
-	if(!pIoman) {
-		return NULL;	// No NULL pointer modification.
+FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
+	if(Sector >= pIoman->pPartition->FatBeginLBA && Sector < (pIoman->pPartition->FatBeginLBA + pIoman->pPartition->ReservedSectors)) {
+		return FF_TRUE;
 	}
-
-	if(!FF_IOMAN_ModeValid(Mode)) {
-		return NULL;	// Make sure mode is correctly set.
-	}
-
-	// Get a Semaphore now, and release on any return.
-	// Improves speed of the searching. Prevents description changes
-	// Mid-loop. This could be a performance issue later on!!
-	while(1) {
-		
-		FF_PendSemaphore(pIoman->pSemaphore);
-		
-		// Search for an appropriate buffer.
-		if(Mode == FF_MODE_READ) {
-			// Find A READ sector that.
-			for(i = 0; i < pIoman->CacheSize; i++) {
-				if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ) {
-					// Suitable Sector, was it modified?
-					if((pIoman->pBuffers + i)->Modified == FF_FALSE && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) { // Perfect !
-						(pIoman->pBuffers + i)->NumHandles += 1;
-						(pIoman->pBuffers + i)->Persistance += 1;
-						FF_ReleaseSemaphore(pIoman->pSemaphore);
-						return (pIoman->pBuffers + i);
-					} else {
-						// It was, if it has no handles attached, then we can update it.
-						if((pIoman->pBuffers + i)->NumHandles == 0) {
-							// Go ahead and refresh the sector!
-							// Prepare and do some work!
-							(pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
-							FF_ReleaseSemaphore(pIoman->pSemaphore);
-							{
-								retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
-							}	// Work Done!
-							FF_PendSemaphore(pIoman->pSemaphore);
-							(pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
-							// Work complete!
-
-							if(retVal) { // Buffer was not filled!
-								FF_ReleaseSemaphore(pIoman->pSemaphore);
-								return NULL;
-							}
-							(pIoman->pBuffers + i)->Modified	 = FF_FALSE; // Cache is up-to-date!
-							(pIoman->pBuffers + i)->NumHandles	+= 1;
-							(pIoman->pBuffers + i)->Persistance += 1;
-							FF_ReleaseSemaphore(pIoman->pSemaphore);
-							return (pIoman->pBuffers + i);
-						}
-					}
-				}
-			}
-
-			/*for(i = 0; i < pIoman->CacheSize; i++) {
-				if((pIoman->pBuffers + i)->Persistance == 0) {
-					retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
-					if(retVal) { // Buffer was not filled!
-						FF_ReleaseSemaphore(pIoman->pSemaphore);
-						return NULL;
-					}
-					(pIoman->pBuffers + i)->Mode = Mode;
-					(pIoman->pBuffers + i)->NumHandles = 1;
-					(pIoman->pBuffers + i)->Sector = Sector;
-					// Fill the buffer with data from the device.
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return (pIoman->pBuffers + i);
-				}
-			}*/
-		}
-
-		for(i = 0; i < pIoman->CacheSize; i++) {
-			if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) {
-				if((pIoman->pBuffers + i)->Mode == FF_MODE_WRITE && (pIoman->pBuffers + i)->NumHandles == 0) {
-					// Flush that buffer to the disk! Mark Read, and increase handles / persistance!
-					// Work to do - prepare!
-					(pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					{
-						FF_IOMAN_FlushBuffer(pIoman, Sector, (pIoman->pBuffers + i)->pBuffer);
-					}
-					FF_PendSemaphore(pIoman->pSemaphore);
-					(pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
-
-					for(x = 0; x < pIoman->CacheSize; x++) {
-						if((pIoman->pBuffers + x)->Sector == (pIoman->pBuffers + i)->Sector && (pIoman->pBuffers + x)->Mode == FF_MODE_READ) {
-							(pIoman->pBuffers + x)->Modified = FF_TRUE;
-						}
-					}
-					(pIoman->pBuffers + i)->NumHandles = 1;
-					(pIoman->pBuffers + i)->Mode = Mode;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return (pIoman->pBuffers + i);
-				}
-			}
-		}
-		
-		// Last resort, fill a buffer with no handles!
-
-		for(i = 0; i < pIoman->CacheSize; i++) {
-			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) {
-				
-				(pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
-				if((pIoman->pBuffers + i)->Mode == FF_MODE_WRITE) {
-					FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
-				}
-				FF_ReleaseSemaphore(pIoman->pSemaphore);
-				{
-					retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
-				}
-				FF_PendSemaphore(pIoman->pSemaphore);
-				(pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
-				
-				if(retVal) { // Buffer was not filled!
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return NULL;
-				}
-				(pIoman->pBuffers + i)->Mode = Mode;
-				(pIoman->pBuffers + i)->Persistance = 1;
-				(pIoman->pBuffers + i)->NumHandles = 1;
-				(pIoman->pBuffers + i)->Sector = Sector;
-				(pIoman->pBuffers + i)->Modified = FF_FALSE;
-				// Fill the buffer with data from the device.
-				FF_ReleaseSemaphore(pIoman->pSemaphore);
-				return (pIoman->pBuffers + i);
-			}
-		}
-
-		FF_ReleaseSemaphore(pIoman->pSemaphore);	// Important that we free access!
-		FF_Yield();		// Yield Thread, so that further iterations can gain resources.
-	}
-	//return NULL;	// No buffer available.
+	return FF_FALSE;
 }
+
+FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
+	
+	FF_BUFFER	*pBuffer = pIoman->pBuffers;
+	FF_T_UINT16	Persistance = 0;
+	FF_T_UINT16 i,x = 0, y = 0;
+	FF_T_BOOL	bFoundBuffer = FF_FALSE;
+
+	while(1) {	// Loop infinitely until we can return with a buffer.
+		FF_PendSemaphore(pIoman->pSemaphore);
+		{
+			// Find Matching Sectors.
+			for(i = 0; i < pIoman->CacheSize; i++) {
+				pBuffer = (pIoman->pBuffers + i);
+				if(pBuffer->Sector == Sector) {	// Sector is in cache, is it suitable?
+					if(Mode == FF_MODE_READ && pBuffer->Mode == FF_MODE_READ) {
+						pBuffer->NumHandles += 1;
+						if(FF_isFATSector(pIoman, Sector)) {
+							pBuffer->Persistance += 2;
+						} else {
+							pBuffer->Persistance += 1;
+						}
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+						return pBuffer;
+					}
+
+					if(pBuffer->Mode == FF_MODE_WRITE && pBuffer->NumHandles == 0) {	// This buffer has no attached handles.
+						pBuffer->Modified = FF_TRUE;
+						pBuffer->Mode = Mode;
+						pBuffer->NumHandles = 1;
+						pBuffer->Persistance += 1;
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+						return pBuffer;
+					}
+
+					if(pBuffer->Mode == FF_MODE_READ && Mode == FF_MODE_WRITE && pBuffer->NumHandles == 0) {
+						pBuffer->Mode = Mode;
+						pBuffer->Modified = FF_TRUE;
+						pBuffer->NumHandles = 1;
+						pBuffer->Persistance += 1;
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+						return pBuffer;
+					}
+				}
+			}
+
+			// No Matches, find a suitable sector to replace.
+			for(i = 0; i < pIoman->CacheSize; i++) {
+				pBuffer = (pIoman->pBuffers + i);
+				if(pBuffer->NumHandles == 0) {	// Possible candidate for replacement.
+					if(y == 0) {
+						Persistance = pBuffer->Persistance;
+						bFoundBuffer = FF_TRUE;
+						x = i;					// Flag current sector as a candidate.
+					} else {
+						if(pBuffer->Persistance < Persistance) {
+							Persistance = pBuffer->Persistance;
+							x = i;
+						}
+					}
+					y++;
+				}
+			}
+
+			if(bFoundBuffer) {
+				// Process the suitable candidate.
+				pBuffer = (pIoman->pBuffers + x);
+				if(pBuffer->Modified == FF_TRUE) {
+					FF_IOMAN_FlushBuffer(pIoman, pBuffer->Sector, pBuffer->pBuffer);
+				}
+				pBuffer->Mode = Mode;
+				pBuffer->Persistance = 1;
+				pBuffer->NumHandles = 1;
+				pBuffer->Sector = Sector;
+				pBuffer->Modified = FF_FALSE;
+				FF_IOMAN_FillBuffer(pIoman, Sector, pBuffer->pBuffer);
+				FF_ReleaseSemaphore(pIoman->pSemaphore);
+				return pBuffer;
+			}
+
+		}
+		FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+		FF_Yield();
+	}
+}
+
 
 
 /**

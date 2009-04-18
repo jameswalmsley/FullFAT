@@ -47,18 +47,18 @@
 #define FF_SEEK_END	3
 
 typedef struct _FF_FILE {
-	FF_IOMAN	*pIoman;		///< Ioman Pointer!
-	FF_T_UINT32 Filesize;		///< File's Size.
-	FF_T_UINT32 ObjectCluster;	///< File's Start Cluster.
-	FF_T_UINT32	iChainLength;	///< Total Length of the File's cluster chain.
-	FF_T_UINT32 iEndOfChain;
-	FF_T_UINT32 FilePointer;	///< Current Position Pointer.
-	FF_T_UINT8	Mode;			///< Mode that File Was opened in.
-	FF_T_UINT32	CurrentCluster;	///< Prevents FAT Thrashing
-	FF_T_UINT32 AddrCurrentCluster;
-	FF_T_UINT32 DirCluster;		///< Cluster Number that the Dirent is in.
-	FF_T_UINT32 DirEntry;		///< Dirent Entry Number describing this file.
-	struct _FF_FILE *Next;
+	FF_IOMAN	*pIoman;			///< Ioman Pointer!
+	FF_T_UINT32 Filesize;			///< File's Size.
+	FF_T_UINT32 ObjectCluster;		///< File's Start Cluster.
+	FF_T_UINT32	iChainLength;		///< Total Length of the File's cluster chain.
+	FF_T_UINT32	CurrentCluster;		///< Prevents FAT Thrashing.
+	FF_T_UINT32 AddrCurrentCluster;	///< Address of the current cluster.
+	FF_T_UINT32 iEndOfChain;		///< Address of the last cluster in the chain.
+	FF_T_UINT32 FilePointer;		///< Current Position Pointer.
+	FF_T_UINT8	Mode;				///< Mode that File Was opened in.
+	FF_T_UINT32 DirCluster;			///< Cluster Number that the Dirent is in.
+	FF_T_UINT32 DirEntry;			///< Dirent Entry Number describing this file.
+	struct _FF_FILE *Next;			///< Pointer to the next file object in the linked list.
 } FF_FILE,
 *PFF_FILE;
 
