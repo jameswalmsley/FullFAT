@@ -76,6 +76,7 @@ FF_T_SINT32	 FF_Write	(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Coun
 FF_T_BOOL	 FF_isEOF	(FF_FILE *pFile);
 FF_T_SINT8	 FF_Seek	(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin);
 FF_T_SINT8	 FF_PutC    (FF_FILE *pFile, FF_T_UINT8 Value);
+FF_T_SINT8	 FF_RmFile	(FF_IOMAN *pIoman, FF_T_INT8 *path);
 
 // Private :
 

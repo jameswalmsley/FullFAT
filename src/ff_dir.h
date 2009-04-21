@@ -48,12 +48,7 @@
 #include <string.h>
 
 typedef struct {
-	
-#ifdef FF_LFN_SUPPORT
 	FF_T_INT8	FileName[FF_MAX_FILENAME];
-#else
-	FF_T_INT8	FileName[FF_MAX_FILENAME];
-#endif
 	FF_T_UINT8	Attrib;
 	FF_T_UINT32 Filesize;
 	FF_T_UINT32	ObjectCluster;
@@ -65,9 +60,14 @@ typedef struct {
 	FF_T_BOOL	ProcessedLFN;
 } FF_DIRENT;
 
-FF_T_SINT8	FF_GetEntry	(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted);
-FF_T_SINT8  FF_PutEntry (FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 Entry, FF_DIRENT *pDirent);
-FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
+		FF_T_SINT8	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted);
+		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 Entry, FF_DIRENT *pDirent);
+		FF_T_UINT32 FF_FindEntry	(FF_IOMAN *pIoman, FF_T_SINT8 *path, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
+		FF_T_SINT8	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path);
+		FF_T_SINT8	FF_FindNext		(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
+static	FF_T_UINT8	FF_CreateChkSum	(const FF_T_UINT8 *pa_pShortName);
+static	void		FF_lockDIR		(FF_IOMAN *pIoman);
+static	void		FF_unlockDIR	(FF_IOMAN *pIoman);
 
 #endif
 

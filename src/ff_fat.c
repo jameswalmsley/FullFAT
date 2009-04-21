@@ -44,6 +44,27 @@
 #include "ff_config.h"
 #include <string.h>
 
+static void FF_lockFAT(FF_IOMAN *pIoman) {
+	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
+	{
+		while(pIoman->FatLock) {
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
+			FF_Yield();						// Keep Releasing and Yielding until we have the Fat protector.
+			FF_PendSemaphore(pIoman->pSemaphore);
+		}
+		pIoman->FatLock = 1;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+}
+
+static void FF_unlockFAT(FF_IOMAN *pIoman) {
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		pIoman->FatLock = 0;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+}
+
 /**
  *	@private
  **/
@@ -423,27 +444,14 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
 FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
 	FF_T_UINT32 iLength = 0;
 	
-	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
+	FF_lockFAT(pIoman);
 	{
-		while(pIoman->FatProtector) {
-			FF_ReleaseSemaphore(pIoman->pSemaphore);
-			FF_Yield();						// Keep Releasing and Yielding until we have the Fat protector.
-			FF_PendSemaphore(pIoman->pSemaphore);
+		while(!FF_isEndOfChain(pIoman, pa_nStartCluster)) {
+			pa_nStartCluster = FF_getFatEntry(pIoman, pa_nStartCluster);
+			iLength++;
 		}
-		pIoman->FatProtector = 1;
 	}
-	FF_ReleaseSemaphore(pIoman->pSemaphore);
-	
-	while(!FF_isEndOfChain(pIoman, pa_nStartCluster)) {
-		pa_nStartCluster = FF_getFatEntry(pIoman, pa_nStartCluster);
-		iLength++;
-	}
-	
-	FF_PendSemaphore(pIoman->pSemaphore);	// Return the FatProtector back to 0
-	{
-		pIoman->FatProtector = 0;
-	}
-	FF_ReleaseSemaphore(pIoman->pSemaphore);
+	FF_unlockFAT(pIoman);
 
 	return iLength;
 }

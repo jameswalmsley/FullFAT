@@ -148,7 +148,8 @@ typedef struct {
 	FF_T_UINT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.
 	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
-	FF_T_UINT8		FatProtector;	///< 
+	FF_T_UINT8		FatLock;		///< Lock Flag for FAT (This must be accessed via a semaphore).
+	FF_T_UINT8		DirLock;		///< Lock Flag for Dir Modification (This must be accessed via a semaphore).
 	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
 	void			*FirstFile;		///< Pointer to the first File object.
 } FF_IOMAN;

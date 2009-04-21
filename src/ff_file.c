@@ -93,7 +93,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	
 
 	if(DirCluster) {
-		FileCluster = FF_FindEntry(pIoman, DirCluster, filename, 0x00, &Object);
+		FileCluster = FF_FindEntry(pIoman, path, 0x00, &Object);
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 			FF_tolower(Object.FileName, FF_MAX_FILENAME);
 			FF_tolower(filename, FF_MAX_FILENAME);
@@ -170,20 +170,25 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 
 
 FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
-	FF_FILE *file;
+	FF_FILE *pFile;
 	FF_T_SINT8 Error;
+	FF_DIRENT OriginalEntry;
 
-	file = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+	pFile = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
 
-	if(!file) {
+	if(!pFile) {
 		return Error;	// File in use or File not found!
 	}
 
-	FF_UnlinkClusterChain(pIoman, file->ObjectCluster, 0);	// 0 to delete the entire chain!
+	FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
 	
 	// Edit the Directory Entry! (So it appears as deleted);
+	FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry, FF_FALSE);
+	OriginalEntry.FileName[0] = 0xE5;
+	FF_PutEntry(pIoman, pFile->DirCluster, pFile->DirEntry, &OriginalEntry);
+
 	
-	FF_Close(file); // Free the file pointer resources
+	FF_Close(pFile); // Free the file pointer resources
 	// File is now lost!
 	return 0;
 }
@@ -772,6 +777,8 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		case FF_SEEK_SET:
 			if((FF_T_UINT32) Offset <= pFile->Filesize && Offset >= 0) {
 				pFile->FilePointer = Offset;
+				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
+				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster);
 			} else {
 				return -2;
 			}
@@ -780,6 +787,8 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		case FF_SEEK_CUR:
 			if((Offset + pFile->FilePointer) <= pFile->Filesize && (Offset + (FF_T_SINT32) pFile->FilePointer) >= 0) {
 				pFile->FilePointer = Offset + pFile->FilePointer;
+				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
+				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster);
 			} else {
 				return -2;
 			}
@@ -788,6 +797,8 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		case FF_SEEK_END:
 			if((Offset + (FF_T_SINT32) pFile->Filesize) >= 0 && (Offset + pFile->Filesize) <= pFile->Filesize) {
 				pFile->FilePointer = Offset + pFile->Filesize;
+				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
+				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster);
 			} else {
 				return -2;
 			}

@@ -116,7 +116,8 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	pIoman->BlkSize		 = BlkSize;
 	pIoman->CacheSize	 = (FF_T_UINT8) (Size / BlkSize);
 	pIoman->FirstFile	 = NULL;
-	pIoman->FatProtector = 0;
+	pIoman->FatLock = 0;
+	pIoman->DirLock = 0;
 
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
 		but uses buffer objects instead. Allows us to provide thread safety.

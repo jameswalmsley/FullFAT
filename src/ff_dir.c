@@ -42,35 +42,133 @@
 
 #include "ff_dir.h"
 
+static void FF_lockDIR(FF_IOMAN *pIoman) {
+	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
+	{
+		while(pIoman->DirLock) {
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
+			FF_Yield();						// Keep Releasing and Yielding until we have the Fat protector.
+			FF_PendSemaphore(pIoman->pSemaphore);
+		}
+		pIoman->DirLock = 1;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+}
+
+static void FF_unlockDIR(FF_IOMAN *pIoman) {
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		pIoman->DirLock = 0;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+}
+
+static FF_T_UINT8 FF_CreateChkSum(const FF_T_UINT8 *pa_pShortName) {
+	FF_T_UINT8	cNameLen;
+	FF_T_UINT8	ChkSum = 0;
+
+	for(cNameLen = 11; cNameLen != 0; cNameLen--) {
+		ChkSum = ((ChkSum & 1) ? 0x80 : 0) + (ChkSum >> 1) + *pa_pShortName++;
+	}
+	return ChkSum;
+}
+
+FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
+	
+	pDirent->DirCluster = DirCluster;
+
+	for(pDirent->CurrentItem = 0; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
+		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
+			return -2;
+		}
+		if(EntryBuffer[0] != 0xE5) {
+			if(FF_isEndOfDir(EntryBuffer)){
+				return -2;
+			}
+			pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
+				// LFN Processing
+				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+#ifdef FF_LFN_SUPPORT
+				FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+				return 0;
+#else 
+				pDirent->CurrentItem += (numLFNs - 1);
+#endif
+			} else if((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
+				// Do Nothing
+			
+			} else {
+				FF_PopulateShortDirent(pDirent, EntryBuffer);
+				pDirent->CurrentItem += 1;
+				return 0;
+			}
+		}
+	}
+
+
+
+}
+
 /**
  *	@private
  **/
-FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
+FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_SINT8 *path, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
 	
 	FF_T_INT32		retVal;
-	FF_DIRENT		MyDir;
+	FF_T_INT8		name[FF_MAX_FILENAME];
 	FF_T_INT8		Filename[FF_MAX_FILENAME];
 	FF_T_UINT16		fnameLen;
 	FF_T_UINT16		compareLength;
-	FF_T_UINT16		nameLen = (FF_T_UINT16) strlen(name);
+	FF_T_UINT16		nameLen;
+	FF_T_UINT16		i = strlen(path);
 	/*
 		Initialise the MyDir object so that it can traverse Dirs > 1 Cluster.
 	*/
-	MyDir.CurrentItem		= 0;
-	MyDir.CurrentCluster	= 0;
-	MyDir.ProcessedLFN		= FF_FALSE;
-	MyDir.DirCluster		= DirCluster;
 
-	while(1) {	
-		do { /* Skip past all deleted entries */
-			retVal = FF_GetEntry(pIoman, MyDir.CurrentItem, MyDir.DirCluster, &MyDir, FF_FALSE);
-		}while(retVal == -1);
-
-		if(retVal == -2) {	/* -2 was returned because the end of directory was reached. */
+	while(i != 0) {
+		if(path[i] == '\\' || path[i] == '/') {
 			break;
 		}
-		if((MyDir.Attrib & pa_Attrib) == pa_Attrib){
-			strcpy(Filename, MyDir.FileName);
+		i--;
+	}
+	
+	if(i == 0) {
+		i = 1;
+	}
+
+	nameLen = strlen((path + i));
+	strncpy(name, (path + i), nameLen);
+	name[nameLen] = '\0';	
+	
+
+	if(FF_FindFirst(pIoman, pDirent, path)) {
+		return 0; // file not found.
+	}
+
+	if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
+		strcpy(Filename, pDirent->FileName);
+		fnameLen = (FF_T_UINT16) strlen(Filename);
+		FF_tolower(Filename, (FF_T_UINT32) fnameLen);
+		FF_tolower(name, (FF_T_UINT32) nameLen);
+		if(nameLen > fnameLen) {
+			compareLength = nameLen;
+		} else {
+			compareLength = fnameLen;
+		}
+		if(strncmp(name, Filename, (FF_T_UINT32) compareLength) == 0) {
+			// Object found!!
+			return pDirent->ObjectCluster;	// Return the cluster number
+		}
+	}
+
+	while(1) {	
+		if(FF_FindNext(pIoman, pDirent)) {
+			return 0;	// end of dir, file not found!
+		}
+
+		if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
+			strcpy(Filename, pDirent->FileName);
 			fnameLen = (FF_T_UINT16) strlen(Filename);
 			FF_tolower(Filename, (FF_T_UINT32) fnameLen);
 			FF_tolower(name, (FF_T_UINT32) nameLen);
@@ -80,11 +178,8 @@ FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *na
 				compareLength = fnameLen;
 			}
 			if(strncmp(name, Filename, (FF_T_UINT32) compareLength) == 0) {
-				// Object found!!
-				if(pDirent) {
-					memcpy(pDirent, &MyDir, sizeof(FF_DIRENT));
-				}
-				return MyDir.ObjectCluster;	// Return the cluster number
+				// Object found!
+				return pDirent->ObjectCluster;	// Return the cluster number
 			}
 		}
 	}
@@ -118,7 +213,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
 	 do{
 		//lastDirCluster = dirCluster;
 		MyDir.CurrentItem = 0;
-		dirCluster = FF_FindEntry(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
+		dirCluster = FF_FindEntryInDir(pIoman, path, FF_FAT_ATTR_DIR, &MyDir);
 		if(dirCluster == 0 && MyDir.CurrentItem == 2) {	// .. Dir Entry pointing to root dir.
 			dirCluster = pIoman->pPartition->RootDirCluster;
 		}
@@ -241,9 +336,52 @@ void FF_ProcessShortName(FF_T_INT8 *name) {
 
 }
 
+void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
+	FF_T_UINT16 myShort;
+	
+	memcpy(pDirent->FileName, EntryBuffer, 11);	// Copy the filename into the Dirent object.
+	FF_ProcessShortName(pDirent->FileName);		// Format the shortname, for pleasant viewing.
+	FF_tolower(pDirent->FileName, strlen(pDirent->FileName));
+	// Get the item's Cluster address.
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
+	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
+	pDirent->ObjectCluster |= myShort;
+
+	// Get the filesize.
+	pDirent->Filesize = FF_getLong(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
+	// Get the attribute.
+	pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+}
+
+FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
+	FF_BUFFER *pBuffer;
+	FF_T_UINT32 itemLBA;
+	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster);
+	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, nEntry, (FF_T_UINT16)32);
+	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, nEntry, (FF_T_UINT16)32);
+	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);
+
+	if((clusterNum + 1) > chainLength) {
+		return -3;	// End of Dir was reached!
+	}
+
+	itemLBA = FF_Cluster2LBA(pIoman, clusterAddress)	+ FF_getMajorBlockNumber(pIoman, nEntry, (FF_T_UINT16)32);
+	itemLBA = FF_getRealLBA	(pIoman, itemLBA)			+ FF_getMinorBlockNumber(pIoman, relItem, (FF_T_UINT16)32);
+	
+	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
+	{
+		memcpy(buffer, (pBuffer->pBuffer + (relItem*32)), 32);
+	}
+	FF_ReleaseBuffer(pIoman, pBuffer);
+ 
+    return 0;
+}
+
 /**
  *	@private
  **/
+
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted) {
 	
 	FF_T_UINT8		tester,numLFNs, i;		///< Unsigned byte for testing if dir is deleted
@@ -357,6 +495,69 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
 	return retVal;
 }
 
+FF_T_BOOL FF_isEndOfDir(FF_T_UINT8 *EntryBuffer) {
+	if(EntryBuffer[0] == 0x00) {
+		return FF_TRUE;
+	}
+	return FF_FALSE;
+}
+
+
+FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT32 nEntry) {
+	FF_T_UINT8	EntryBuffer[32];
+	FF_T_INT8	ShortName[13];
+	FF_T_UINT8 numLFNs;
+	FF_T_UINT8 x;
+	FF_T_UINT8 CheckSum = 0;
+	FF_T_UINT16 i,y;
+	FF_T_UINT16 lenlfn = 0;
+	FF_T_UINT16 myShort;
+	
+	FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+	numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+	// Handle the name
+
+	x = numLFNs;
+	while(numLFNs) {
+		for(i = 0, y = 0; i < 5; i++, y += 2) {
+			pDirent->FileName[i + ((numLFNs - 1) * 13)] = EntryBuffer[FF_FAT_LFN_NAME_1 + y];
+			lenlfn++;
+		}
+
+		for(i = 0, y = 0; i < 6; i++, y += 2) {
+			pDirent->FileName[i + ((numLFNs - 1) * 13) + 5] = EntryBuffer[FF_FAT_LFN_NAME_2 + y];
+			lenlfn++;
+		}
+
+		for(i = 0, y = 0; i < 2; i++, y += 2) {
+			pDirent->FileName[i + ((numLFNs - 1) * 13) + 11] = EntryBuffer[FF_FAT_LFN_NAME_3 + y];
+			lenlfn++;
+		}
+
+		FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+		numLFNs--;
+	}
+	
+	// Process the ShortName Entry
+	memcpy(ShortName, EntryBuffer, 11);
+	FF_ProcessShortName(ShortName);
+	if(CheckSum != FF_CreateChkSum(ShortName)) {
+		// Handle This
+	}
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
+	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
+	pDirent->ObjectCluster |= myShort;
+
+	// Get the filesize.
+	pDirent->Filesize = FF_getLong(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
+	// Get the attribute.
+	pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+	
+	pDirent->CurrentItem = nEntry;
+	return x;
+}
+
 /**
  *	@public
  *	@brief	Find's the first directory entry for the provided path.
@@ -375,36 +576,61 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirClus
  **/
 FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
 
-	FF_T_SINT32 retVal;
+	FF_T_UINT8	numLFNs;
+	FF_T_UINT8	EntryBuffer[32];
+	FF_T_UINT16	PathLen = (FF_T_UINT16) strlen(path);
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	pDirent->DirCluster = FF_FindDir(pIoman, path, (FF_T_UINT16)strlen(path));	// Get the directory cluster, if it exists.
+	while(PathLen != 0) {
+		if(path[PathLen] == '\\' || path[PathLen] == '/') {
+			break;
+		}
+		PathLen--;
+	}
+	
+	if(PathLen == 0) {
+		PathLen = 1;
+	}
+
+	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen);	// Get the directory cluster, if it exists.
 
 	if(pDirent->DirCluster == 0) {
 		return -2;
 	}
-
-	pDirent->CurrentCluster = 0;	// Ensure CurrentCluster is 0 so we can traverse clusters.
-	pDirent->CurrentItem = 0;	// Set current item to 0
-	pDirent->ProcessedLFN = FF_FALSE;
-
-	do {
-		retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent, FF_FALSE);
-		// Device error will be passed upwards!
-	}while((retVal == -1) || (pDirent->Attrib == FF_FAT_ATTR_VOLID));
-
-	if(retVal == -2) {
-		return (FF_T_SINT8) retVal;
+	
+	for(pDirent->CurrentItem = 0; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
+		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
+			return -2;
+		}
+		if(EntryBuffer[0] != 0xE5) {
+			if(FF_isEndOfDir(EntryBuffer)){
+				return -2;
+			}
+			pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
+				// LFN Processing
+				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+#ifdef FF_LFN_SUPPORT
+				FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+				return 0;
+#else 
+				pDirent->CurrentItem += (numLFNs - 1);
+#endif
+			} else if((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
+				// Do Nothing
+			
+			} else {
+				FF_PopulateShortDirent(pDirent, EntryBuffer);
+				pDirent->CurrentItem += 1;
+				return 0;
+			}
+		}
 	}
 
-	if(retVal == FF_ERR_DEVICE_DRIVER_FAILED) {
-		return (FF_T_SINT8) retVal;
-	}
-
-	return 0;
+	return -2;
 }
 
 /**
@@ -421,17 +647,44 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
  *
  **/
 FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
+	
+	FF_T_UINT8	numLFNs;
+	FF_T_UINT8	EntryBuffer[32];
 
-	FF_T_SINT8 retVal = 0;
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
-	do {
-		retVal = FF_GetEntry(pIoman, pDirent->CurrentItem, pDirent->DirCluster, pDirent, FF_FALSE);
-		// Device error will be passed upwards!
-	}while((retVal == -1) || (pDirent->Attrib == FF_FAT_ATTR_VOLID));
 	
-	return retVal;
+	for(pDirent->CurrentItem; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
+		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
+			return -2;
+		}
+		if(EntryBuffer[0] != 0xE5) {
+			if(FF_isEndOfDir(EntryBuffer)){
+				return -2;
+			}
+			pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
+				// LFN Processing
+				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+#ifdef FF_LFN_SUPPORT
+				FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+				return 0;
+#else 
+				pDirent->CurrentItem += (numLFNs - 1);
+#endif
+			} else if((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
+				// Do Nothing
+			
+			} else {
+				FF_PopulateShortDirent(pDirent, EntryBuffer);
+				pDirent->CurrentItem += 1;
+				return 0;
+			}
+		}
+	}
+	
+	return -1;
 }
 
 
@@ -458,7 +711,7 @@ FF_T_SINT8 FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 Ent
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
 	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, Entry, (FF_T_UINT16)32);
-	FF_T_UINT32 relItem		= FF_getMinorBlockEntry		(pIoman, Entry, (FF_T_UINT16)32);
+	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, Entry, (FF_T_UINT16)32);
 	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);
 
 	itemLBA = FF_Cluster2LBA(pIoman, clusterAddress)	+ FF_getMajorBlockNumber(pIoman, Entry, (FF_T_UINT16)32);
@@ -467,7 +720,7 @@ FF_T_SINT8 FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 Ent
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_WRITE);
 	{
 		// Modify the Entry!
-		//memcpy((pBuffer->pBuffer + (32*relItem)), pDirent->FileName, 11);
+		memcpy((pBuffer->pBuffer + (32*relItem)), pDirent->FileName, 11);
 		FF_putChar(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB + (32 * relItem)), pDirent->Attrib);
 		FF_putShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH + (32 * relItem)), (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
 		FF_putShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW  + (32 * relItem)), (FF_T_UINT16)(pDirent->ObjectCluster));
