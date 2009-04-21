@@ -57,7 +57,7 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8192*8	// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	(8192*4)		// Increase This for Faster File Copies
 
 signed int fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
@@ -85,11 +85,11 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
-	FILE *f = NULL, *fDest = NULL;
+	FILE *f = NULL, *fDest = NULL, *fXSource;
 	FF_BUFFER *myBuf, *myBuf2;
 	int f1;
 	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 2048, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
 	char commandShadow[2600];
@@ -98,7 +98,7 @@ int main(void) {
 	char cmdHistory = 0;
 	char tester;
 	unsigned long BytesRead;
-	FF_T_UINT32 i,x;
+	FF_T_INT32 i,x;
 	FF_DIRENT mydir;
 	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
@@ -112,19 +112,18 @@ int main(void) {
 	FF_FILE *myfile;
 	float time, transferRate;
 
-
-	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive4"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
-
+	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
 
 	if(hDev == INVALID_HANDLE_VALUE) {
 		printf("Vista!\n");
 	}
 
-	//f = fopen("c:\\driveimage", "rb+");
+	//f = fopen("c:\\fcfat16.img", "rb");
 	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
+	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
 	for(i = 0; i < 10; i++) {
@@ -147,6 +146,17 @@ int main(void) {
 			getchar();
 			return -1;
 		}
+
+		ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
+		if(ff1) {
+			for(i = 0; i < 64000; i++) {
+				x = i % 4;
+				FF_PutC(ff1, mystring[x]);
+			}
+			FF_Close(ff1);
+		}
+
+		//FF_RmFile(pIoman, "\\talk.mp3");
 
 		while(1) {
 			printf("FullFAT:%s>",workingDir);
@@ -340,7 +350,7 @@ int main(void) {
 						QueryPerformanceCounter(&start_ticks);  
 						do{
 							BytesRead = fread(buffer, 1, COPY_BUFFER_SIZE, fDest);
-							FF_Write(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
+							FF_Write(fSource, BytesRead, 1, (FF_T_UINT8 *)buffer);
 							QueryPerformanceCounter(&end_ticks); 
 							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
@@ -350,6 +360,45 @@ int main(void) {
 						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 						fclose(fDest);
 						FF_Close(fSource);
+					} else {
+						fclose(fDest);
+						if(Error == FF_ERR_FILE_NOT_FOUND) {
+							printf("File Not Found!\n");
+						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
+							printf("File In Use!\n");
+						} else {
+							printf("Couldn't Open file! Unknown Error \n");
+						}
+					}
+				} else {
+					printf("Error Opening Destination\n");
+				}
+				strcpy(source, "");
+				strcpy(destination, "");
+			}
+
+			if(strstr(commandLine[cmdHistory], "xc")) {
+				sscanf((commandLine[cmdHistory] + 3), "%s %s", source, destination);
+				
+				fDest = fopen(destination, "wb");
+				if(fDest) {
+					fXSource = fopen(source, "rb");
+					if(fXSource) {
+						QueryPerformanceCounter(&start_ticks);  
+						i = 0;
+						do{
+							BytesRead = fread(buffer, 1, COPY_BUFFER_SIZE, fXSource);
+							i += BytesRead;
+							fwrite(buffer, BytesRead, 1, fDest);
+							QueryPerformanceCounter(&end_ticks); 
+							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
+							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+							transferRate = ((float)i / time) / 1024;
+							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", 1.0, i, transferRate);
+						}while(BytesRead > 0);
+						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", 1.0, i, transferRate);
+						fclose(fDest);
+						fclose(fXSource);
 					} else {
 						fclose(fDest);
 						if(Error == FF_ERR_FILE_NOT_FOUND) {
