@@ -57,7 +57,7 @@ typedef struct _FF_FILE {
 	FF_T_UINT32 FilePointer;		///< Current Position Pointer.
 	FF_T_UINT8	Mode;				///< Mode that File Was opened in.
 	FF_T_UINT32 DirCluster;			///< Cluster Number that the Dirent is in.
-	FF_T_UINT32 DirEntry;			///< Dirent Entry Number describing this file.
+	FF_T_UINT16 DirEntry;			///< Dirent Entry Number describing this file.
 	struct _FF_FILE *Next;			///< Pointer to the next file object in the linked list.
 } FF_FILE,
 *PFF_FILE;

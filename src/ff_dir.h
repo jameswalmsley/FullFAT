@@ -54,18 +54,24 @@ typedef struct {
 	FF_T_UINT32	ObjectCluster;
 
 	//---- Book Keeping for FF_Find Functions
-	FF_T_UINT32	CurrentItem;	
+	FF_T_UINT16	CurrentItem;	
 	FF_T_UINT32	DirCluster;
-	FF_T_UINT32	CurrentCluster;
+	//FF_T_UINT32	CurrentCluster;
 	FF_T_BOOL	ProcessedLFN;
 } FF_DIRENT;
 
-		FF_T_SINT8	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent, FF_T_BOOL Deleted);
-		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 Entry, FF_DIRENT *pDirent);
+		FF_T_SINT8	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
+		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_UINT32 FF_FindEntry	(FF_IOMAN *pIoman, FF_T_SINT8 *path, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path);
 		FF_T_SINT8	FF_FindNext		(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
-static	FF_T_UINT8	FF_CreateChkSum	(const FF_T_UINT8 *pa_pShortName);
+		void		FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer);
+		FF_T_SINT8	FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry);
+		FF_T_SINT8	FF_FetchEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer);
+		FF_T_BOOL	FF_isEndOfDir	(FF_T_UINT8 *EntryBuffer);
+		FF_T_SINT8	FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
+		FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
+static	FF_T_UINT8	FF_CreateChkSum	(const FF_T_INT8 *pa_pShortName);
 static	void		FF_lockDIR		(FF_IOMAN *pIoman);
 static	void		FF_unlockDIR	(FF_IOMAN *pIoman);
 

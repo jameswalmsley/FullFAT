@@ -93,7 +93,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	
 
 	if(DirCluster) {
-		FileCluster = FF_FindEntry(pIoman, path, 0x00, &Object);
+		FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object);
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 			FF_tolower(Object.FileName, FF_MAX_FILENAME);
 			FF_tolower(filename, FF_MAX_FILENAME);
@@ -149,9 +149,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 				if(pFile->Filesize == 0 && pFile->ObjectCluster == 0) {	// No Allocated clusters.
 					// Create a Cluster chain!
 					pFile->AddrCurrentCluster = FF_CreateClusterChain(pFile->pIoman);
-					FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry, FF_FALSE);
+					FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 					OriginalEntry.ObjectCluster = pFile->AddrCurrentCluster;
-					FF_PutEntry(pIoman, pFile->DirCluster, pFile->DirEntry, &OriginalEntry);
+					FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 					pFile->ObjectCluster = pFile->AddrCurrentCluster;
 					pFile->iChainLength = 1;
 					pFile->CurrentCluster = 0;
@@ -183,9 +183,9 @@ FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
 	
 	// Edit the Directory Entry! (So it appears as deleted);
-	FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry, FF_FALSE);
+	FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 	OriginalEntry.FileName[0] = 0xE5;
-	FF_PutEntry(pIoman, pFile->DirCluster, pFile->DirEntry, &OriginalEntry);
+	FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 
 	
 	FF_Close(pFile); // Free the file pointer resources
@@ -535,7 +535,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	// Handle file-space allocation
 	if((pFile->FilePointer + Bytes) > (pFile->iChainLength * iBytesPerCluster)) {
 		// Need To Extend the File Physically.
-		pFile->iEndOfChain = FF_ExtendClusterChain(pFile->pIoman, pFile->iEndOfChain, ((Bytes / iBytesPerCluster) + 1));
+		pFile->iEndOfChain = FF_ExtendClusterChain(pFile->pIoman, pFile->iEndOfChain, (FF_T_UINT16) ((Bytes / iBytesPerCluster) + 1));
 		pFile->iChainLength += ((Bytes / iBytesPerCluster) + 1);
 	}
 
@@ -834,10 +834,10 @@ FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// UpDate Dirent if File-size has changed?
 
 	// Update the Dirent!
-	FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry, FF_FALSE);
+	FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 	if(pFile->Filesize != OriginalEntry.Filesize) {
 		OriginalEntry.Filesize = pFile->Filesize;
-		FF_PutEntry(pFile->pIoman, pFile->DirCluster, pFile->DirEntry, &OriginalEntry);
+		FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 	}
 
 	if(pFile->Mode == FF_MODE_WRITE) {
