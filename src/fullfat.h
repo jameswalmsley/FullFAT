@@ -29,9 +29,14 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
+#ifndef _FULLFAT_H_
+#define _FULLFAT_H_
+
 #include "ff_config.h"
 #include "ff_ioman.h"
 #include "ff_fat.h"
 #include "ff_file.h"
 #include "ff_dir.h"
 
+
+#endif

@@ -239,6 +239,74 @@ int main(void) {
 				}
 			}
 
+			if(strstr(commandLine[cmdHistory], "rm")) {
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (commandLine[cmdHistory]+3)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine[cmdHistory]+3));
+				}
+
+				tester = FF_RmFile(pIoman, buffer);
+
+				if(tester) {
+					switch(tester) {
+						case FF_ERR_FILE_NOT_FOUND: {
+							printf("Could not find \"%s\"\n", commandLine[cmdHistory]+3);
+							break;
+						}
+
+						case FF_ERR_FILE_OBJECT_IS_A_DIR: {
+							printf("Cannot delete a directory (use the rd command)\n");
+							break;
+						}
+
+						case FF_ERR_FILE_ALREADY_OPEN: {
+							printf("Dir is currently in use\n");
+						}
+
+						default: {
+							printf("Unknown Error while removing a file.\n");
+							break;
+						}
+					}
+				}
+			}
+
+			if(strstr(commandLine[cmdHistory], "rd")) {
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (commandLine[cmdHistory]+3)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine[cmdHistory]+3));
+				}
+
+				tester = FF_RmDir(pIoman, buffer);
+
+				if(tester) {
+					switch(tester) {
+						case FF_ERR_FILE_NOT_FOUND: {
+							printf("Could not find \"%s\"\n", commandLine[cmdHistory]+3);
+							break;
+						}
+
+						case FF_ERR_FILE_ALREADY_OPEN: {
+							printf("Directory is currently in use\n");
+						}
+
+						case FF_ERR_DIR_NOT_EMPTY: {
+							printf("Cannot delete this Dir, it contains files!\n");
+							break;
+						}
+
+						default: {
+							printf("Unknown Error while removing a directory.\n");
+							break;
+						}
+					}
+				}
+			}
+
+
+
 			if(strstr(commandLine[cmdHistory], "view")) {
 				if(strlen(workingDir) == 1) {
 					sprintf(buffer, "\\%s", (commandLine[cmdHistory]+5)); 

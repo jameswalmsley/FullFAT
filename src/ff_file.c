@@ -60,6 +60,10 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 
 	FF_T_UINT16	i;
 
+	if(pError) {
+		*pError = 0;
+	}
+	
 	if(!pIoman) {
 		if(pError) {
 			*pError = FF_ERR_NULL_POINTER;
@@ -108,6 +112,16 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 			}
 		}
 		if(FileCluster) {
+			if(Object.Attrib == FF_FAT_ATTR_DIR) {
+				if(Mode != FF_MODE_DIR) {
+					// Not the object, File Not Found!
+					free(pFile);
+					if(pError) {
+						*pError = FF_ERR_FILE_OBJECT_IS_A_DIR;
+					}
+					return (FF_FILE *) NULL;
+				}
+			}
 			pFile->pIoman = pIoman;
 			pFile->FilePointer = 0;
 			pFile->ObjectCluster = Object.ObjectCluster;
@@ -176,13 +190,66 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	return (FF_FILE *)NULL;
 }
 
+static FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Path) {
+	
+	FF_DIRENT MyDir;
+	FF_T_SINT8	RetVal = 0;
+	FF_T_UINT8	i = 0;
+	
+	RetVal = FF_FindFirst(pIoman, &MyDir, Path);
+	while(RetVal == 0) {
+		i++;
+		RetVal = FF_FindNext(pIoman, &MyDir);
+		if(i > 2) {
+			return FF_FALSE;
+		}
+	}
+
+	return FF_TRUE;
+}
+
+FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
+	FF_FILE *pFile;
+	FF_T_SINT8 Error = 0;
+	FF_DIRENT OriginalEntry;
+	FF_T_UINT8 EntryBuffer[32];
+	FF_T_SINT8 RetVal = 0;
+
+	if(!pIoman) {
+		return FF_ERR_NULL_POINTER;
+	}
+
+	pFile = FF_Open(pIoman, path, FF_MODE_DIR, &Error);
+
+	if(!pFile) {
+		return Error;	// File in use or File not found!
+	}
+
+	if(FF_isDirEmpty(pIoman, pFile->DirCluster, path)) {
+		FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
+		
+		// Edit the Directory Entry! (So it appears as deleted);
+		FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+		EntryBuffer[0] = 0xE5;
+		FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+
+		FF_FlushCache(pIoman);
+	} else {
+		RetVal = FF_ERR_DIR_NOT_EMPTY;
+	}
+	
+	FF_Close(pFile); // Free the file pointer resources
+	// File is now lost!
+	return RetVal;
+}
 
 FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	FF_FILE *pFile;
-	FF_T_SINT8 Error;
+	FF_T_SINT8 Error = 0;
 	FF_DIRENT OriginalEntry;
+	FF_T_UINT8 EntryBuffer[32];
 
-	pFile = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+	pFile = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 
 	if(!pFile) {
 		return Error;	// File in use or File not found!
@@ -191,10 +258,11 @@ FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
 	
 	// Edit the Directory Entry! (So it appears as deleted);
-	FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-	OriginalEntry.FileName[0] = 0xE5;
-	FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+	FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+	EntryBuffer[0] = 0xE5;
+	FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 
+	FF_FlushCache(pIoman);
 	
 	FF_Close(pFile); // Free the file pointer resources
 	// File is now lost!

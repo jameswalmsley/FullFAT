@@ -32,17 +32,21 @@
 #define _FF_ERROR_H_
 
 // Global Error Codes
-#define FF_ERR_NULL_POINTER			-2	///< pIoman was NULL
+#define FF_ERR_NULL_POINTER			-2	///< pIoman was NULL.
 #define FF_ERR_NOT_ENOUGH_MEMORY	-3	///< malloc() failed!
 
 // File Error Codes
 #define FF_ERR_FILE_ALREADY_OPEN	-20	///< File is in use.
 #define FF_ERR_FILE_NOT_FOUND		-21	///< File was not found.
+#define FF_ERR_FILE_OBJECT_IS_A_DIR	-22	///< Tried to FF_Open() a Directory.
 
 // Directory Error Codes
 #define FF_ERR_DIR_OBJECT_EXISTS	-30	
 #define FF_ERR_DIR_DIRECTORY_FULL	-31
+#define FF_ERR_DIR_END_OF_DIR		-32
+#define FF_ERR_DIR_NOT_EMPTY		-33
 
+// Fat Error Codes
 
 #endif
 

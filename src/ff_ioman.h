@@ -59,8 +59,9 @@
 #define FF_T_FAT16				0x0B
 #define FF_T_FAT32				0x0C
 
-#define FF_MODE_READ			0x01		///< Buffer Mode for Read Access.
-#define	FF_MODE_WRITE			0x02		///< Buffer Mode for Write Access.
+#define FF_MODE_READ			0x01		///< Buffer / FILE Mode for Read Access.
+#define	FF_MODE_WRITE			0x02		///< Buffer / FILE Mode for Write Access.
+#define FF_MODE_DIR				0x80		///< Special Mode to open a Dir.
 
 #define FF_BUF_MAX_HANDLES		65536		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
 

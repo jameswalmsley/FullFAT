@@ -728,6 +728,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	FF_T_UINT16 NameLen; 
 	FF_T_BOOL	FitsShort = FF_FALSE;
 	FF_DIRENT	MyDir;
+	FF_T_SINT8	RetVal = 0;
 	FF_T_INT8	NumberBuf[6];
 	// Create a Short Name
 	strncpy(TempName, LongName, FF_MAX_FILENAME);
