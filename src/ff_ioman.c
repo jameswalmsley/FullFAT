@@ -345,6 +345,146 @@ FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
 	return FF_FALSE;
 }
 
+/*
+FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
+
+        FF_T_UINT16 i,x;
+        FF_T_SINT32 retVal;
+        
+        if(!pIoman) {
+                return NULL;    // No NULL pointer modification.
+        }
+
+        if(!FF_IOMAN_ModeValid(Mode)) {
+                return NULL;    // Make sure mode is correctly set.
+        }
+
+        // Get a Semaphore now, and release on any return.
+        // Improves speed of the searching. Prevents description changes
+        // Mid-loop. This could be a performance issue later on!!
+        while(1) {
+                
+                FF_PendSemaphore(pIoman->pSemaphore);
+                
+                // Search for an appropriate buffer.
+                if(Mode == FF_MODE_READ) {
+                        // Find A READ sector that.
+                        for(i = 0; i < pIoman->CacheSize; i++) {
+                                if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->Mode == FF_MODE_READ) {
+                                        // Suitable Sector, was it modified?
+                                        if((pIoman->pBuffers + i)->Modified == FF_FALSE && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) { // Perfect !
+                                                (pIoman->pBuffers + i)->NumHandles += 1;
+                                                (pIoman->pBuffers + i)->Persistance += 1;
+                                                FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                                return (pIoman->pBuffers + i);
+                                        } else {
+                                                // It was, if it has no handles attached, then we can update it.
+                                                if((pIoman->pBuffers + i)->NumHandles == 0) {
+                                                        // Go ahead and refresh the sector!
+                                                        // Prepare and do some work!
+                                                        (pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
+                                                        FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                                        {
+                                                                retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+                                                        }       // Work Done!
+                                                        FF_PendSemaphore(pIoman->pSemaphore);
+                                                        (pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
+                                                        // Work complete!
+
+                                                        if(retVal) { // Buffer was not filled!
+                                                                FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                                                return NULL;
+                                                        }
+                                                        (pIoman->pBuffers + i)->Modified         = FF_FALSE; // Cache is up-to-date!
+                                                        (pIoman->pBuffers + i)->NumHandles      += 1;
+                                                        (pIoman->pBuffers + i)->Persistance += 1;
+                                                        FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                                        return (pIoman->pBuffers + i);
+                                                }
+                                        }
+                                }
+                        }
+
+                        /*for(i = 0; i < pIoman->CacheSize; i++) {
+                                if((pIoman->pBuffers + i)->Persistance == 0) {
+                                        retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+                                        if(retVal) { // Buffer was not filled!
+                                                FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                                return NULL;
+                                        }
+                                        (pIoman->pBuffers + i)->Mode = Mode;
+                                        (pIoman->pBuffers + i)->NumHandles = 1;
+                                        (pIoman->pBuffers + i)->Sector = Sector;
+                                        // Fill the buffer with data from the device.
+                                        FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                        return (pIoman->pBuffers + i);
+                                }
+                        }*/
+  /*              }
+
+                for(i = 0; i < pIoman->CacheSize; i++) {
+                        if((pIoman->pBuffers + i)->Sector == Sector && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) {
+                                if((pIoman->pBuffers + i)->Mode == FF_MODE_WRITE && (pIoman->pBuffers + i)->NumHandles == 0) {
+                                        // Flush that buffer to the disk! Mark Read, and increase handles / persistance!
+                                        // Work to do - prepare!
+                                        (pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
+                                        FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                        {
+                                                FF_IOMAN_FlushBuffer(pIoman, Sector, (pIoman->pBuffers + i)->pBuffer);
+                                        }
+                                        FF_PendSemaphore(pIoman->pSemaphore);
+                                        (pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
+
+                                        for(x = 0; x < pIoman->CacheSize; x++) {
+                                                if((pIoman->pBuffers + x)->Sector == (pIoman->pBuffers + i)->Sector && (pIoman->pBuffers + x)->Mode == FF_MODE_READ) {
+                                                        (pIoman->pBuffers + x)->Modified = FF_TRUE;
+                                                }
+                                        }
+                                        (pIoman->pBuffers + i)->NumHandles = 1;
+                                        (pIoman->pBuffers + i)->Mode = Mode;
+                                        FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                        return (pIoman->pBuffers + i);
+                                }
+                        }
+                }
+                
+                // Last resort, fill a buffer with no handles!
+
+                for(i = 0; i < pIoman->CacheSize; i++) {
+                        if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->isIOMANediting == FF_FALSE) {
+                                
+                                (pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
+                                if((pIoman->pBuffers + i)->Mode == FF_MODE_WRITE) {
+                                        FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
+                                }
+                                FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                {
+                                        retVal = FF_IOMAN_FillBuffer(pIoman, Sector,(pIoman->pBuffers + i)->pBuffer);
+                                }
+                                FF_PendSemaphore(pIoman->pSemaphore);
+                                (pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
+                                
+                                if(retVal) { // Buffer was not filled!
+                                        FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                        return NULL;
+                                }
+                                (pIoman->pBuffers + i)->Mode = Mode;
+                                (pIoman->pBuffers + i)->Persistance = 1;
+                                (pIoman->pBuffers + i)->NumHandles = 1;
+                                (pIoman->pBuffers + i)->Sector = Sector;
+                                (pIoman->pBuffers + i)->Modified = FF_FALSE;
+                                // Fill the buffer with data from the device.
+                                FF_ReleaseSemaphore(pIoman->pSemaphore);
+                                return (pIoman->pBuffers + i);
+                        }
+                }
+
+                FF_ReleaseSemaphore(pIoman->pSemaphore);        // Important that we free access!
+                FF_Yield();             // Yield Thread, so that further iterations can gain resources.
+        }
+        //return NULL;  // No buffer available.
+}
+*/
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 	
 	FF_BUFFER	*pBuffer = pIoman->pBuffers;
@@ -419,6 +559,9 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 				pBuffer->NumHandles = 1;
 				pBuffer->Sector = Sector;
 				pBuffer->Modified = FF_FALSE;
+				if(Mode == FF_MODE_WRITE) {
+					pBuffer->Modified = FF_TRUE;
+				}
 				FF_IOMAN_FillBuffer(pIoman, Sector, pBuffer->pBuffer);
 				FF_ReleaseSemaphore(pIoman->pSemaphore);
 				return pBuffer;
@@ -430,7 +573,6 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 		FF_Yield();
 	}
 }
-
 
 
 /**

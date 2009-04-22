@@ -390,11 +390,11 @@ void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster);
+	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster);	// BottleNeck
 	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, nEntry, (FF_T_UINT16)32);
-	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);
-
+	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
+	
 	if((clusterNum + 1) > chainLength) {
 		return -3;	// End of Dir was reached!
 	}
@@ -414,7 +414,6 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
 /**
  *	@private
  **/
-
 FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	FF_T_UINT8 EntryBuffer[32];
 	FF_T_UINT8 numLFNs;
@@ -636,18 +635,23 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 
 FF_T_UINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 Sequential) {
 
-	FF_DIRENT mydir;
-	mydir.CurrentItem = 0;	// Set current item to 0
-	mydir.ProcessedLFN = FF_FALSE;
+	FF_T_INT8	EntryBuffer[32];
+	FF_T_UINT8	i;
+	FF_T_UINT16 nEntry = 0;
+	
+	for(i = 0; i < Sequential; i++) {
+		FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+		if(EntryBuffer[0] == 0xE5) {
+			// Do Nothing, just let i Iterate!
+		} else {
+			i = 0;
+		}
+		if(FF_isEndOfDir(EntryBuffer)) {
+			return (nEntry - 1);
+		}
+	}
 
-	mydir.DirCluster = DirCluster;
-
-	/*do {
-		retVal = FF_GetEntry(pIoman, mydir.CurrentItem, DirCluster, &mydir, FF_TRUE);
-	}while(retVal != -10);*/
-	Sequential;
-	pIoman;
-	return mydir.CurrentItem;
+	return (nEntry - 1) - Sequential;	// Return the beginning entry in the sequential sequence.
 }
 
 
@@ -664,7 +668,7 @@ FF_T_SINT8 FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirClust
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_WRITE);
 	{
 		// Modify the Entry!
-		memcpy((pBuffer->pBuffer + (32*relItem)), pDirent->FileName, 11);
+		//memcpy((pBuffer->pBuffer + (32*relItem)), pDirent->FileName, 11);
 		FF_putChar(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB + (32 * relItem)), pDirent->Attrib);
 		FF_putShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH + (32 * relItem)), (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
 		FF_putShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW  + (32 * relItem)), (FF_T_UINT16)(pDirent->ObjectCluster));
@@ -675,15 +679,61 @@ FF_T_SINT8 FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirClust
     return 0;
 }
 
+
+static FF_T_BOOL FF_isShortName(const FF_T_UINT8 *Name, FF_T_UINT16 StrLen) {
+	FF_T_UINT16 i;
+	for(i = 0; i < StrLen; i++) {
+		if(Name[i] == '.') {
+			i--;
+		}
+	}
+	if(i < 11) {
+		return FF_TRUE;
+	}
+	return FF_FALSE;
+}
+
+void FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName) {
+	FF_T_UINT16 i,x;
+	
+	// Create a Short Name
+	FF_toupper(LongName, strlen(LongName));
+
+	// Main part of the name
+	for(i = 0, x = 0; i < 8; i++, x++) {
+		if(i == 0 && LongName[x] == '.') {
+			i--;
+		} else {
+			if(LongName[x] == '.') {
+				break;
+			}
+			ShortName[i] = LongName[x];
+		}
+	}
+
+	// Extension
+	if(LongName[x++] == '.') {
+		for(i; i < 11; i++) {
+			ShortName[i] = LongName[x++];
+		}
+	}
+
+	// 
+}
+
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
-	FF_BUFFER	*pBuffer;
-	FF_T_UINT32 FreeEntry;
-	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 currentCluster;
-	FF_T_UINT8	relItem;
+	FF_T_UINT8	EntryBuffer[32];	// 
+	FF_T_UINT16	NameLen = (FF_T_UINT16) strlen(pDirent->FileName);
+	FF_T_UINT8	numLFNs = (FF_T_UINT8) (NameLen / 32);
 
-	FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, 1);
+#ifdef FF_LFN_SUPPORT
+	
+#else
+	
+#endif
+	
+/*	FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, 1);
 
 	currentCluster = FF_getClusterChainNumber(pIoman, FreeEntry, 32);
 
@@ -702,6 +752,7 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
 	FF_FlushCache(pIoman);
+	*/
 
 	return 0;
 }

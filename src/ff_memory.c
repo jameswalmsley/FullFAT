@@ -147,6 +147,16 @@ void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	}
 }
 
+void FF_toupper(FF_T_INT8 *string, FF_T_UINT32 strLen) {
+	FF_T_UINT32 i;
+	for(i = 0; i < strLen; i++) {
+		if(string[i] >= 'a' && string[i] <= 'z')
+			string[i] -= 32;
+		if(string[i] == '\0') 
+			break;
+	}
+}
+
 
 FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length) {
 	FF_T_UINT16 strLen = Length;

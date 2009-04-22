@@ -60,13 +60,12 @@
 #define COPY_BUFFER_SIZE	(8192*4)		// Increase This for Faster File Copies
 
 signed int fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
-signed int fnVistaWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
-signed int fnWrite_512	(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnVistaRead_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
+signed int fnVistaWrite_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
+signed int fnWrite_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnNewRead_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+signed int fnNewWrite_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
 signed int test_2048		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -105,21 +104,21 @@ int main(void) {
 
 	HANDLE hDev;
 	DWORD	BytesReturned;
-	BOOL jim;
+	BOOL	jim;
 
 	char mystring[] = "RUTH";
 
 	FF_FILE *myfile;
 	float time, transferRate;
 
-	/*hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive5"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
+	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
 
 	if(hDev == INVALID_HANDLE_VALUE) {
 		printf("Vista!\n");
-	}*/
-	hDev = 0;
+	}
+	//hDev = 0;
 	//f = fopen("c:\\fcfat16.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE5", "rb");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -132,8 +131,8 @@ int main(void) {
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
-	if(f) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+	if(hDev) {
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnVistaWrite_512, (FF_READ_BLOCKS) fnVistaRead_512, hDev);
 		
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			if(f) {
@@ -146,6 +145,8 @@ int main(void) {
 			getchar();
 			return -1;
 		}
+
+		FF_CreateShortName(pIoman, 0, buffer, "MYNAME.TXT");
 
 		ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
 		if(ff1) {
