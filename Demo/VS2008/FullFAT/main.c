@@ -54,18 +54,11 @@
 #include <winbase.h>
 #include <winioctl.h>
 #include <conio.h>
+#include "testdriver_win32.h"
 #include "../../../src/fullfat.h"
 
-#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	(8192*4)		// Increase This for Faster File Copies
-
-signed int fnRead_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int fnVistaRead_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
-signed int fnVistaWrite_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev);
-signed int fnWrite_512		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int fnNewRead_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int fnNewWrite_512	(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-signed int test_2048		(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
+#define PARTITION_NUMBER	0				// Change this to the primary partition to be mounted (0 to 3)
+#define COPY_BUFFER_SIZE	(8192*16)		// Increase This for Faster File Copies
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -85,9 +78,7 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f = NULL, *fDest = NULL, *fXSource;
-	FF_BUFFER *myBuf, *myBuf2;
-	int f1;
-	FF_FILE *fSource, *ff1, *ff2, *ff3, *ff4;
+	FF_FILE *fSource, *ff1;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 2048, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
@@ -99,16 +90,11 @@ int main(void) {
 	unsigned long BytesRead;
 	FF_T_INT32 i,x;
 	FF_DIRENT mydir;
-	FF_BUFFER *mybuffer;
 	FF_T_SINT8 Error;
 
 	HANDLE hDev;
-	DWORD	BytesReturned;
-	BOOL	jim;
 
 	char mystring[] = "RUTH";
-
-	FF_FILE *myfile;
 	float time, transferRate;
 
 	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
@@ -145,8 +131,6 @@ int main(void) {
 			getchar();
 			return -1;
 		}
-
-		FF_CreateShortName(pIoman, 0, buffer, "MYNAME.TXT");
 
 		ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
 		if(ff1) {
@@ -212,14 +196,14 @@ int main(void) {
 					sprintf(commandShadow, "%s", (commandLine[cmdHistory] + 3));
 				}
 
-				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
+				if(FF_FindDir(pIoman, commandShadow, (FF_T_UINT16) strlen(commandShadow))) {
 					sprintf(workingDir, "%s", commandShadow);
 				} else {
 					printf("Path %s Not Found\n", commandShadow);
 				}
 			}
 
-			if(strstr(commandLine[cmdHistory], "ls") || strstr(commandLine[cmdHistory], "dir")) {
+			if(strstr(commandLine[cmdHistory], "ls")) {
 				i = 0;
 				tester = 0;
 				tester = FF_FindFirst(pIoman, &mydir, workingDir);
@@ -232,6 +216,29 @@ int main(void) {
 				putchar('\n');
 			}
 
+			if(strstr(commandLine[cmdHistory], "mkdir")) {
+				tester = FF_MkDir(pIoman, workingDir, commandLine[cmdHistory]+6);
+
+				if(tester) {
+					switch(tester) {
+						case FF_ERR_DIR_OBJECT_EXISTS: {
+							printf("An object with the name \"%s\" already exists!\n", commandLine[cmdHistory]+6);
+							break;
+						}
+
+						case FF_ERR_DIR_DIRECTORY_FULL: {
+							printf("The current directory has reached its limit of objects!\n");
+							break;
+						}
+
+						default: {
+							printf("Unknown Error while making a Directory\n");
+							break;
+						}
+					}
+				}
+			}
+
 			if(strstr(commandLine[cmdHistory], "view")) {
 				if(strlen(workingDir) == 1) {
 					sprintf(buffer, "\\%s", (commandLine[cmdHistory]+5)); 
@@ -241,7 +248,7 @@ int main(void) {
 				
 				fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
 				if(fSource) {
-					for(i = 0; i < fSource->Filesize; i++) {
+					for(i = 0; (FF_T_UINT32)i < fSource->Filesize; i++) {
 						printf("%c", FF_GetC(fSource));
 					}
 

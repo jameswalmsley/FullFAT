@@ -192,6 +192,29 @@ FF_T_SINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	return (FF_T_SINT32) FatEntry;
 }
 
+FF_T_SINT8 FF_ClearCluster(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
+	FF_BUFFER *pBuffer;
+	FF_T_UINT16 i;
+	FF_T_UINT32	BaseLBA;
+	FF_T_SINT8	RetVal = 0;
+
+	BaseLBA = FF_Cluster2LBA(pIoman, nCluster);
+	BaseLBA = FF_getRealLBA(pIoman, BaseLBA);
+
+	for(i = 0; i < pIoman->pPartition->SectorsPerCluster; i++) {
+		pBuffer = FF_GetBuffer(pIoman, BaseLBA++, FF_MODE_WRITE);
+		{
+			if(pBuffer) {
+				memset(pBuffer->pBuffer, 0x00, 512);
+			} else {
+				RetVal = -3;
+			}
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
+	}
+
+	return RetVal;
+}
 
 /**
  *	@private

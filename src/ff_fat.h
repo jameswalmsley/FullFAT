@@ -62,7 +62,7 @@ FF_T_UINT32	FF_TraverseFAT			(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 C
 FF_T_UINT32 FF_CreateClusterChain	(FF_IOMAN *pIoman);
 FF_T_UINT32 FF_GetChainLength		(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster);
 FF_T_UINT32 FF_FindEndOfChain		(FF_IOMAN *pIoman, FF_T_UINT32 Start);
-
+FF_T_SINT8	FF_ClearCluster			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster);
 static void FF_lockFAT				(FF_IOMAN *pIoman);
 static void FF_unlockFAT			(FF_IOMAN *pIoman);
 

@@ -35,9 +35,13 @@
 #define FF_ERR_NULL_POINTER			-2	///< pIoman was NULL
 #define FF_ERR_NOT_ENOUGH_MEMORY	-3	///< malloc() failed!
 
-
+// File Error Codes
 #define FF_ERR_FILE_ALREADY_OPEN	-20	///< File is in use.
 #define FF_ERR_FILE_NOT_FOUND		-21	///< File was not found.
+
+// Directory Error Codes
+#define FF_ERR_DIR_OBJECT_EXISTS	-30	
+#define FF_ERR_DIR_DIRECTORY_FULL	-31
 
 
 #endif

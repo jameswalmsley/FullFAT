@@ -100,6 +100,11 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 			if(Object.Filesize == 0 && strcmp(filename, Object.FileName) == 0) {
 				// The file really was found!
 				FileCluster = 1;
+			} else {
+				if(Mode == FF_MODE_WRITE) {
+					FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object);
+					Object.CurrentItem += 1;
+				}
 			}
 		}
 		if(FileCluster) {
@@ -165,6 +170,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	if(pError) {
 		*pError = FF_ERR_FILE_NOT_FOUND;
 	}
+
+	free(pFile);
+
 	return (FF_FILE *)NULL;
 }
 
@@ -268,7 +276,6 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 	fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 	fileLBA = FF_getRealLBA(pFile->pIoman, fileLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
-
 	
 	if(Bytes > (pFile->Filesize - pFile->FilePointer)) {
 		Bytes = pFile->Filesize - pFile->FilePointer;
