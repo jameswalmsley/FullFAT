@@ -79,6 +79,7 @@ FF_T_SINT8	 FF_PutC    (FF_FILE *pFile, FF_T_UINT8 Value);
 FF_T_UINT32	 FF_Tell	(FF_FILE *pFile);
 FF_T_SINT8	 FF_RmFile	(FF_IOMAN *pIoman, FF_T_INT8 *path);
 FF_T_SINT8	 FF_RmDir	(FF_IOMAN *pIoman, FF_T_INT8 *path);
+static FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path);
 
 // Private :
 

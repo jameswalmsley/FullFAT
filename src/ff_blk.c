@@ -49,6 +49,10 @@ FF_T_UINT32 FF_getClusterChainNumber(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_
 	FF_T_UINT32 clusterChainNumber	= nEntry / (pIoman->BlkSize * (pPart->SectorsPerCluster * pPart->BlkFactor) / nEntrySize);
 	return clusterChainNumber;
 }
+
+FF_T_UINT32 FF_getClusterPosition(FF_IOMAN *pIoman, FF_T_UINT32 nEntry, FF_T_UINT16 nEntrySize) {
+	return nEntry % ((pIoman->BlkSize * (pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkFactor)) / nEntrySize);
+}
 /**
  *	@private
  **/

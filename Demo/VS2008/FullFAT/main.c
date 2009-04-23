@@ -58,7 +58,7 @@
 #include "../../../src/fullfat.h"
 
 #define PARTITION_NUMBER	0				// Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	(8192*16)		// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	(8192*10)		// Increase This for Faster File Copies
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -78,7 +78,7 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f = NULL, *fDest = NULL, *fXSource;
-	FF_FILE *fSource, *ff1;
+	FF_FILE *fSource, *ff1, *ff2;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 2048, 512);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
@@ -94,7 +94,7 @@ int main(void) {
 
 	HANDLE hDev;
 
-	char mystring[] = "RUTH";
+	char mystring[] = "Hello World!\n";
 	float time, transferRate;
 
 	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
@@ -133,12 +133,14 @@ int main(void) {
 		}
 
 		ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
+
+		//ff2 = FF_Open(pIoman, "\\hello.txt", FF_MODE_READ, NULL);
 		if(ff1) {
 			for(i = 0; i < 64000; i++) {
-				x = i % 4;
+				x = i % strlen(mystring);
 				FF_PutC(ff1, mystring[x]);
 			}
-			FF_Close(ff1);
+		//	FF_Close(ff1);
 		}
 
 		//FF_RmFile(pIoman, "\\talk.mp3");

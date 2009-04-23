@@ -41,6 +41,7 @@
  **/
 
 #include "ff_dir.h"
+#include <stdio.h>
 
 static void FF_lockDIR(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
@@ -661,8 +662,8 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 
 FF_T_UINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 Sequential) {
 
-	FF_T_INT8	EntryBuffer[32];
-	FF_T_UINT8	i;
+	FF_T_UINT8	EntryBuffer[32];
+	//FF_T_UINT8	i;
 	FF_T_UINT16 nEntry = 0;
 	
 	FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
@@ -728,11 +729,11 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	FF_T_UINT16 NameLen; 
 	FF_T_BOOL	FitsShort = FF_FALSE;
 	FF_DIRENT	MyDir;
-	FF_T_SINT8	RetVal = 0;
+	//FF_T_SINT8	RetVal = 0;
 	FF_T_INT8	NumberBuf[6];
 	// Create a Short Name
 	strncpy(TempName, LongName, FF_MAX_FILENAME);
-	NameLen = strnlen(TempName, FF_MAX_FILENAME);
+	NameLen = (FF_T_UINT16) strnlen(TempName, FF_MAX_FILENAME);
 	FF_toupper(TempName, NameLen);
 
 	// Initialise Shortname
@@ -798,7 +799,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 		}
 		for(i = 1; i < 0x0000FFFF; i++) { // Max Number of Entries in a DIR!
 			sprintf(NumberBuf, "%d", i);
-			NameLen = strlen(NumberBuf);
+			NameLen = (FF_T_UINT16) strlen(NumberBuf);
 			x = 7 - NameLen;
 			ShortName[x++] = '~';
 			for(y = 0; y < NameLen; y++) {
@@ -819,14 +820,14 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
 	FF_T_UINT8	EntryBuffer[32];	// 
-	FF_T_UINT16	NameLen = (FF_T_UINT16) strlen(pDirent->FileName);
-	FF_T_UINT8	numLFNs = (FF_T_UINT8) (NameLen / 32);
+//	FF_T_UINT16	NameLen = (FF_T_UINT16) strlen(pDirent->FileName);
+//	FF_T_UINT8	numLFNs = (FF_T_UINT8) (NameLen / 32);
 	FF_T_UINT16	FreeEntry;
 	FF_T_SINT8	RetVal = 0;
 	
 	memset(EntryBuffer, 0, 32);
 	// Create the ShortName
-	RetVal = FF_CreateShortName(pIoman, DirCluster, EntryBuffer, pDirent->FileName);
+	RetVal = FF_CreateShortName(pIoman, DirCluster, (FF_T_INT8 *) EntryBuffer, pDirent->FileName);
 
 	if(RetVal) {
 		return RetVal;
@@ -834,7 +835,7 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 
 #ifdef FF_LFN_SUPPORT
 	// Create and push the LFN's
-	FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, 1);
+	FreeEntry = (FF_T_UINT16) FF_FindFreeDirent(pIoman, DirCluster, 1);
 #else
 	FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, 1);
 #endif
@@ -893,7 +894,7 @@ FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path, FF_T_INT8 *DirName) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	DirCluster = FF_FindDir(pIoman, Path, strlen(Path));
+	DirCluster = FF_FindDir(pIoman, Path, (FF_T_UINT16) strlen(Path));
 
 	if(DirCluster) {
 		strncpy(MyDir.FileName, DirName, FF_MAX_FILENAME);
