@@ -336,6 +336,9 @@ FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 StartCluster, FF_T_UINT3
 		CurrentCluster = FF_TraverseFAT(pFile->pIoman, CurrentCluster, (SequentialClusters + 1));
 		buffer += Sectors * pFile->pIoman->BlkSize;
 		SequentialClusters = 0;
+		if(Count) {
+			printf("Interesting!");
+		}
 	}
 	return 0;
 }
@@ -781,6 +784,10 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			}
 
 		}
+	}
+
+	if(pFile->FilePointer > pFile->Filesize) {
+		pFile->Filesize = pFile->FilePointer;
 	}
 
 	return nBytesWritten;
