@@ -57,7 +57,6 @@ typedef struct {
 	FF_T_UINT16	CurrentItem;	
 	FF_T_UINT32	DirCluster;
 	FF_T_UINT32	CurrentCluster;
-	FF_T_BOOL	ProcessedLFN;
 } FF_DIRENT;
 
 		FF_T_SINT8	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
