@@ -132,16 +132,16 @@ int main(void) {
 			return -1;
 		}
 
-		ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
+		//ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
 
 		//ff2 = FF_Open(pIoman, "\\hello.txt", FF_MODE_READ, NULL);
-		if(ff1) {
+		/*if(ff1) {
 			for(i = 0; i < 64000; i++) {
 				x = i % strlen(mystring);
 				FF_PutC(ff1, mystring[x]);
 			}
 		//	FF_Close(ff1);
-		}
+		}*/
 
 		//FF_RmFile(pIoman, "\\talk.mp3");
 

@@ -134,6 +134,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 			pFile->DirEntry = Object.CurrentItem - 1;
 			pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster);
 			pFile->iEndOfChain = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->iChainLength);
+			pFile->FileDeleted = FF_FALSE;
 
 			/*
 				Add pFile onto the end of our linked list of FF_FILE objects.
@@ -224,6 +225,8 @@ FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 		return Error;	// File in use or File not found!
 	}
 
+	pFile->FileDeleted = FF_TRUE;
+
 	if(FF_isDirEmpty(pIoman, path)) {
 		FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
 		
@@ -252,6 +255,8 @@ FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	if(!pFile) {
 		return Error;	// File in use or File not found!
 	}
+
+	pFile->FileDeleted = FF_TRUE;
 
 	FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
 	
@@ -1194,9 +1199,12 @@ FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 
 	// Update the Dirent!
 	FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-	if(pFile->Filesize != OriginalEntry.Filesize) {
-		OriginalEntry.Filesize = pFile->Filesize;
-		FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+	
+	if(!pFile->FileDeleted) {
+		if(pFile->Filesize != OriginalEntry.Filesize) {
+			OriginalEntry.Filesize = pFile->Filesize;
+			FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+		}
 	}
 
 	if(pFile->Mode == FF_MODE_WRITE) {
