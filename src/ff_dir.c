@@ -733,7 +733,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	FF_T_INT8	NumberBuf[6];
 	// Create a Short Name
 	strncpy(TempName, LongName, FF_MAX_FILENAME);
-	NameLen = (FF_T_UINT16) strnlen(TempName, FF_MAX_FILENAME);
+	NameLen = (FF_T_UINT16) strlen(TempName);
 	FF_toupper(TempName, NameLen);
 
 	// Initialise Shortname
