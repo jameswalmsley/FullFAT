@@ -31,22 +31,32 @@
 #ifndef _FF_ERROR_H_
 #define _FF_ERROR_H_
 
+/*	FullFAT defines different Error-Code spaces for each module. This ensures
+	that all error codes remain unique, and their meaning can be quickly identified.
+*/
 // Global Error Codes
-#define FF_ERR_NULL_POINTER			-2	///< pIoman was NULL.
-#define FF_ERR_NOT_ENOUGH_MEMORY	-3	///< malloc() failed!
+#define FF_ERR_NONE						 0	///< No Error
+#define FF_ERR_NULL_POINTER				-2	///< pIoman was NULL.
+#define FF_ERR_NOT_ENOUGH_MEMORY		-3	///< malloc() failed! - Could not allocate handle memory.
 
-// File Error Codes
-#define FF_ERR_FILE_ALREADY_OPEN	-20	///< File is in use.
-#define FF_ERR_FILE_NOT_FOUND		-21	///< File was not found.
-#define FF_ERR_FILE_OBJECT_IS_A_DIR	-22	///< Tried to FF_Open() a Directory.
+// IOMAN Error Codes
+#define	FF_ERR_IOMAN_BAD_BLKSIZE		-11	///< The provided blocksize was not a multiple of 512.
+#define FF_ERR_IOMAN_BAD_MEMSIZE		-12	///< The memory size was not a multiple of the blocksize.
+#define FF_ERR_IOMAN_PARTITION_MOUNTED	-18	///< Device is in use by an actively mounted partition. Unmount the partition first.
+#define FF_ERR_IOMAN_ACTIVE_HANDLES		-19 ///< The partition cannot be unmounted until all active file handles are closed.
 
-// Directory Error Codes
-#define FF_ERR_DIR_OBJECT_EXISTS	-30	
-#define FF_ERR_DIR_DIRECTORY_FULL	-31
-#define FF_ERR_DIR_END_OF_DIR		-32
-#define FF_ERR_DIR_NOT_EMPTY		-33
+// File Error Codes						-20 +
+#define FF_ERR_FILE_ALREADY_OPEN		-20	///< File is in use.
+#define FF_ERR_FILE_NOT_FOUND			-21	///< File was not found.
+#define FF_ERR_FILE_OBJECT_IS_A_DIR		-22	///< Tried to FF_Open() a Directory.
 
-// Fat Error Codes
+// Directory Error Codes				-30 +
+#define FF_ERR_DIR_OBJECT_EXISTS		-30	
+#define FF_ERR_DIR_DIRECTORY_FULL		-31	///< No more items could be added to the directory.
+#define FF_ERR_DIR_END_OF_DIR			-32	
+#define FF_ERR_DIR_NOT_EMPTY			-33	///< Cannot delete a directory that contains files or folders.
+
+// Fat Error Codes						-40 +
 
 #endif
 

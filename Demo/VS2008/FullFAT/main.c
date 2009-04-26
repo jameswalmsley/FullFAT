@@ -79,7 +79,7 @@ int main(void) {
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f = NULL, *fDest = NULL, *fXSource;
 	FF_FILE *fSource, *ff1, *ff2;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 2048, 512);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 2048, 512, NULL);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
 	char commandShadow[2600];

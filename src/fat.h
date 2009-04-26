@@ -51,6 +51,8 @@
 #define FF_FAT_PTBL					0x1BE
 #define FF_FAT_PTBL_LBA				0x008
 
+#define FF_FAT_DELETED				0xE5
+
 // Directory Entry Offsets
 #define FF_FAT_DIRENT_SHORTNAME		0x000
 #define FF_FAT_DIRENT_ATTRIB		0x00B
@@ -58,6 +60,7 @@
 #define FF_FAT_DIRENT_CLUS_LOW		0x01A
 #define FF_FAT_DIRENT_FILESIZE		0x01C
 #define FF_FAT_LFN_NAME_1			0x001
+#define	FF_FAT_LFN_CHECKSUM			0x00D
 #define FF_FAT_LFN_NAME_2			0x00E
 #define FF_FAT_LFN_NAME_3			0x01C
 

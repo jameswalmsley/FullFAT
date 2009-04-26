@@ -52,35 +52,57 @@
  *	@param	pCacheMem		Pointer to a buffer for the cache. (NULL if ok to Malloc).
  *	@param	Size			The size of the provided buffer, or size of the cache to be created.
  *	@param	BlkSize			The block size of devices to be attached. If in doubt use 512.
+ *	@param	pError			Pointer to a signed byte for error checking. Can be NULL if not required.
+ *	@param	pError			To be checked when a NULL pointer is returned.
  *
- *	@return	Returns a pointer to an FF_IOMAN type object.
+ *	@return	Returns a pointer to an FF_IOMAN type object. NULL on Error, check the contents of
+ *	@return pError
  **/
-FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize) {
+FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_T_SINT8 *pError) {
 
 	FF_IOMAN	*pIoman = NULL;
 	FF_T_UINT32 *pLong	= NULL;	// Force malloc to malloc memory on a 32-bit boundary.
 
+	if(pError) {
+		*pError = FF_ERR_NONE;
+	}
+
 	if((BlkSize % 512) != 0 || Size == 0) {
+		if(pError) {
+			*pError = FF_ERR_IOMAN_BAD_BLKSIZE;
+		}
 		return NULL;	// BlkSize Size not a multiple of 512 > 0
 	}
 
 	if((Size % BlkSize) != 0 || Size == 0) {
+		if(pError) {
+			*pError = FF_ERR_IOMAN_BAD_MEMSIZE;
+		}
 		return NULL;	// Memory Size not a multiple of BlkSize > 0
 	}
 
 	pIoman = (FF_IOMAN *) malloc(sizeof(FF_IOMAN));
 
 	if(!pIoman) {		// Ensure malloc() succeeded.
+		if(pError) {
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+		}
 		return NULL;
 	}
 
 	// This is just a bit-mask, to use a byte to keep track of memory.
-	pIoman->MemAllocation = 0x00;	// Unset all allocation identifiers.
+	// pIoman->MemAllocation = 0x00;	// Unset all allocation identifiers.
+	pIoman->pBlkDevice	= NULL;
+	pIoman->pBuffers	= NULL;
+	pIoman->pCacheMem	= NULL;
+	pIoman->pPartition	= NULL;
+	pIoman->pSemaphore	= NULL;
 
 	pIoman->pPartition	= (FF_PARTITION  *) malloc(sizeof(FF_PARTITION));
 	if(pIoman->pPartition) {	// If succeeded, flag that allocation.
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_PART;
 		pIoman->pPartition->LastFreeCluster = 0;
+		pIoman->pPartition->PartitionMounted = FF_FALSE;	// This should be checked by FF_Open();
 	} else {
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
@@ -483,11 +505,11 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
                 FF_Yield();             // Yield Thread, so that further iterations can gain resources.
         }
         //return NULL;  // No buffer available.
-}
-*/
+}*/
+
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 	
-	FF_BUFFER	*pBuffer = pIoman->pBuffers;
+	FF_BUFFER	*pBuffer	= pIoman->pBuffers;
 	FF_T_UINT16	Persistance = 0;
 	FF_T_UINT16 i,x = 0, y = 0;
 	FF_T_BOOL	bFoundBuffer = FF_FALSE;
@@ -810,6 +832,54 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	return 0;
 }
+
+FF_T_SINT8 FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
+	
+	FF_T_SINT8 RetVal = FF_ERR_NONE;
+
+	if(!pIoman) {
+		return FF_ERR_NULL_POINTER;
+	}
+	
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		if(pIoman->pPartition->PartitionMounted == FF_FALSE) {
+			pIoman->pBlkDevice->devBlkSize		= 0;
+			pIoman->pBlkDevice->fnReadBlocks	= NULL;
+			pIoman->pBlkDevice->fnWriteBlocks	= NULL;
+			pIoman->pBlkDevice->pParam			= NULL;
+		} else {
+			RetVal = FF_ERR_IOMAN_PARTITION_MOUNTED;
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return RetVal;
+}
+
+FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
+	FF_T_SINT8 RetVal = FF_ERR_NONE;
+
+	if(!pIoman) {
+		return FF_ERR_NULL_POINTER;
+	}
+
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		if(pIoman->FirstFile == NULL) {
+			FF_FlushCache(pIoman);	// Flush any unwritten sectors to disk.
+			// Perhaps flag the partition as unmounted, to disable any more work on the disk
+			// by accident.
+			pIoman->pPartition->PartitionMounted = FF_FALSE;
+		} else {
+			RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return RetVal;
+}
+
 #ifdef FF_64_NUM_SUPPORT
 /**
  *	@brief	Returns the number of bytes contained within the mounted partition or volume.

@@ -497,6 +497,7 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 	FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
 	numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
 	// Handle the name
+	CheckSum = FF_getChar(EntryBuffer, FF_FAT_LFN_CHECKSUM);
 
 	x = numLFNs;
 	while(numLFNs) {
@@ -523,10 +524,13 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 	
 	// Process the ShortName Entry
 	memcpy(ShortName, EntryBuffer, 11);
-	FF_ProcessShortName(ShortName);
 	if(CheckSum != FF_CreateChkSum(ShortName)) {
-		// Handle This
+		FF_ProcessShortName(ShortName);
+		strcpy(pDirent->FileName, ShortName);
+	} else {
+		FF_ProcessShortName(ShortName);
 	}
+	
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
 	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
@@ -630,7 +634,7 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
 			return -2;
 		}
-		if(EntryBuffer[0] != 0xE5) {
+		if(EntryBuffer[0] != FF_FAT_DELETED) {
 			if(FF_isEndOfDir(EntryBuffer)){
 				return -2;
 			}
@@ -638,9 +642,19 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 				// LFN Processing
 				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+				// Fetch the shortname, and get it's checksum, or for a deleted item with
+				// orphaned LFN entries.
+
+				FF_FetchEntry(pIoman, pDirent->DirCluster, (pDirent->CurrentItem + numLFNs), EntryBuffer);
+
+				
+				
+				// Get the shortname and check if it is marked deleted.
 #ifdef FF_LFN_SUPPORT
-				FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
-				return 0;
+				if(EntryBuffer[0] != FF_FAT_DELETED) {
+					FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+					return 0;
+				}
 #else 
 				pDirent->CurrentItem += (numLFNs - 1);
 #endif
