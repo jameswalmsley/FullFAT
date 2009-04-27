@@ -533,7 +533,6 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 					}
 
 					if(pBuffer->Mode == FF_MODE_WRITE && pBuffer->NumHandles == 0) {	// This buffer has no attached handles.
-						pBuffer->Modified = FF_TRUE;
 						pBuffer->Mode = Mode;
 						pBuffer->NumHandles = 1;
 						pBuffer->Persistance += 1;

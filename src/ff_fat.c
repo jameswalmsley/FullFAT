@@ -301,10 +301,6 @@ FF_T_BOOL FF_isEndOfChain(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry) {
 }
 
 
-
-
-
-
 /**
  *	@private
  *	@brief	Writes a new Entry to the FAT Tables.
@@ -491,16 +487,12 @@ FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
 FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
 	
 	FF_T_UINT32 fatEntry = StartCluster;
-	FF_T_UINT32 currentCluster, nextCluster;
+	FF_T_UINT32 currentCluster = StartCluster, nextCluster;
 	FF_T_UINT32 clusEndOfChain;
 	FF_T_UINT16 i;
+	
+	clusEndOfChain = FF_FindEndOfChain(pIoman, StartCluster);
 
-	do {
-		currentCluster = fatEntry;
-		fatEntry = FF_getFatEntry(pIoman, currentCluster);
-	}while(!FF_isEndOfChain(pIoman, fatEntry));
-
-	clusEndOfChain = currentCluster;
 	nextCluster = FF_FindFreeCluster(pIoman);	// Find Free clusters!
 
 	FF_putFatEntry(pIoman, clusEndOfChain, nextCluster);

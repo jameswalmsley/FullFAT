@@ -83,6 +83,7 @@ FF_T_SINT8	 FF_RmDir	(FF_IOMAN *pIoman, FF_T_INT8 *path);
 static FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path);
 
 // Private :
+static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size);
 
 #endif
 
