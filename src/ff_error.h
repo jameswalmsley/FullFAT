@@ -35,28 +35,38 @@
 	that all error codes remain unique, and their meaning can be quickly identified.
 */
 // Global Error Codes
-#define FF_ERR_NONE						 0	///< No Error
-#define FF_ERR_NULL_POINTER				-2	///< pIoman was NULL.
-#define FF_ERR_NOT_ENOUGH_MEMORY		-3	///< malloc() failed! - Could not allocate handle memory.
+#define FF_ERR_NONE								  0	///< No Error
+#define FF_ERR_NULL_POINTER						 -2	///< pIoman was NULL.
+#define FF_ERR_NOT_ENOUGH_MEMORY				 -3	///< malloc() failed! - Could not allocate handle memory.
+#define FF_ERR_DEVICE_DRIVER_FAILED				 -4	///< The Block Device driver reported a FATAL error, cannot continue.
+
 
 // IOMAN Error Codes
-#define	FF_ERR_IOMAN_BAD_BLKSIZE		-11	///< The provided blocksize was not a multiple of 512.
-#define FF_ERR_IOMAN_BAD_MEMSIZE		-12	///< The memory size was not a multiple of the blocksize.
-#define FF_ERR_IOMAN_PARTITION_MOUNTED	-18	///< Device is in use by an actively mounted partition. Unmount the partition first.
-#define FF_ERR_IOMAN_ACTIVE_HANDLES		-19 ///< The partition cannot be unmounted until all active file handles are closed.
+#define	FF_ERR_IOMAN_BAD_BLKSIZE				-11	///< The provided blocksize was not a multiple of 512.
+#define FF_ERR_IOMAN_BAD_MEMSIZE				-12	///< The memory size was not a multiple of the blocksize.
+#define FF_ERR_IOMAN_DEV_ALREADY_REGD			-11 ///< Device was already registered. Use FF_UnRegister() to re-use this IOMAN with another device.
+#define FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION		-12	///< A mountable partition could not be found on the device.
+#define FF_ERR_IOMAN_INVALID_FORMAT				-13	///< The 
+#define FF_ERR_IOMAN_INVALID_PARTITION_NUM		-14	///< The partition number provided was out of range.
+#define FF_ERR_IOMAN_NOT_FAT_FORMATTED			-15	///< The partition did not look like a FAT partition.
+#define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE		-16 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
+#define FF_ERR_IOMAN_PARTITION_MOUNTED			-18	///< Device is in use by an actively mounted partition. Unmount the partition first.
+#define FF_ERR_IOMAN_ACTIVE_HANDLES				-19 ///< The partition cannot be unmounted until all active file handles are closed. (There may also be active handles on the cache).
 
-// File Error Codes						-20 +
-#define FF_ERR_FILE_ALREADY_OPEN		-20	///< File is in use.
-#define FF_ERR_FILE_NOT_FOUND			-21	///< File was not found.
-#define FF_ERR_FILE_OBJECT_IS_A_DIR		-22	///< Tried to FF_Open() a Directory.
 
-// Directory Error Codes				-30 +
-#define FF_ERR_DIR_OBJECT_EXISTS		-30	
-#define FF_ERR_DIR_DIRECTORY_FULL		-31	///< No more items could be added to the directory.
-#define FF_ERR_DIR_END_OF_DIR			-32	
-#define FF_ERR_DIR_NOT_EMPTY			-33	///< Cannot delete a directory that contains files or folders.
+// File Error Codes								-30 +
+#define FF_ERR_FILE_ALREADY_OPEN				-30	///< File is in use.
+#define FF_ERR_FILE_NOT_FOUND					-31	///< File was not found.
+#define FF_ERR_FILE_OBJECT_IS_A_DIR				-32	///< Tried to FF_Open() a Directory.
+#define FF_ERR_FILE_IS_READ_ONLY				-33	///< Tried to FF_Open() a file marked read only.
 
-// Fat Error Codes						-40 +
+// Directory Error Codes						-50 +
+#define FF_ERR_DIR_OBJECT_EXISTS				-50	///< A file or folder of the same name already exists in the current directory.
+#define FF_ERR_DIR_DIRECTORY_FULL				-51	///< No more items could be added to the directory.
+#define FF_ERR_DIR_END_OF_DIR					-52	///
+#define FF_ERR_DIR_NOT_EMPTY					-53	///< Cannot delete a directory that contains files or folders.
+
+// Fat Error Codes								-70 +
 
 #endif
 

@@ -49,7 +49,11 @@
  *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
  *	@param	path		Path to the File or object.
  *	@param	Mode		Access Mode required.
+ *	@param	pError		Pointer to a signed byte for error checking. Can be NULL if not required.
+ *	@param	pError		To be checked when a NULL pointer is returned.
  *
+ *	@return	NULL pointer on Error, in which case pError should be checked for more information.
+ *	@return	pError can be:
  **/
 FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError) {
 	FF_FILE		*pFile;
@@ -119,6 +123,17 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 					free(pFile);
 					if(pError) {
 						*pError = FF_ERR_FILE_OBJECT_IS_A_DIR;
+					}
+					return (FF_FILE *) NULL;
+				}
+			}
+			
+			//---------- Ensure Read-Only files don't get opened for Writing.
+			if(Mode == FF_MODE_WRITE) {
+				if((Object.Attrib & FF_FAT_ATTR_READONLY)) {
+					free(pFile);
+					if(pError) {
+						*pError = FF_ERR_FILE_IS_READ_ONLY;
 					}
 					return (FF_FILE *) NULL;
 				}
@@ -359,9 +374,14 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	}
 
 	if(nTotalClustersNeeded > pFile->iChainLength) {
+#ifdef FF_ALLOC_DEFAULT
 		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nClusterToExtend);
 		pFile->iChainLength += nClusterToExtend;
-		//pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster);
+#endif
+#ifdef FF_ALLOC_DOUBLE
+		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nTotalClustersNeeded);
+		pFile->iChainLength += nTotalClustersNeeded;
+#endif
 	}
 
 	return 0;

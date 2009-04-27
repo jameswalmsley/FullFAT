@@ -45,16 +45,7 @@
 #include "ff_safety.h"	// Provide critical regions
 #include "ff_memory.h"
 
-#define	FF_MAX_PARTITION_NAME				5	///< Partition name length.
-
-#define FF_ERR_IOMAN_NULL_POINTER			-10	///< Null Pointer return error code.
-#define FF_ERR_IOMAN_DEV_ALREADY_REGD		-11 ///< Device was already registered.
-#define FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION -12
-#define FF_ERR_IOMAN_INVALID_FORMAT			-13
-#define FF_ERR_IOMAN_INVALID_PARTITION_NUM	-14
-#define FF_ERR_IOMAN_NOT_FAT_FORMATTED		-15
-#define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE	-16 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
-#define FF_ERR_DEVICE_DRIVER_FAILED			-17
+#define	FF_MAX_PARTITION_NAME		5	///< Partition name length.
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -62,6 +53,7 @@
 
 #define FF_MODE_READ			0x01		///< Buffer / FILE Mode for Read Access.
 #define	FF_MODE_WRITE			0x02		///< Buffer / FILE Mode for Write Access.
+#define FF_MODE_APPEND			0x04		///< FILE Mode Append Access.
 #define FF_MODE_DIR				0x80		///< Special Mode to open a Dir.
 
 #define FF_BUF_MAX_HANDLES		65536		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
@@ -104,14 +96,11 @@ typedef struct {
  *	@note	This may change throughout development.
  **/
 typedef struct {
-	FF_T_UINT16		ID;				///< Auto-Incremental Buffer ID.
 	FF_T_UINT32		Sector;			///< The LBA of the Cached sector.
 	FF_T_UINT8		Mode;			///< Read or Write mode.
-	FF_T_UINT16		ContextID;		///< Context Identifier.
 	FF_T_UINT16		NumHandles;		///< Number of objects using this buffer.
 	FF_T_UINT16		Persistance;	///< For the persistance algorithm.
 	FF_T_BOOL		Modified;		///< If the sector was modified since read.
-	FF_T_BOOL		isIOMANediting;	///< FF_TRUE if the buffer manager is currently editing this.
 	FF_T_UINT8		*pBuffer;		///< Pointer to the cache block.
 } FF_BUFFER;
 

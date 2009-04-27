@@ -43,31 +43,27 @@
 // Comment this out if you don't want to worry about Patent Issues.
 #define FF_LFN_SUPPORT
 
+//---------- File Allocation Method
+// Comment out the prefered method.
+#define FF_ALLOC_DEFAULT	// Only allocate as much as is needed. (Provides good performance, without wasting space).
+//#define FF_ALLOC_DOUBLE		// Doubles the size of a file each time allocation is required. (When high-performance writing is required).
 
-//---------- USE MACROS
-// Increases Code Size, but provides greater performance for partition mounting. And directory listing.
-//#define FF_USE_MACROS
 
-//---------- USE INLINE FUNCTIONS (Requires inline Keyword!)
-// Increases Code Size, but provides greater performance for partition mounting. And directory listing.
-//#define FF_INLINE
 
 //---------- FAT12 SUPPORT
-#define FF_FAT12_SUPPORT
+//#define FF_FAT12_SUPPORT
 
 //---------- 64-Bit Number Support
-//#define FF_64_NUM_SUPPORT
+#define FF_64_NUM_SUPPORT
 
 //---------- Actively Determine if partition is FAT
 #define FF_FAT_CHECK	// This is experimental, so if FullFAT won't mount your volume, comment this out
 						// Also report the problem to james@worm.me.uk
-
 
 #ifdef FF_LFN_SUPPORT
 #define FF_MAX_FILENAME		260
 #else
 #define	FF_MAX_FILENAME		13
 #endif
-
 
 #endif

@@ -165,14 +165,14 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
  *
  *	@param	pIoman	Pointer to an FF_IOMAN object, as returned from FF_CreateIOMAN.
  *
- *	@return	Zero on sucess, or a documented error code on failure. (FF_IOMAN_NULL_POINTER)
+ *	@return	FF_ERR_NONE on sucess, or a documented error code on failure. (FF_ERR_NULL_POINTER)
  *
  **/
 FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 
 	// Ensure no NULL pointer was provided.
 	if(!pIoman) {
-		return FF_ERR_IOMAN_NULL_POINTER;
+		return FF_ERR_NULL_POINTER;
 	}
 
 	// Ensure pPartition pointer was allocated.
@@ -203,7 +203,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 	// Finally free the FF_IOMAN object.
 	free(pIoman);
 
-	return 0;
+	return FF_ERR_NONE;
 }
 
 /**
@@ -217,15 +217,12 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	FF_T_UINT16 i;
 	FF_BUFFER *pBuffer = pIoman->pBuffers;
 	for(i = 0; i < pIoman->CacheSize; i++) {
-		pBuffer->ID 			= (FF_T_UINT16) i;
-		pBuffer->ContextID		= 0;
 		pBuffer->Mode			= 0;
 		pBuffer->NumHandles 	= 0;
 		pBuffer->Persistance 	= 0;
 		pBuffer->Sector 		= 0;
 		pBuffer->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + pIoman->BlkSize * i);
 		pBuffer->Modified		= FF_FALSE;
-		pBuffer->isIOMANediting	= FF_FALSE;
 		pBuffer++;
 	}
 }
@@ -318,8 +315,9 @@ static FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_
  *	@private
  *	@brief		Flushes all Write cache buffers with no active Handles.
  *
- *	@param		pIoman		IOMAN Object.
+ *	@param		pIoman	IOMAN Object.
  *
+ *	@return		FF_ERR_NONE on Success.
  **/
 FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	
@@ -329,17 +327,10 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	{
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->Modified == FF_TRUE) {
-				//Prepare and Do some work on this buffer!
-				(pIoman->pBuffers + i)->isIOMANediting = FF_TRUE;
-				FF_ReleaseSemaphore(pIoman->pSemaphore);	// Release Semaphore while 
-				{											// Work is being done!
-					FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
-				}
-				FF_PendSemaphore(pIoman->pSemaphore);
-				(pIoman->pBuffers + i)->isIOMANediting = FF_FALSE;
-				// End of work, cleaned up status!
 				
-				// Buffer has now been flushed, set mark it as a read buffer!
+				FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
+				
+				// Buffer has now been flushed, mark it as a read buffer and unmodified.
 				(pIoman->pBuffers + i)->Mode = FF_MODE_READ;
 				(pIoman->pBuffers + i)->Modified = FF_FALSE;
 
@@ -357,10 +348,10 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 
-	return 0;
+	return FF_ERR_NONE;
 }
 
-FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
+static FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
 	if(Sector >= pIoman->pPartition->FatBeginLBA && Sector < (pIoman->pPartition->FatBeginLBA + pIoman->pPartition->ReservedSectors)) {
 		return FF_TRUE;
 	}
@@ -630,7 +621,7 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
  **/
 FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
 	if(!pIoman) {	// We can't do anything without an IOMAN object.
-		return FF_ERR_IOMAN_NULL_POINTER;
+		return FF_ERR_NULL_POINTER;
 	}
 
 	if((BlkSize % 512) != 0 || BlkSize == 0) {
@@ -660,7 +651,7 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_
 	pIoman->pBlkDevice->fnWriteBlocks	= fnWriteBlocks;
 	pIoman->pBlkDevice->pParam			= pParam;
 
-	return 0;	// Success
+	return FF_ERR_NONE;	// Success
 }
 
 /**
@@ -680,16 +671,16 @@ static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
-					return -2;
+					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if((testLong & 0x3FF) != 0x3F8) {
-				return -2;
+				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 			}
 #endif
-			return 0;
+			return FF_ERR_NONE;
 
 		} else if(pPart->NumClusters < 65525) {
 			// FAT 16
@@ -698,16 +689,16 @@ static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
-					return -2;
+					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if(testLong != 0xFFF8) {
-				return -2;
+				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 			}
 #endif
-			return 0;
+			return FF_ERR_NONE;
 		}
 		else {
 			// FAT 32!
@@ -716,20 +707,20 @@ static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
-					return -2;
+					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
 				testLong = FF_getLong(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8) {
-				return -2;
+				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 			}
 #endif
-			return 0;
+			return FF_ERR_NONE;
 		}
 	}
 
-	return -1;
+	return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 }
 /**
  *	@public
@@ -742,7 +733,7 @@ static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
  *	@param	PartitionNumber	The primary partition number to be mounted. (0 - 3).
  *
  *	@return	0 on success. 
- *	@return FF_ERR_IOMAN_NULL_POINTER if a pIoman object wasn't provided. 
+ *	@return FF_ERR_NULL_POINTER if a pIoman object wasn't provided. 
  *	@return FF_ERR_IOMAN_INVALID_PARTITION_NUM if the partition number is out of range. 
  *	@return FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION if no partition was found.
  *	@return FF_ERR_IOMAN_INVALID_FORMAT if the master boot record or partition boot block didn't provide sensible data.
@@ -754,7 +745,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_BUFFER		*pBuffer = 0;
 
 	if(!pIoman) {
-		return FF_ERR_IOMAN_NULL_POINTER;
+		return FF_ERR_NULL_POINTER;
 	}
 
 	if(PartitionNumber > 3) {
@@ -829,7 +820,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 	}
 
-	return 0;
+	return FF_ERR_NONE;
 }
 
 FF_T_SINT8 FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
@@ -856,6 +847,30 @@ FF_T_SINT8 FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
 	return RetVal;
 }
 
+/**
+ *	@private
+ *	@brief		Checks the cache for Active Handles
+ *
+ *	@param		pIoman FF_IOMAN Object.
+ *
+ *	@return		FF_TRUE if an active handle is found, else FF_FALSE.
+ *
+ *	@pre		This function must be wrapped with the cache handling semaphore.	
+ **/
+static FF_T_BOOL FF_ActiveHandles(FF_IOMAN *pIoman) {
+	FF_T_UINT32	i;
+	FF_BUFFER	*pBuffer;
+
+	for(i = 0; i < pIoman->CacheSize; i++) {
+		pBuffer = (pIoman->pBuffers + i);
+		if(pBuffer->NumHandles) {
+			return FF_TRUE;
+		}
+	}
+
+	return FF_FALSE;
+}
+
 FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
 	FF_T_SINT8 RetVal = FF_ERR_NONE;
 
@@ -863,15 +878,17 @@ FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	FF_PendSemaphore(pIoman->pSemaphore);
+	FF_PendSemaphore(pIoman->pSemaphore);	// Ensure that there are no File Handles
 	{
-		if(pIoman->FirstFile == NULL) {
-			FF_FlushCache(pIoman);	// Flush any unwritten sectors to disk.
-			// Perhaps flag the partition as unmounted, to disable any more work on the disk
-			// by accident.
-			pIoman->pPartition->PartitionMounted = FF_FALSE;
+		if(!FF_ActiveHandles(pIoman)) {
+			if(pIoman->FirstFile == NULL) {
+				FF_FlushCache(pIoman);			// Flush any unwritten sectors to disk.
+				pIoman->pPartition->PartitionMounted = FF_FALSE;	
+			} else {
+				RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;
+			}
 		} else {
-			RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;
+			RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;	// Active handles found on the cache.
 		}
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);

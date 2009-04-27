@@ -57,8 +57,30 @@
 #include "testdriver_win32.h"
 #include "../../../src/fullfat.h"
 
-#define PARTITION_NUMBER	0				// Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	(8192*10)		// Increase This for Faster File Copies
+#define PARTITION_NUMBER	1				// Change this to the primary partition to be mounted (0 to 3)
+#define COPY_BUFFER_SIZE	(8192*16)		// Increase This for Faster File Copies
+
+void FF_PrintCache(FF_IOMAN *pIoman) {
+	FF_T_UINT32 i;
+	FF_BUFFER *pBuffer;
+	FF_T_INT8 mode[8];
+	FF_T_INT8 modified[8];
+	for(i = 0; i < pIoman->CacheSize; i++) {
+		pBuffer = (pIoman->pBuffers + i);
+		if(pBuffer->Mode == FF_MODE_WRITE) {
+			sprintf(mode, "WRITE");
+		} else {
+			sprintf(mode, "READ");
+		}
+
+		if(pBuffer->Modified) {
+			sprintf(modified, "YES");
+		} else {
+			sprintf(modified, "NO");
+		}
+		printf("ID: %3d, LBA %10d, Mode: %5s, Hndls: %5d, Persist: %5d, Diff: %3s\n", i, pBuffer->Sector, mode, pBuffer->NumHandles, pBuffer->Persistance, modified);
+	}
+}
 
 void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
@@ -79,7 +101,7 @@ int main(void) {
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f = NULL, *fDest = NULL, *fXSource;
 	FF_FILE *fSource, *ff1, *ff2;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 2048, 512, NULL);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512, NULL);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
 	char commandShadow[2600];
@@ -87,6 +109,7 @@ int main(void) {
 	char workingDir[2600] = "\\";
 	char cmdHistory = 0;
 	char tester;
+	FF_T_SINT8 RetVal;
 	unsigned long BytesRead;
 	FF_T_INT32 i,x;
 	FF_DIRENT mydir;
@@ -98,13 +121,13 @@ int main(void) {
 	float time, transferRate;
 
 	//hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
-
+	hDev = 0;
 	if(hDev == INVALID_HANDLE_VALUE) {
 		printf("Vista!\n");
 	}
-	hDev = 0;
+	
 	//f = fopen("c:\\fcfat16.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	f = fopen("\\\\.\\PHYSICALDRIVE0", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -498,15 +521,32 @@ int main(void) {
 				FF_FlushCache(pIoman);
 			}
 
+			if(strstr(commandLine[cmdHistory], "cache")) {
+				FF_PrintCache(pIoman);
+			}
+
 			if(strstr(commandLine[cmdHistory], "exit") || strstr(commandLine[cmdHistory], "quit")) {
-				if(f) {
-					fclose(f);
+				
+				if(!(RetVal = FF_UnMountPartition(pIoman))) {
+					if(f) {
+						fclose(f);
+					}
+					if(hDev) {
+						CloseHandle(hDev);
+					}
+					return 0;
 				}
 
-				if(hDev) {
-					CloseHandle(hDev);
+				switch(RetVal) {
+					case FF_ERR_IOMAN_ACTIVE_HANDLES: {
+						printf("There are currently active handles on the disk.\n");
+						break;
+					}
+					default: {
+						printf("Unknown Error\n");
+						break;
+					}
 				}
-				return 0;
 			}
 
 			cmdHistory++;
