@@ -97,14 +97,14 @@ int main(void) {
 	char mystring[] = "Hello World!\n";
 	float time, transferRate;
 
-	hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
+	//hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
 
 	if(hDev == INVALID_HANDLE_VALUE) {
 		printf("Vista!\n");
 	}
-	//hDev = 0;
+	hDev = 0;
 	//f = fopen("c:\\fcfat16.img", "rb");
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -117,8 +117,8 @@ int main(void) {
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
-	if(hDev) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnVistaWrite_512, (FF_READ_BLOCKS) fnVistaRead_512, hDev);
+	if(f) {
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
 		
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			if(f) {

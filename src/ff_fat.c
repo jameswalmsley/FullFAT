@@ -497,9 +497,9 @@ FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF
 
 	FF_putFatEntry(pIoman, clusEndOfChain, nextCluster);
 
-	for(i = 0; i < Count; i++) {
+	for(i = 0; i <= Count; i++) {
 		currentCluster = nextCluster;
-		if(i + 1 == Count) {
+		if(i == Count) {
 			FF_putFatEntry(pIoman, currentCluster, 0xFFFFFFFF);
 			break;
 		}

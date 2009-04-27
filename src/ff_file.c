@@ -56,6 +56,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object, OriginalEntry;
 	FF_T_UINT32 DirCluster, FileCluster;
+	FF_T_UINT32	nBytesPerCluster;
 	FF_T_INT8	filename[FF_MAX_FILENAME];
 
 	FF_T_UINT16	i;
@@ -122,19 +123,20 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 					return (FF_FILE *) NULL;
 				}
 			}
-			pFile->pIoman = pIoman;
-			pFile->FilePointer = 0;
-			pFile->ObjectCluster = Object.ObjectCluster;
-			pFile->Filesize = Object.Filesize;
-			pFile->CurrentCluster = 0;
-			pFile->AddrCurrentCluster = pFile->ObjectCluster;
-			pFile->Mode = Mode;
-			pFile->Next = NULL;
-			pFile->DirCluster = DirCluster;
-			pFile->DirEntry = Object.CurrentItem - 1;
-			pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster);
-			pFile->iEndOfChain = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->iChainLength);
-			pFile->FileDeleted = FF_FALSE;
+			pFile->pIoman				= pIoman;
+			pFile->FilePointer			= 0;
+			pFile->ObjectCluster		= Object.ObjectCluster;
+			pFile->Filesize				= Object.Filesize;
+			pFile->CurrentCluster		= 0;
+			pFile->AddrCurrentCluster	= pFile->ObjectCluster;
+			pFile->Mode					= Mode;
+			pFile->Next					= NULL;
+			pFile->DirCluster			= DirCluster;
+			pFile->DirEntry				= Object.CurrentItem - 1;
+			nBytesPerCluster			= pFile->pIoman->pPartition->SectorsPerCluster / pIoman->BlkSize;
+			pFile->iChainLength			= FF_GetChainLength(pIoman, pFile->ObjectCluster);
+			pFile->iEndOfChain			= FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->iChainLength);
+			pFile->FileDeleted			= FF_FALSE;
 
 			/*
 				Add pFile onto the end of our linked list of FF_FILE objects.
@@ -350,14 +352,16 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	FF_IOMAN	*pIoman = pFile->pIoman;
 	FF_T_UINT32 nBytesPerCluster = pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster;
 	FF_T_UINT32 nTotalClustersNeeded = Size / nBytesPerCluster;
+	FF_T_UINT32 nClusterToExtend = nTotalClustersNeeded - pFile->iChainLength;
 
 	if(Size % nBytesPerCluster) {
 		nTotalClustersNeeded += 1;
 	}
 
 	if(nTotalClustersNeeded > pFile->iChainLength) {
-		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nTotalClustersNeeded);
-		pFile->iChainLength += nTotalClustersNeeded;
+		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nClusterToExtend);
+		pFile->iChainLength += nClusterToExtend;
+		//pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster);
 	}
 
 	return 0;
