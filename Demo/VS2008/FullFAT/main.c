@@ -57,7 +57,7 @@
 #include "testdriver_win32.h"
 #include "../../../src/fullfat.h"
 
-#define PARTITION_NUMBER	1				// Change this to the primary partition to be mounted (0 to 3)
+#define PARTITION_NUMBER	0				// Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	(8192*16)		// Increase This for Faster File Copies
 
 void FF_PrintCache(FF_IOMAN *pIoman) {
@@ -100,7 +100,7 @@ int main(void) {
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f = NULL, *fDest = NULL, *fXSource;
-	FF_FILE *fSource, *ff1, *ff2;
+	FF_FILE *fSource;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512, NULL);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
@@ -111,13 +111,13 @@ int main(void) {
 	char tester;
 	FF_T_SINT8 RetVal;
 	unsigned long BytesRead;
-	FF_T_INT32 i,x;
+	FF_T_INT32 i;
 	FF_DIRENT mydir;
 	FF_T_SINT8 Error;
 
 	HANDLE hDev;
 
-	char mystring[] = "Hello World!\n";
+//	char mystring[] = "Hello World!\n";
 	float time, transferRate;
 
 	//hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
@@ -127,7 +127,7 @@ int main(void) {
 	}
 	
 	//f = fopen("c:\\fcfat16.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE0", "rb+");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\ramdisk.dat", "rb");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -168,7 +168,7 @@ int main(void) {
 
 		//FF_RmFile(pIoman, "\\talk.mp3");
 
-		while(1) {
+		while(1 == 1) {
 			printf("FullFAT:%s>",workingDir);
 			for(i = 0; i < 1024; i++) {
 				commandLine[cmdHistory][i] = (char) _getch();
@@ -242,7 +242,7 @@ int main(void) {
 			}
 
 			if(strstr(commandLine[cmdHistory], "mkdir")) {
-				tester = FF_MkDir(pIoman, workingDir, commandLine[cmdHistory]+6);
+				tester = FF_MkDir(pIoman, workingDir, (commandLine[cmdHistory]+6));
 
 				if(tester) {
 					switch(tester) {
@@ -257,7 +257,7 @@ int main(void) {
 						}
 
 						default: {
-							printf("Unknown Error while making a Directory\n");
+							printf("Unknown Error while making a Directory (%d)\n", RetVal);
 							break;
 						}
 					}
@@ -420,16 +420,27 @@ int main(void) {
 						FF_Close(fSource);
 					} else {
 						fclose(fDest);
-						if(Error == FF_ERR_FILE_NOT_FOUND) {
+							printf("Source: ");
+					switch(Error) {
+						case FF_ERR_FILE_INVALID_PATH:
+							printf("Invalid Path (Directory not found)\n");
+							break;
+						case FF_ERR_FILE_IS_READ_ONLY:
+							printf("Destination has Read-Only permissions\n");
+							break;
+						case FF_ERR_FILE_NOT_FOUND:
 							printf("File Not Found!\n");
-						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
-							printf("File In Use!\n");
-						} else {
-							printf("Couldn't Open file! Unknown Error \n");
-						}
+							break;
+						case FF_ERR_FILE_ALREADY_OPEN:
+							printf("The file is currently in use by another process!\n");
+							break;
+						default :
+							printf("Couldn't Open file! Unknown Error (%d)\n", Error);
+							break;
+					}
 					}
 				} else {
-					printf("Error Opening Destination\n");
+					printf("Error opening destination!\n");
 				}
 				strcpy(source, "");
 				strcpy(destination, "");
@@ -438,10 +449,14 @@ int main(void) {
 			if(strstr(commandLine[cmdHistory], "copy")) {
 				sscanf((commandLine[cmdHistory] + 5), "%s %s", source, destination);
 				
-				if(strlen(workingDir) == 1) {
+				if(strlen(workingDir) == 1 && !(destination[0] != '\\' || destination[0] != '/')) {
 					sprintf(buffer, "\\%s", (destination)); 
 				} else {
-					sprintf(buffer, "%s\\%s", workingDir, (destination));
+					if(destination[0] == '\\' || destination[0] == '/') {
+						sprintf(buffer, "%s", (destination));
+					} else {
+						sprintf(buffer, "%s\\%s", workingDir, (destination));
+					}
 				}
 				
 				fDest = fopen(source, "rb");
@@ -463,12 +478,22 @@ int main(void) {
 						FF_Close(fSource);
 					} else {
 						fclose(fDest);
-						if(Error == FF_ERR_FILE_NOT_FOUND) {
-							printf("File Not Found!\n");
-						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
-							printf("File In Use!\n");
-						} else {
-							printf("Couldn't Open file! Unknown Error \n");
+						switch(Error) {
+							case FF_ERR_FILE_INVALID_PATH:
+								printf("Invalid Path (Directory not found)\n");
+								break;
+							case FF_ERR_FILE_IS_READ_ONLY:
+								printf("Destination has Read-Only permissions\n");
+								break;
+							case FF_ERR_FILE_NOT_FOUND:
+								printf("File Not Found!\n");
+								break;
+							case FF_ERR_FILE_ALREADY_OPEN:
+								printf("The file is currently in use by another process!\n");
+								break;
+							default :
+								printf("Couldn't Open file! Unknown Error (%d)\n", Error);
+								break;
 						}
 					}
 				} else {
@@ -526,8 +551,8 @@ int main(void) {
 			}
 
 			if(strstr(commandLine[cmdHistory], "exit") || strstr(commandLine[cmdHistory], "quit")) {
-				
-				if(!(RetVal = FF_UnMountPartition(pIoman))) {
+				RetVal = FF_UnMountPartition(pIoman);
+				if(!RetVal) {
 					if(f) {
 						fclose(f);
 					}

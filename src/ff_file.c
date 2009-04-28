@@ -111,11 +111,20 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 				FileCluster = 1;
 			} else {
 				if(Mode == FF_MODE_WRITE) {
-					FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object);
+#ifdef FF_LFN_SUPPORT
+					strncpy(filename, (path + i), FF_MAX_FILENAME); // Copy back with Case!
+#endif
+					if(filename[0] == '\\' || '/' ) {
+						i = 1;
+					} else {
+						i = 0;
+					}
+					FileCluster = FF_CreateFile(pIoman, DirCluster, filename + i, &Object);
 					Object.CurrentItem += 1;
 				}
 			}
 		}
+		
 		if(FileCluster) {
 			if(Object.Attrib == FF_FAT_ATTR_DIR) {
 				if(Mode != FF_MODE_DIR) {
@@ -197,10 +206,16 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 			}
 
 			return pFile;
-		}
+		}else {
+			free(pFile);
+			if(pError) {
+				*pError = FF_ERR_FILE_NOT_FOUND;
+			}
+			return (FF_FILE *) NULL;
+		} 
 	}
 	if(pError) {
-		*pError = FF_ERR_FILE_NOT_FOUND;
+		*pError = FF_ERR_FILE_INVALID_PATH;
 	}
 
 	free(pFile);
@@ -367,7 +382,7 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	FF_IOMAN	*pIoman = pFile->pIoman;
 	FF_T_UINT32 nBytesPerCluster = pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster;
 	FF_T_UINT32 nTotalClustersNeeded = Size / nBytesPerCluster;
-	FF_T_UINT32 nClusterToExtend = nTotalClustersNeeded - pFile->iChainLength;
+	FF_T_UINT32 nClusterToExtend = (nTotalClustersNeeded - pFile->iChainLength);
 
 	if(Size % nBytesPerCluster) {
 		nTotalClustersNeeded += 1;
@@ -387,10 +402,9 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	return 0;
 }
 
-static FF_T_SINT32 FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 StartCluster, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
+static FF_T_SINT32 FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
 	FF_T_UINT32 Sectors;
 	FF_T_UINT32 SequentialClusters = 0;
-	FF_T_UINT32 CurrentCluster = StartCluster;
 	FF_T_UINT32 nItemLBA;
 	FF_T_SINT32 RetVal;	
 
@@ -612,7 +626,6 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32		fileLBA;
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT8		retChar;
-	FF_T_UINT32		fatEntry;
 	FF_T_UINT32		relMinorBlockPos;
 	FF_T_UINT32     clusterNum;
 	
@@ -779,7 +792,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 			nClusters = (nBytes / nBytesPerCluster);
 			
-			FF_WriteClusters(pFile, pFile->AddrCurrentCluster, nClusters, buffer);
+			FF_WriteClusters(pFile, nClusters, buffer);
 			
 			nBytesToWrite = (nBytesPerCluster *  nClusters);
 			

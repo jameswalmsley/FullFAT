@@ -318,8 +318,9 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
 	FF_T_UINT32 FatEntry;
 	FF_T_UINT8	LBAadjust;
 	FF_T_UINT16 relClusterEntry;
-	
+#ifdef FF_FAT12_SUPPORT	
 	FF_T_UINT8	F12short[2];		// For FAT12 FAT Table Across sector boundary traversal.
+#endif
 	
 	if(pIoman->pPartition->Type == FF_T_FAT32) {
 		FatOffset = nCluster * 4;
@@ -484,12 +485,11 @@ FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
  *	@param	Count			Number of clusters to extend the chain with.
  *
  **/
-FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
+FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT32 Count) {
 	
-	FF_T_UINT32 fatEntry = StartCluster;
 	FF_T_UINT32 currentCluster = StartCluster, nextCluster;
 	FF_T_UINT32 clusEndOfChain;
-	FF_T_UINT16 i;
+	FF_T_UINT32 i;
 	
 	clusEndOfChain = FF_FindEndOfChain(pIoman, StartCluster);
 
