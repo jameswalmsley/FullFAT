@@ -280,7 +280,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
             //lastDirCluster = dirCluster;
             MyDir.CurrentItem = 0;
             dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
-			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
+			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] != '.') { // .. Dir Entry pointing to root dir.
 				dirCluster = pIoman->pPartition->RootDirCluster;
             }
             token = FF_strtok(path, mytoken, &it, &last, pathLen);
