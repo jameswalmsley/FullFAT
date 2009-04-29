@@ -446,7 +446,7 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 			return nCluster;
 		}
 	}
-	 
+
 	return 0;
 }
 
@@ -485,6 +485,7 @@ FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster) {
  *	@param	Count			Number of clusters to extend the chain with.
  *
  **/
+/*
 FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT32 Count) {
 	
 	FF_T_UINT32 currentCluster = StartCluster, nextCluster;
@@ -507,8 +508,9 @@ FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF
 		nextCluster = FF_FindFreeCluster(pIoman);
 		FF_putFatEntry(pIoman, currentCluster, ++nextCluster);
 	}
+	FF_FlushCache(pIoman);
 	return currentCluster;
-}
+}*/
 
 
 /**

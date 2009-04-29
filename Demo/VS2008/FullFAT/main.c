@@ -112,6 +112,9 @@ int main(void) {
 	char workingDir[2600] = "\\";
 	char cmdHistory = 0;
 	char tester;
+	char *Argument;
+	char *argv;
+	unsigned int nArgs;
 	FF_T_SINT8 RetVal;
 	unsigned long BytesRead;
 	FF_T_INT32 i;
@@ -121,16 +124,13 @@ int main(void) {
 	char *mydata;
 	char mystring[] = "Hello";
 
-
-
-	
-
 	HANDLE hDev;
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
 //	char mystring[] = "Hello World!\n";
 	float time, transferRate;
-	mydata = (char *) malloc(1048576);
-	for(i = 0; i < 1048576; i++) {
+	mydata = (char *) malloc(1048576 * 4);
+	for(i = 0; i < 1048576 * 4; i++) {
 		mydata[i] = mystring[i % 5];
 	}
 	//hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
@@ -138,17 +138,19 @@ int main(void) {
 	if(hDev == INVALID_HANDLE_VALUE) {
 		printf("Vista!\n");
 	}
+
+	SetConsoleTitle(TEXT("FullFAT"));
 	
 	//f = fopen("c:\\fcfat16.img", "rb");
 	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
-	f = fopen("c:\\Write.img", "rb+");
+	f = fopen("c:\\NoOpen", "rb+");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	
 	QueryPerformanceFrequency(&ticksPerSecond);
 
 	for(i = 0; i < 10; i++) {
-		strcpy(commandLine[i], "No Commands");
+		strcpy(commandLine[i], "\0");
 	}
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
@@ -168,10 +170,13 @@ int main(void) {
 			return -1;
 		}
 
-		fSource = FF_Open(pIoman, "\\1m", FF_MODE_WRITE, NULL);
+		fSource = FF_Open(pIoman, "\\4m", FF_MODE_WRITE, &Error);
 		fDest = fopen("c:\\my1m", "wb");
-		FF_Write(fSource, 1, 1048576, mydata);
-		fwrite(mydata, 1, 1048576, fDest);
+		FF_Write(fSource, 1, 1048576*4, mydata);
+		/*for(i = 0; i < 1048576*4; i++) {
+			FF_PutC(fSource, mydata[i]);
+		}*/
+		fwrite(mydata, 1, 1048576*4, fDest);
 		fclose(fDest);
 		FF_Close(fSource);
 
@@ -192,6 +197,7 @@ int main(void) {
 			printf("FullFAT:%s>",workingDir);
 			for(i = 0; i < 1024; i++) {
 				commandLine[cmdHistory][i] = (char) _getch();
+				commandLine[cmdHistory][i + 1] = '\0';
 				if(commandLine[cmdHistory][i] == 'à') {
 					commandLine[cmdHistory][i] = (char) _getch();
 					if(commandLine[cmdHistory][i] == 'K') {
@@ -219,16 +225,32 @@ int main(void) {
 						i = strlen(commandLine[cmdHistory]);
 					}
 				} else if(commandLine[cmdHistory][i] == 0x08) {
-					printf("Del\n");
+					commandLine[cmdHistory][--i] = '\0';
+					i --;
+					//_putch(0x08);
 				}else {
-					_putch(commandLine[cmdHistory][i]);
+					//_putch(commandLine[cmdHistory][i]);
 				}
+				printf("\r                                                                               ");
+				//printf("\x1B[2K");
+				printf("\rFullFAT:%s>%s\r",workingDir, commandLine[cmdHistory]);
+
 				if(commandLine[cmdHistory][i] == '\r') {
 					_putch('\n');
 					commandLine[cmdHistory][i] = '\0';
 					break;
 				}
 			}
+
+			i = 0;
+			/*argv = malloc(
+			while((Argument = strtok(commandLine[cmdHistory], " ")) != NULL) {
+				i++;
+												
+			}*/
+
+			
+
 			if(strstr(commandLine[cmdHistory], "cd")) {
 				
 				if(commandLine[cmdHistory][3] != '\\' && commandLine[cmdHistory][3] != '/') {

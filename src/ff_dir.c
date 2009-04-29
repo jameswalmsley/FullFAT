@@ -153,7 +153,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 
 	while(1) {	
 		if(FF_FindNextInDir(pIoman, DirCluster, pDirent)) {
-			return 0;	// end of dir, file not found!
+			break;	// end of dir, file not found!
 		}
 
 		if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
@@ -178,6 +178,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 			}
 		}
 	}
+	
 	return 0;
 }
 

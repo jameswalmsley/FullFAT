@@ -114,7 +114,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 #ifdef FF_LFN_SUPPORT
 					strncpy(filename, (path + i), FF_MAX_FILENAME); // Copy back with Case!
 #endif
-					if(filename[0] == '\\' || '/' ) {
+					if(filename[0] == '\\' || filename[0] == '/' ) {
 						i = 1;
 					} else {
 						i = 0;
@@ -365,9 +365,18 @@ static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 StartCluster, FF_
 		nItemLBA = FF_Cluster2LBA(pFile->pIoman, CurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA);
 
-		if(pFile->pIoman->pBlkDevice->fnReadBlocks) {
-			RetVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, nItemLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
-		}
+		do {
+			if(pFile->pIoman->pBlkDevice->fnReadBlocks) {
+				RetVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, nItemLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
+				if(RetVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+				}
+			} else {
+				RetVal = FF_ERR_DEVICE_DRIVER_FAILED;
+			}
+			
+		}while(RetVal == FF_ERR_DRIVER_BUSY);	
 		
 		Count -= (SequentialClusters + 1);
 		CurrentCluster = FF_TraverseFAT(pFile->pIoman, CurrentCluster, (SequentialClusters + 1));
@@ -382,13 +391,18 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	FF_IOMAN	*pIoman = pFile->pIoman;
 	FF_T_UINT32 nBytesPerCluster = pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster;
 	FF_T_UINT32 nTotalClustersNeeded = Size / nBytesPerCluster;
-	FF_T_UINT32 nClusterToExtend = (nTotalClustersNeeded - pFile->iChainLength);
+	FF_T_UINT32 nClusterToExtend; 
+	FF_T_UINT32 CurrentCluster, NextCluster;
+	FF_T_UINT32	i;
 
 	if(Size % nBytesPerCluster) {
 		nTotalClustersNeeded += 1;
 	}
 
+	nClusterToExtend = (nTotalClustersNeeded - pFile->iChainLength);
+
 	if(nTotalClustersNeeded > pFile->iChainLength) {
+		/*
 #ifdef FF_ALLOC_DEFAULT
 		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nClusterToExtend);
 		pFile->iChainLength += nClusterToExtend;
@@ -396,7 +410,23 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 #ifdef FF_ALLOC_DOUBLE
 		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nTotalClustersNeeded);
 		pFile->iChainLength += nTotalClustersNeeded;
-#endif
+#endif*/
+		
+		NextCluster = pFile->AddrCurrentCluster;
+		
+		for(i = 0; i < nClusterToExtend; i++) {
+			CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster);
+			NextCluster = FF_FindFreeCluster(pIoman);
+			FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
+			FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
+		}
+
+		pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster);
+		pFile->iChainLength += nClusterToExtend;
+
+		//FF_GetChainLength(pIoman, pFile->AddrCurrentCluster);
+
+		//FF_putFatEntry(pIoman, CurrentCluster, 0xFFFFFFFF);
 	}
 
 	return 0;
@@ -416,9 +446,18 @@ static FF_T_SINT32 FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT
 		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA);
 
-		if(pFile->pIoman->pBlkDevice->fnWriteBlocks) {
-			RetVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, nItemLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
-		}
+		do {
+			if(pFile->pIoman->pBlkDevice->fnWriteBlocks) {
+				RetVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, nItemLBA, Sectors, pFile->pIoman->pBlkDevice->pParam);
+				if(RetVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+				}
+			} else {
+				RetVal = FF_ERR_DEVICE_DRIVER_FAILED;
+			}
+			
+		}while(RetVal == FF_ERR_DRIVER_BUSY);
 		
 		Count -= (SequentialClusters + 1);
 		pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, (SequentialClusters + 1));
@@ -525,9 +564,17 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
 			sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
-			if(pIoman->pBlkDevice->fnReadBlocks) {
-				RetVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
-			}
+			
+			do {
+				if(pIoman->pBlkDevice->fnReadBlocks) {
+					RetVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
+				}
+				if(RetVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+				}
+			}while(RetVal == FF_ERR_DRIVER_BUSY);
+			
 			nBytesToRead		 = sSectors * pIoman->BlkSize;
 			nBytes				-= nBytesToRead;
 			buffer				+= nBytesToRead;
@@ -564,9 +611,15 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 			
-			if(pIoman->pBlkDevice->fnReadBlocks) {
-				RetVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
-			}
+			do {
+				if(pIoman->pBlkDevice->fnReadBlocks) {
+					RetVal = pFile->pIoman->pBlkDevice->fnReadBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
+				}
+				if(RetVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+				}
+			}while(RetVal == FF_ERR_DRIVER_BUSY);
 			
 			nBytesToRead = sSectors * pIoman->BlkSize;
 			pFile->FilePointer	+= nBytesToRead;
@@ -732,7 +785,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	} else {
 
-		//---------- Read (memcpy) to a Sector Boundary
+		//---------- Write (memcpy) to a Sector Boundary
 		if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
 			nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
@@ -758,7 +811,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			}
 		}
 
-		//---------- Read to a Cluster Boundary
+		//---------- Write to a Cluster Boundary
 		
 		nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
 		if(nRelClusterPos != 0 && nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
@@ -767,9 +820,17 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
 			sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
-			if(pIoman->pBlkDevice->fnWriteBlocks) {
-				RetVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
-			}
+			
+			do {
+				if(pIoman->pBlkDevice->fnWriteBlocks) {
+					RetVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
+				}
+				if(RetVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+				}
+			}while(RetVal == FF_ERR_DRIVER_BUSY);
+			
 			nBytesToWrite		 = sSectors * pIoman->BlkSize;
 			nBytes				-= nBytesToWrite;
 			buffer				+= nBytesToWrite;
@@ -787,7 +848,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			}
 		}
 
-		//---------- Read Clusters
+		//---------- Write Clusters
 		if(nBytes >= nBytesPerCluster) {
 
 			nClusters = (nBytes / nBytesPerCluster);
@@ -803,16 +864,22 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nBytesWritten		+= nBytesToWrite;
 		}
 
-		//---------- Read Remaining Blocks
+		//---------- Write Remaining Blocks
 		if(nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
 			
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 			
-			if(pIoman->pBlkDevice->fnWriteBlocks) {
-				RetVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
-			}
+			do {
+				if(pIoman->pBlkDevice->fnWriteBlocks) {
+					RetVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, nItemLBA, sSectors, pIoman->pBlkDevice->pParam);
+				}
+				if(RetVal == FF_ERR_DRIVER_BUSY) {
+					FF_Yield();
+					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+				}
+			}while(RetVal == FF_ERR_DRIVER_BUSY);
 			
 			nBytesToWrite = sSectors * pIoman->BlkSize;
 			pFile->FilePointer	+= nBytesToWrite;
@@ -831,7 +898,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			}
 		}
 
-		//---------- Read (memcpy) Remaining Bytes
+		//---------- Write (memcpy) Remaining Bytes
 		if(nBytes > 0) {
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
@@ -869,272 +936,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 }
 
-/*
-FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
-	FF_BUFFER	*pBuffer;
-	FF_T_UINT32 iClusterNum;
-	FF_T_UINT32 iRelPos, iRelClusterEntry, iSectors;
-	FF_T_UINT32 iBytesPerCluster;
-	FF_T_UINT32	Bytes = ElementSize * Count;
-	FF_T_UINT32	iItemLBA, fatEntry;
-	FF_T_UINT32	BytesWritten = 0;
-	FF_T_SINT32	retVal = 0;
-	FF_T_UINT32 i;
 
-	if(!pFile) {
-		return FF_ERR_NULL_POINTER;
-	}
-
-	iClusterNum			= FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-	iRelPos				= FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
-	iBytesPerCluster	= pFile->pIoman->pPartition->SectorsPerCluster * pFile->pIoman->pPartition->BlkSize;
-
-	// Handle file-space allocation
-	if((pFile->FilePointer + Bytes) > (pFile->iChainLength * iBytesPerCluster)) {
-		// Need To Extend the File Physically.
-		pFile->iEndOfChain = FF_ExtendClusterChain(pFile->pIoman, pFile->iEndOfChain, (FF_T_UINT16) ((Bytes / iBytesPerCluster) + 1));
-		pFile->iChainLength += ((Bytes / iBytesPerCluster) + 1);
-	}
-
-	if(iClusterNum > pFile->CurrentCluster) {
-		fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-		if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
-			return -3;
-		}
-		if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
-			pFile->AddrCurrentCluster = pFile->ObjectCluster;
-			// ERROR THIS SHOULD NOT OCCUR!
-			return -2;
-		} else {
-			pFile->AddrCurrentCluster = fatEntry;
-			pFile->CurrentCluster += 1;
-		}
-	}
-
-	iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster)	+ FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-	iItemLBA = FF_getRealLBA (pFile->pIoman, iItemLBA)			+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-
-	if((Bytes + iRelPos) < pFile->pIoman->BlkSize) { // We have to memcpy from a buffer!
-
-		pBuffer = FF_GetBuffer(pFile->pIoman, iItemLBA, FF_MODE_WRITE);
-		{
-			if(!pBuffer) {
-				return 0;
-			}
-			memcpy((pBuffer->pBuffer + iRelPos), buffer, Bytes);
-		}
-		FF_ReleaseBuffer(pFile->pIoman, pBuffer);
-
-		pFile->FilePointer += Bytes;
-		BytesWritten += Bytes;
-	} else {
-		// Optimise Write for faster throughput with larger data quantities.
-		
-		if(iRelPos > 0) { // Not on a Sector Boundary. Memcpy First Lot
-			pBuffer = FF_GetBuffer(pFile->pIoman, iItemLBA, FF_MODE_WRITE);
-			{
-				if(!pBuffer) {
-					return 0;
-				}
-				memcpy((pBuffer->pBuffer + iRelPos), buffer, pFile->pIoman->BlkSize - iRelPos);
-			}
-			FF_ReleaseBuffer(pFile->pIoman, pBuffer);
-
-			buffer		+= (pFile->pIoman->BlkSize - iRelPos);
-
-			Bytes				-= pFile->pIoman->BlkSize - iRelPos;
-			BytesWritten		+= pFile->pIoman->BlkSize - iRelPos;
-			pFile->FilePointer	+= pFile->pIoman->BlkSize - iRelPos;
-		}
-
-		// Put to a Cluster boundary
-		iRelClusterEntry	 = pFile->FilePointer % ((pFile->pIoman->pPartition->SectorsPerCluster * pFile->pIoman->pPartition->BlkFactor) * pFile->pIoman->pPartition->BlkSize);
-
-		if(iRelClusterEntry) {
-
-			iSectors = (iBytesPerCluster - iRelClusterEntry) / pFile->pIoman->pPartition->BlkSize;
-
-			iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-			iItemLBA = FF_getRealLBA(pFile->pIoman, iItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
-			
-			do{
-				if(pFile->pIoman->pBlkDevice->fnWriteBlocks) {
-					retVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, iItemLBA, iSectors, pFile->pIoman->pBlkDevice->pParam);
-				}
-				if(retVal == FF_ERR_DRIVER_BUSY) {
-					FF_Yield();
-					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
-				}
-			} while(retVal == FF_ERR_DRIVER_BUSY);
-
-			if(retVal < 0) {
-				return BytesWritten;
-			}
-
-			buffer	+= (iSectors * pFile->pIoman->pPartition->BlkSize);
-			Bytes	-= (iSectors * pFile->pIoman->pPartition->BlkSize);
-			pFile->FilePointer += (iSectors * pFile->pIoman->pPartition->BlkSize);
-			BytesWritten += (iSectors * pFile->pIoman->pPartition->BlkSize);
-		}
-
-		// Direct Copy :D Remaining Bytes > IOMAN BlkSIze
-
-		while(Bytes >= iBytesPerCluster) {
-			// Direct Copy Size Remaining Cluster's!
-			iClusterNum			= FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-			iRelClusterEntry	= pFile->FilePointer % (pFile->pIoman->BlkSize * (pFile->pIoman->pPartition->SectorsPerCluster * pFile->pIoman->pPartition->BlkFactor) / 1);
-			
-			if(iClusterNum > pFile->CurrentCluster) {
-				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-				if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
-					return -3;
-				}
-				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
-					pFile->AddrCurrentCluster = pFile->ObjectCluster;
-					// ERROR THIS SHOULD NOT OCCUR!
-					return -2;
-				} else {
-					pFile->AddrCurrentCluster = fatEntry;
-					pFile->CurrentCluster += 1;
-				}
-			}
-
-			// Find the number of continuous clusters!
-			i = 1;
-			// TODO: This should be able to work without this condition, find out why!
-			//if((Bytes % pFile->pIoman->pPartition->BlkSize) == 0) {
-		/*		fatEntry = pFile->AddrCurrentCluster;//FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-				nextfatEntry = FF_getFatEntry(pFile->pIoman, fatEntry);
-
-				if(nextfatEntry == (fatEntry + 1)) {
-					i = 2;
-					iMax = ((Bytes / iBytesPerCluster));
-					if(iMax == 1) {
-						i = 1;
-					}
-					while(i < iMax) {
-						fatEntry = nextfatEntry;
-						nextfatEntry = FF_getFatEntry(pFile->pIoman, fatEntry);
-						if(nextfatEntry != (fatEntry + 1)) {
-							break;
-						}
-						i++;
-					}
-				}
-			//}
-			*/
-/*			iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-			iItemLBA = FF_getRealLBA(pFile->pIoman, iItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
-
-			iSectors = (iBytesPerCluster - iRelClusterEntry) / pFile->pIoman->BlkSize;
-			iSectors *= i;
-	
-			do{
-				if(pFile->pIoman->pBlkDevice->fnWriteBlocks) {
-					retVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, iItemLBA, iSectors, pFile->pIoman->pBlkDevice->pParam);
-				}
-				if(retVal == FF_ERR_DRIVER_BUSY) {
-					FF_Yield();
-					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
-				}
-			} while(retVal == FF_ERR_DRIVER_BUSY);
-
-			if(retVal < 0) {
-				return BytesWritten;
-			}
-
-			buffer				+= (iSectors * pFile->pIoman->pPartition->BlkSize);
-			Bytes				-= (iSectors * pFile->pIoman->pPartition->BlkSize);
-			pFile->FilePointer	+= (iSectors * pFile->pIoman->pPartition->BlkSize);
-			BytesWritten		+= (iSectors * pFile->pIoman->pPartition->BlkSize);	// Return value of the driver function is sectors written.
-			// pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, i - 1);
-		}
-
-
-		if(Bytes >= pFile->pIoman->BlkSize) {
-
-			iClusterNum	= FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-			if(iClusterNum > pFile->CurrentCluster) {
-				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-				if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
-					return -3;
-				}
-				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
-					pFile->AddrCurrentCluster = pFile->ObjectCluster;
-					// ERROR THIS SHOULD NOT OCCUR!
-					return -2;
-				} else {
-					pFile->AddrCurrentCluster = fatEntry;
-					pFile->CurrentCluster += 1;
-				}
-			}
-
-			iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster)	+ FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-			iItemLBA = FF_getRealLBA (pFile->pIoman, iItemLBA)			+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-
-			iSectors = Bytes / pFile->pIoman->BlkSize;
-			 do{
-				if(pFile->pIoman->pBlkDevice->fnWriteBlocks) {
-					retVal = pFile->pIoman->pBlkDevice->fnWriteBlocks(buffer, iItemLBA, iSectors, pFile->pIoman->pBlkDevice->pParam);
-				}
-				if(retVal == FF_ERR_DRIVER_BUSY) {
-					FF_Yield();
-					FF_Sleep(FF_DRIVER_BUSY_SLEEP);
-				}
-			} while(retVal == FF_ERR_DRIVER_BUSY);
-			
-			if(retVal < 0) {
-				return BytesWritten;
-			}
-
-			Bytes				-= (iSectors * pFile->pIoman->BlkSize);
-			buffer				+= (iSectors * pFile->pIoman->BlkSize);
-			BytesWritten		+= (iSectors * pFile->pIoman->BlkSize);
-			pFile->FilePointer	+= (iSectors * pFile->pIoman->BlkSize);
-			iItemLBA			+= iSectors;
-		}
-
-		if(Bytes > 0) {	// Memcpy the remaining Bytes
-			iClusterNum	= FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-			if(iClusterNum > pFile->CurrentCluster) {
-				fatEntry = FF_getFatEntry(pFile->pIoman, pFile->AddrCurrentCluster);
-				if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
-					return -3;
-				}
-				if(FF_isEndOfChain(pFile->pIoman, fatEntry)) {
-					pFile->AddrCurrentCluster = pFile->ObjectCluster;
-					// ERROR THIS SHOULD NOT OCCUR!
-					return -2;
-				} else {
-					pFile->AddrCurrentCluster = fatEntry;
-					pFile->CurrentCluster += 1;
-				}
-			}
-
-			iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster)	+ FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-			iItemLBA = FF_getRealLBA (pFile->pIoman, iItemLBA)			+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-
-			pBuffer = FF_GetBuffer(pFile->pIoman, iItemLBA, FF_MODE_WRITE);
-			{
-				if(!pBuffer) {
-					return BytesWritten;
-				}
-				memcpy((pBuffer->pBuffer), buffer, Bytes);
-			}
-			FF_ReleaseBuffer(pFile->pIoman, pBuffer);
-
-			BytesWritten		+= Bytes;
-			pFile->FilePointer	+= Bytes;
-		}
-
-	}
-
-	if(pFile->Filesize < (pFile->FilePointer)) {
-		pFile->Filesize = pFile->FilePointer;
-	}
-
-	return BytesWritten;
-}*/
 
 FF_T_SINT8 FF_PutC(FF_FILE *pa_pFile, FF_T_UINT8 pa_cValue) {
 	FF_BUFFER	*pBuffer;
@@ -1151,8 +953,9 @@ FF_T_SINT8 FF_PutC(FF_FILE *pa_pFile, FF_T_UINT8 pa_cValue) {
 	// Handle File Space Allocation.
 	if((pa_pFile->FilePointer + 1) > (pa_pFile->iChainLength * iBytesPerCluster)) {
 		// Need To Extend the File Physically.
-		pa_pFile->iEndOfChain = FF_ExtendClusterChain(pa_pFile->pIoman, pa_pFile->iEndOfChain, 1);
-		pa_pFile->iChainLength += 1;
+		/*pa_pFile->iEndOfChain = FF_ExtendClusterChain(pa_pFile->pIoman, pa_pFile->iEndOfChain, 1);
+		pa_pFile->iChainLength += 1;*/
+		FF_ExtendFile(pa_pFile, pa_pFile->FilePointer + 1);
 	}
 
 	if(iClusterNum > pa_pFile->CurrentCluster) {

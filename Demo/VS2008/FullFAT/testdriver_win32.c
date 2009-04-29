@@ -101,6 +101,7 @@ signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned s
 signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 	unsigned long long address;
 	int retVal;
+	printf("W %d %d\n", sector, sectors);
 	address = (unsigned long long) sector * 512;
 	lseek((int)pParam, address, SEEK_SET);
 	retVal = write((int)pParam, buffer, 512);
@@ -110,6 +111,7 @@ signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned 
 signed int fnWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 	unsigned long long address;
 	unsigned long retVal;
+	printf("W %d %d\n", sector, sectors);
 	address = (unsigned long long) sector * 512;
 	_fseeki64(pParam, address, SEEK_SET);
 	retVal = fwrite(buffer, 512, sectors, pParam);
