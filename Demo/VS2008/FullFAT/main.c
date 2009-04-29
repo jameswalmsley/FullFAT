@@ -57,6 +57,9 @@
 #include "testdriver_win32.h"
 #include "../../../src/fullfat.h"
 
+#include "md5.h"
+
+
 #define PARTITION_NUMBER	0				// Change this to the primary partition to be mounted (0 to 3)
 #define COPY_BUFFER_SIZE	(8192*16)		// Increase This for Faster File Copies
 
@@ -115,11 +118,21 @@ int main(void) {
 	FF_DIRENT mydir;
 	FF_T_SINT8 Error;
 
+	char *mydata;
+	char mystring[] = "Hello";
+
+
+
+	
+
 	HANDLE hDev;
 
 //	char mystring[] = "Hello World!\n";
 	float time, transferRate;
-
+	mydata = (char *) malloc(1048576);
+	for(i = 0; i < 1048576; i++) {
+		mydata[i] = mystring[i % 5];
+	}
 	//hDev = CreateFile(TEXT("\\\\.\\PhysicalDrive1"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
 	hDev = 0;
 	if(hDev == INVALID_HANDLE_VALUE) {
@@ -127,8 +140,8 @@ int main(void) {
 	}
 	
 	//f = fopen("c:\\fcfat16.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
-	//f = fopen("c:\\ramdisk.dat", "rb");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	f = fopen("c:\\Write.img", "rb+");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	
@@ -154,6 +167,13 @@ int main(void) {
 			getchar();
 			return -1;
 		}
+
+		fSource = FF_Open(pIoman, "\\1m", FF_MODE_WRITE, NULL);
+		fDest = fopen("c:\\my1m", "wb");
+		FF_Write(fSource, 1, 1048576, mydata);
+		fwrite(mydata, 1, 1048576, fDest);
+		fclose(fDest);
+		FF_Close(fSource);
 
 		//ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
 
@@ -226,6 +246,53 @@ int main(void) {
 				} else {
 					printf("Path %s Not Found\n", commandShadow);
 				}
+			}
+
+			if(strstr(commandLine[cmdHistory], "md5")) {
+				
+				if(commandLine[cmdHistory][4] != '\\' && commandLine[cmdHistory][4] != '/') {
+					if(strlen(workingDir) == 1) {
+						sprintf(commandShadow, "\\%s", (commandLine[cmdHistory] + 4));
+					} else {
+						sprintf(commandShadow, "%s\\%s", workingDir, (commandLine[cmdHistory] + 4));
+					}
+				} else {
+					sprintf(commandShadow, "%s", (commandLine[cmdHistory] + 4));
+				}
+
+				/*if(FF_FindDir(pIoman, commandShadow, (FF_T_UINT16) strlen(commandShadow))) {
+					sprintf(workingDir, "%s", commandShadow);
+				} else {
+					printf("Path %s Not Found\n", commandShadow);
+				}*/
+
+				
+				fSource = FF_Open(pIoman, commandShadow, FF_MODE_READ, NULL);
+
+				if(fSource) {
+					int len;
+					md5_state_t state;
+					md5_byte_t digest[16];
+					char hex_output[16*2 + 1];
+					int di;
+
+					unsigned char md5buffer[1024];
+
+					md5_init(&state);
+
+					while (len = FF_Read(fSource, 1, 1024, md5buffer))
+						md5_append(&state, (const md5_byte_t *)md5buffer, len);
+					
+					md5_finish(&state, digest);
+
+					for (di = 0; di < 16; ++di)
+						printf("%02x", digest[di]);
+
+					printf ("\n");
+
+					FF_Close(fSource);
+				}
+
 			}
 
 			if(strstr(commandLine[cmdHistory], "ls")) {
