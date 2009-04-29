@@ -402,19 +402,10 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	nClusterToExtend = (nTotalClustersNeeded - pFile->iChainLength);
 
 	if(nTotalClustersNeeded > pFile->iChainLength) {
-		/*
-#ifdef FF_ALLOC_DEFAULT
-		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nClusterToExtend);
-		pFile->iChainLength += nClusterToExtend;
-#endif
-#ifdef FF_ALLOC_DOUBLE
-		pFile->iEndOfChain = FF_ExtendClusterChain(pIoman, pFile->iEndOfChain, nTotalClustersNeeded);
-		pFile->iChainLength += nTotalClustersNeeded;
-#endif*/
-		
+
 		NextCluster = pFile->AddrCurrentCluster;
 		
-		for(i = 0; i < nClusterToExtend; i++) {
+		for(i = 0; i <= nClusterToExtend; i++) {
 			CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster);
 			NextCluster = FF_FindFreeCluster(pIoman);
 			FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
@@ -423,10 +414,6 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 
 		pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster);
 		pFile->iChainLength += nClusterToExtend;
-
-		//FF_GetChainLength(pIoman, pFile->AddrCurrentCluster);
-
-		//FF_putFatEntry(pIoman, CurrentCluster, 0xFFFFFFFF);
 	}
 
 	return 0;
