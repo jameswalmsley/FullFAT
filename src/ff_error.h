@@ -31,6 +31,9 @@
 #ifndef _FF_ERROR_H_
 #define _FF_ERROR_H_
 
+#include "ff_config.h"
+#include "ff_types.h"
+
 /*	FullFAT defines different Error-Code spaces for each module. This ensures
 	that all error codes remain unique, and their meaning can be quickly identified.
 */
@@ -68,6 +71,10 @@
 #define FF_ERR_DIR_NOT_EMPTY					-53	///< Cannot delete a directory that contains files or folders.
 
 // Fat Error Codes								-70 +
+
+#ifdef FF_DEBUG
+const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
+#endif
 
 #endif
 

@@ -32,15 +32,15 @@
 /**
  *	@file		ff_error.c
  *	@author		James Walmsley
- *	@ingroup	DIR
+ *	@ingroup	ERROR
  *
- *	@defgroup	DIR Handles Directory Traversal
- *	@brief		Handles DIR access and traversal.
+ *	@defgroup	ERR Handles Error Codes
+ *	@brief		Used to return pretty strings for FullFAT error codes.
  *
- *	Provides FindFirst() and FindNext() Interfaces
  **/
 #include "ff_config.h"
 #include "ff_types.h"
+#include "ff_error.h"
 
 #ifdef FF_DEBUG
 const struct _FFERRTAB
@@ -50,46 +50,45 @@ const struct _FFERRTAB
 
 } gcpFullFATErrorTable[] =
 {
-	"Error Code Not Found",					-1000,
-    "FF_ERR_NONE",                          0,
-    "FF_ERR_NULL_POINTER",                  -2,
-    "FF_ERR_NOT_ENOUGH_MEMORY",             -3,
-    "FF_ERR_DEVICE_DRIVER_FAILED",          -4,
-    "FF_ERR_IOMAN_BAD_BLKSIZE",             -11,
-    "FF_ERR_IOMAN_BAD_MEMSIZE",             -12,
-    "FF_ERR_IOMAN_DEV_ALREADY_REGD",        -11,
-    "FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION",  -12,
-    "FF_ERR_IOMAN_INVALID_FORMAT",          -13,
-    "FF_ERR_IOMAN_INVALID_PARTITION_NUM",   -14,
-    "FF_ERR_IOMAN_NOT_FAT_FORMATTED",       -15,
-    "FF_ERR_IOMAN_DEV_INVALID_BLKSIZE",     -16,
-    "FF_ERR_IOMAN_PARTITION_MOUNTED",       -18,
-    "FF_ERR_IOMAN_ACTIVE_HANDLES",          -19,
-    "FF_ERR_FILE_ALREADY_OPEN",             -30,
-    "FF_ERR_FILE_NOT_FOUND",                -31,
-    "FF_ERR_FILE_OBJECT_IS_A_DIR",          -32,
-    "FF_ERR_FILE_IS_READ_ONLY",             -33,
-    "FF_ERR_FILE_INVALID_PATH",             -34,
-    "FF_ERR_DIR_OBJECT_EXISTS",             -50,
-    "FF_ERR_DIR_DIRECTORY_FULL",            -51,
-    "FF_ERR_DIR_END_OF_DIR",                -52,
-    "FF_ERR_DIR_NOT_EMPTY",                 -53
+	"Unknown or Generic Error! - Please contact FullFAT DEV - james@worm.me.uk",	-1000,
+    "No Error.",															FF_ERR_NONE,
+    "Null Pointer provided, (probably for IOMAN).",							FF_ERR_NULL_POINTER,
+    "Not enough memory (malloc() returned NULL).",							FF_ERR_NOT_ENOUGH_MEMORY,
+    "Device Driver returned a FATAL error!.",								FF_ERR_DEVICE_DRIVER_FAILED,
+    "The blocksize is not 512 multiple.",									FF_ERR_IOMAN_BAD_BLKSIZE,
+    "The size not a multiple of the blocksize.",							FF_ERR_IOMAN_BAD_MEMSIZE,
+    "Device is already registered, use FF_UnregisterBlkDevice() first.",	FF_ERR_IOMAN_DEV_ALREADY_REGD,
+    "No mountable partition was found on the specified device.",			FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION,
+    "The format of the MBR was unrecognised.",								FF_ERR_IOMAN_INVALID_FORMAT,
+    "The provided partition number is out-of-range (0 - 3).",				FF_ERR_IOMAN_INVALID_PARTITION_NUM,
+    "The selected partition / volume doesn't appear to be FAT formatted.",	FF_ERR_IOMAN_NOT_FAT_FORMATTED,
+    "Cannot register device. (BlkSize not a multiple of 512).",				FF_ERR_IOMAN_DEV_INVALID_BLKSIZE,
+    "Cannot unregister device, a partition is still mounted.",				FF_ERR_IOMAN_PARTITION_MOUNTED,
+    "Cannot unmount the partition while there are active FILE handles.",	FF_ERR_IOMAN_ACTIVE_HANDLES,
+    "Cannot open the file, file already in use.",							FF_ERR_FILE_ALREADY_OPEN,
+    "The specified file could not be found.",								FF_ERR_FILE_NOT_FOUND,
+    "Cannot open a Directory.",												FF_ERR_FILE_OBJECT_IS_A_DIR,
+	"Cannot open for writing: File is marked as Read-Only.",				FF_ERR_FILE_IS_READ_ONLY,
+    "Path not found.",														FF_ERR_FILE_INVALID_PATH,
+    "A file or folder of the same name already exists.",					FF_ERR_DIR_OBJECT_EXISTS,
+    "FF_ERR_DIR_DIRECTORY_FULL",											FF_ERR_DIR_DIRECTORY_FULL,
+    "FF_ERR_DIR_END_OF_DIR",												FF_ERR_DIR_END_OF_DIR,
+    "FF_ERR_DIR_NOT_EMPTY",													FF_ERR_DIR_NOT_EMPTY
 };
 
-/**********************************************************************************
-Function Name: cmdGetFullFatErrorString
-Description:   Function to get an error string for a fullFAT error code
-Parameters:    IN  iErrorCode - The error code
-Return value:  Pointer to the string
-**********************************************************************************/
-const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode)
-{
-    //static const char * const pszNotFount = "Error not found";
+/**
+ *	@public
+ *	@brief	Returns a pointer to a string relating to a FullFAT error code.
+ *	
+ *	@param	iErrorCode	The error code.
+ *
+ *	@return	Pointer to a string describing the error.
+ *
+ **/
+const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode) {
     FF_T_UINT32 stCount = sizeof (gcpFullFATErrorTable) / sizeof ( struct _FFERRTAB);
-    while (stCount--)
-    {
-        if (gcpFullFATErrorTable[stCount].iErrorCode == iErrorCode)
-        {
+    while (stCount--){
+        if (gcpFullFATErrorTable[stCount].iErrorCode == iErrorCode) {
             return gcpFullFATErrorTable[stCount].strErrorString;
         }
     }
