@@ -577,13 +577,30 @@ FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman) {
 
 #ifdef FF_64_NUM_SUPPORT
 FF_T_UINT64 FF_GetFreeSize(FF_IOMAN *pIoman) {
-	FF_T_UINT32	i;
 	FF_T_UINT32 FreeClusters;
 	FF_T_UINT64 FreeSize;
 	
 	if(pIoman) {
+		if(!pIoman->pPartition->FreeClusterCount) {
+			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		}
 		FreeClusters = pIoman->pPartition->FreeClusterCount;
 		FreeSize = (FF_T_UINT64) ((FF_T_UINT64)FreeClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
+		return FreeSize;
+	}
+	return 0;
+}
+#else
+FF_T_UINT32 FF_GetFreeSize(FF_IOMAN *pIoman) {
+	FF_T_UINT32 FreeClusters;
+	FF_T_UINT32 FreeSize;
+	
+	if(pIoman) {
+		if(!pIoman->pPartition->FreeClusterCount) {
+			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		}
+		FreeClusters = pIoman->pPartition->FreeClusterCount;
+		FreeSize = (FF_T_UINT32) ((FF_T_UINT32)FreeClusters * (FF_T_UINT32)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT32)pIoman->pPartition->BlkSize));
 		return FreeSize;
 	}
 	return 0;

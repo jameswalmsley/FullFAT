@@ -30,48 +30,69 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_fat.h
+ *	@file		ff_error.c
  *	@author		James Walmsley
- *	@ingroup	FAT
+ *	@ingroup	DIR
+ *
+ *	@defgroup	DIR Handles Directory Traversal
+ *	@brief		Handles DIR access and traversal.
+ *
+ *	Provides FindFirst() and FindNext() Interfaces
  **/
-
-#ifndef _FF_FAT_H_
-#define _FF_FAT_H_
-
 #include "ff_config.h"
-#include "fat.h"
-#include "ff_ioman.h"
-#include "ff_blk.h"
 #include "ff_types.h"
 
-//---------- ERROR CODES
+#ifdef FF_DEBUG
+const struct _FFERRTAB
+{
+    const FF_T_INT8 * const strErrorString;
+    const FF_T_SINT32 iErrorCode;
 
+} gcpFullFATErrorTable[] =
+{
+	"Error Code Not Found",					-1000,
+    "FF_ERR_NONE",                          0,
+    "FF_ERR_NULL_POINTER",                  -2,
+    "FF_ERR_NOT_ENOUGH_MEMORY",             -3,
+    "FF_ERR_DEVICE_DRIVER_FAILED",          -4,
+    "FF_ERR_IOMAN_BAD_BLKSIZE",             -11,
+    "FF_ERR_IOMAN_BAD_MEMSIZE",             -12,
+    "FF_ERR_IOMAN_DEV_ALREADY_REGD",        -11,
+    "FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION",  -12,
+    "FF_ERR_IOMAN_INVALID_FORMAT",          -13,
+    "FF_ERR_IOMAN_INVALID_PARTITION_NUM",   -14,
+    "FF_ERR_IOMAN_NOT_FAT_FORMATTED",       -15,
+    "FF_ERR_IOMAN_DEV_INVALID_BLKSIZE",     -16,
+    "FF_ERR_IOMAN_PARTITION_MOUNTED",       -18,
+    "FF_ERR_IOMAN_ACTIVE_HANDLES",          -19,
+    "FF_ERR_FILE_ALREADY_OPEN",             -30,
+    "FF_ERR_FILE_NOT_FOUND",                -31,
+    "FF_ERR_FILE_OBJECT_IS_A_DIR",          -32,
+    "FF_ERR_FILE_IS_READ_ONLY",             -33,
+    "FF_ERR_FILE_INVALID_PATH",             -34,
+    "FF_ERR_DIR_OBJECT_EXISTS",             -50,
+    "FF_ERR_DIR_DIRECTORY_FULL",            -51,
+    "FF_ERR_DIR_END_OF_DIR",                -52,
+    "FF_ERR_DIR_NOT_EMPTY",                 -53
+};
 
-//---------- PROTOTYPES
-
-		FF_T_UINT32 FF_getRealLBA			(FF_IOMAN *pIoman, FF_T_UINT32 LBA);
-		FF_T_UINT32 FF_Cluster2LBA			(FF_IOMAN *pIoman, FF_T_UINT32 Cluster);
-		FF_T_UINT32 FF_LBA2Cluster			(FF_IOMAN *pIoman, FF_T_UINT32 Address);
-		FF_T_SINT32 FF_getFatEntry			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster);
-		FF_T_BOOL	FF_isEndOfChain			(FF_IOMAN *pIoman, FF_T_UINT32 fatEntry);
-		FF_T_SINT8	FF_putFatEntry			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Value);
-		FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
-		FF_T_UINT32	FF_ExtendClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT32 Count);
-		FF_T_SINT8	FF_UnlinkClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count);
-		FF_T_UINT32	FF_TraverseFAT			(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Count);
-		FF_T_UINT32 FF_CreateClusterChain	(FF_IOMAN *pIoman);
-		FF_T_UINT32 FF_GetChainLength		(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster);
-		FF_T_UINT32 FF_FindEndOfChain		(FF_IOMAN *pIoman, FF_T_UINT32 Start);
-		FF_T_SINT8	FF_ClearCluster			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster);
-#ifdef FF_64_NUM_SUPPORT
-		FF_T_UINT64 FF_GetFreeSize			(FF_IOMAN *pIoman);
-#else
-		FF_T_UINT32 FF_GetFreeSize			(FF_IOMAN *pIoman);
+/**********************************************************************************
+Function Name: cmdGetFullFatErrorString
+Description:   Function to get an error string for a fullFAT error code
+Parameters:    IN  iErrorCode - The error code
+Return value:  Pointer to the string
+**********************************************************************************/
+const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode)
+{
+    //static const char * const pszNotFount = "Error not found";
+    FF_T_UINT32 stCount = sizeof (gcpFullFATErrorTable) / sizeof ( struct _FFERRTAB);
+    while (stCount--)
+    {
+        if (gcpFullFATErrorTable[stCount].iErrorCode == iErrorCode)
+        {
+            return gcpFullFATErrorTable[stCount].strErrorString;
+        }
+    }
+	return gcpFullFATErrorTable[0].strErrorString;
+}
 #endif
-		FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
-		FF_T_UINT32 FF_CountFreeClusters	(FF_IOMAN *pIoman);
-		void		FF_lockFAT				(FF_IOMAN *pIoman);
-		void		FF_unlockFAT			(FF_IOMAN *pIoman);
-
-#endif
-

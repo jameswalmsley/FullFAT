@@ -295,7 +295,6 @@ int main(void) {
 					int len;
 					md5_state_t state;
 					md5_byte_t digest[16];
-					char hex_output[16*2 + 1];
 					int di;
 
 					unsigned char md5buffer[1024];
@@ -332,6 +331,10 @@ int main(void) {
 
 			if(strstr(commandLine[cmdHistory], "mkdir")) {
 				tester = FF_MkDir(pIoman, workingDir, (commandLine[cmdHistory]+6));
+
+				if(tester) {
+					printf("%s", FF_GetErrMessage(tester));
+				}
 
 				if(tester) {
 					switch(tester) {

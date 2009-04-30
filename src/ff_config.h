@@ -48,13 +48,17 @@
 #define FF_ALLOC_DEFAULT	// Only allocate as much as is needed. (Provides good performance, without wasting space).
 //#define FF_ALLOC_DOUBLE		// Doubles the size of a file each time allocation is required. (When high-performance writing is required).
 
-
+//---------- Get Free Space on Mount
+//#define FF_MOUNT_FIND_FREE
 
 //---------- FAT12 SUPPORT
-//#define FF_FAT12_SUPPORT
+#define FF_FAT12_SUPPORT
 
 //---------- 64-Bit Number Support
 #define FF_64_NUM_SUPPORT
+
+//---------- Debugging Features
+#define FF_DEBUG
 
 //---------- Actively Determine if partition is FAT
 #define FF_FAT_CHECK	// This is experimental, so if FullFAT won't mount your volume, comment this out

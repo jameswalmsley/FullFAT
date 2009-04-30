@@ -198,6 +198,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\src\ff_error.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_fat.c"
 					>
 				</File>
