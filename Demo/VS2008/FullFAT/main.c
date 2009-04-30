@@ -61,7 +61,7 @@
 
 
 #define PARTITION_NUMBER	0				// Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	(8192*16)		// Increase This for Faster File Copies
+#define COPY_BUFFER_SIZE	(2048*16)		// Increase This for Faster File Copies
 
 void FF_PrintCache(FF_IOMAN *pIoman) {
 	FF_T_UINT32 i;
@@ -104,6 +104,7 @@ int main(void) {
 	LARGE_INTEGER start_ticks, end_ticks, cputime; 
 	FILE *f = NULL, *fDest = NULL, *fXSource;
 	FF_FILE *fSource;
+	FF_BUFFER *pBuffer;
 	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512, NULL);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
@@ -142,8 +143,8 @@ int main(void) {
 	SetConsoleTitle(TEXT("FullFAT"));
 	
 	//f = fopen("c:\\fcfat16.img", "rb");
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
-	f = fopen("c:\\NoOpen", "rb+");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	//f = fopen("c:\\NoOpen", "rb+");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
 	
@@ -155,9 +156,19 @@ int main(void) {
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
+	
+
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
-		
+/*			
+		pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_WRITE);
+
+		memset(pBuffer->pBuffer, 0, 512);
+
+		FF_ReleaseBuffer(pIoman, pBuffer);
+
+		FF_FlushCache(pIoman);
+*/
 		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
 			if(f) {
 				fclose(f);
@@ -169,6 +180,7 @@ int main(void) {
 			getchar();
 			return -1;
 		}
+
 
 		fSource = FF_Open(pIoman, "\\4m", FF_MODE_WRITE, &Error);
 		fDest = fopen("c:\\my1m", "wb");
@@ -297,12 +309,12 @@ int main(void) {
 					md5_byte_t digest[16];
 					int di;
 
-					unsigned char md5buffer[1024];
+					//unsigned char md5buffer[1024];
 
 					md5_init(&state);
 
-					while (len = FF_Read(fSource, 1, 1024, md5buffer))
-						md5_append(&state, (const md5_byte_t *)md5buffer, len);
+					while (len = FF_Read(fSource, 1, COPY_BUFFER_SIZE, buffer))
+						md5_append(&state, (const md5_byte_t *)buffer, len);
 					
 					md5_finish(&state, digest);
 
@@ -479,6 +491,7 @@ int main(void) {
 				printf("Cluster Size: %dKb\n", (pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster) / 1024);
 #ifdef FF_64_NUM_SUPPORT
 				printf("Volume Size: %llu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+				printf("Volume Free: %llu (%d MB)\n", FF_GetFreeSize(pIoman), (unsigned int) (FF_GetFreeSize(pIoman) / 1048576));
 #else
 				printf("Volume Size: %d (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
 #endif
