@@ -581,10 +581,14 @@ FF_T_UINT64 FF_GetFreeSize(FF_IOMAN *pIoman) {
 	FF_T_UINT64 FreeSize;
 	
 	if(pIoman) {
-		if(!pIoman->pPartition->FreeClusterCount) {
-			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		FF_PendSemaphore(pIoman->pSemaphore);
+		{	
+			if(!pIoman->pPartition->FreeClusterCount) {
+				pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+			}
+			FreeClusters = pIoman->pPartition->FreeClusterCount;
 		}
-		FreeClusters = pIoman->pPartition->FreeClusterCount;
+		FF_ReleaseSemaphore(pIoman->pSemaphore);
 		FreeSize = (FF_T_UINT64) ((FF_T_UINT64)FreeClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
 		return FreeSize;
 	}
@@ -596,10 +600,14 @@ FF_T_UINT32 FF_GetFreeSize(FF_IOMAN *pIoman) {
 	FF_T_UINT32 FreeSize;
 	
 	if(pIoman) {
-		if(!pIoman->pPartition->FreeClusterCount) {
-			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		FF_PendSemaphore(pIoman->pSemaphore);
+		{	
+			if(!pIoman->pPartition->FreeClusterCount) {
+				pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+			}
+			FreeClusters = pIoman->pPartition->FreeClusterCount;
 		}
-		FreeClusters = pIoman->pPartition->FreeClusterCount;
+		FF_ReleaseSemaphore(pIoman->pSemaphore);
 		FreeSize = (FF_T_UINT32) ((FF_T_UINT32)FreeClusters * (FF_T_UINT32)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT32)pIoman->pPartition->BlkSize));
 		return FreeSize;
 	}
