@@ -413,7 +413,7 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		}
 
 		pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster);
-		pFile->iChainLength += nClusterToExtend;
+		pFile->iChainLength += i;
 	}
 
 	return 0;
@@ -750,6 +750,14 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	nRelBlockPos = FF_getMinorBlockEntry(pIoman, pFile->FilePointer, 1); // Get the position within a block.
 	
+	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
+	if(nClusterDiff) {
+		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
+			pFile->CurrentCluster += nClusterDiff;
+		}
+	}
+	
 	nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 	nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
@@ -762,11 +770,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 		pFile->FilePointer += nBytes;
 		
-		nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
-			pFile->CurrentCluster += nClusterDiff;
-		}
+		
 		
 		return nBytes;		// Return the number of bytes read.
 
@@ -786,16 +790,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nBytesWritten		+= nBytesToWrite;
 			pFile->FilePointer	+= nBytesToWrite;
 			buffer				+= nBytesToWrite;
-
-			/*if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, 1);
-				pFile->CurrentCluster += 1;
-			}*/
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
-				pFile->CurrentCluster += nClusterDiff;
-			}
 		}
 
 		//---------- Write to a Cluster Boundary
@@ -803,6 +797,14 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
 		if(nRelClusterPos != 0 && nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
 			
+			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
+			if(nClusterDiff) {
+				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
+					pFile->CurrentCluster += nClusterDiff;
+				}
+			}
+		
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
@@ -824,15 +826,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nBytesWritten		+= nBytesToWrite;
 			pFile->FilePointer	+= nBytesToWrite;
 
-			/*if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, 1);
-				pFile->CurrentCluster += 1;
-			}*/
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
-				pFile->CurrentCluster += nClusterDiff;
-			}
 		}
 
 		//---------- Write Clusters
@@ -855,6 +848,14 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		if(nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
 			
+			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
+			if(nClusterDiff) {
+				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
+					pFile->CurrentCluster += nClusterDiff;
+				}
+			}			
+			
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 			
@@ -874,19 +875,19 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			buffer				+= nBytesToWrite;
 			nBytesWritten		+= nBytesToWrite;
 
-			/*if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, 1);
-				pFile->CurrentCluster += 1;
-			}*/
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
-				pFile->CurrentCluster += nClusterDiff;
-			}
 		}
 
 		//---------- Write (memcpy) Remaining Bytes
 		if(nBytes > 0) {
+			
+			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
+			if(nClusterDiff) {
+				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
+					pFile->CurrentCluster += nClusterDiff;
+				}
+			}
+			
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
@@ -900,17 +901,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nBytes				-= nBytesToWrite;
 			buffer				+= nBytesToWrite;
 			nBytesWritten			+= nBytesToWrite;
-
-			/*if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, 1);
-				pFile->CurrentCluster += 1;
-			}*/
-
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
-				pFile->CurrentCluster += nClusterDiff;
-			}
 
 		}
 	}
