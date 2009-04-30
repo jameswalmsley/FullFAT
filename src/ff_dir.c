@@ -43,7 +43,7 @@
 #include "ff_dir.h"
 #include <stdio.h>
 
-static void FF_lockDIR(FF_IOMAN *pIoman) {
+void FF_lockDIR(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
 	{
 		while(pIoman->DirLock) {
@@ -56,7 +56,7 @@ static void FF_lockDIR(FF_IOMAN *pIoman) {
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
 
-static void FF_unlockDIR(FF_IOMAN *pIoman) {
+void FF_unlockDIR(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
 		pIoman->DirLock = 0;

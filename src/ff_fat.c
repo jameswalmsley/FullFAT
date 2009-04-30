@@ -44,7 +44,7 @@
 #include "ff_config.h"
 #include <string.h>
 
-static void FF_lockFAT(FF_IOMAN *pIoman) {
+void FF_lockFAT(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
 	{
 		while(pIoman->FatLock) {
@@ -57,7 +57,7 @@ static void FF_lockFAT(FF_IOMAN *pIoman) {
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
 
-static void FF_unlockFAT(FF_IOMAN *pIoman) {
+void FF_unlockFAT(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
 		pIoman->FatLock = 0;
@@ -456,8 +456,13 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
  **/
 FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
 	FF_T_UINT32	iStartCluster;
-	iStartCluster = FF_FindFreeCluster(pIoman);
-	FF_putFatEntry(pIoman, iStartCluster, 0xFFFFFFFF); // Mark the cluster as EOC
+	FF_lockFAT(pIoman);
+	{
+		iStartCluster = FF_FindFreeCluster(pIoman);
+		FF_putFatEntry(pIoman, iStartCluster, 0xFFFFFFFF); // Mark the cluster as EOC
+	}
+	FF_unlockFAT(pIoman);
+	FF_DecreaseFreeClusters(pIoman, 1);
 	return iStartCluster;
 }
 
@@ -553,3 +558,34 @@ FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 	return 0;
 }
 
+
+FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman) {
+	FF_T_UINT32 i;
+	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
+	FF_T_UINT32 FatEntry;
+	FF_T_UINT32 FreeClusters = 0;
+
+	for(i = 0; i < TotalClusters; i++) {
+		FatEntry = FF_getFatEntry(pIoman, i);
+		if(!FatEntry) {
+			FreeClusters++;
+		}
+	}
+
+	return FreeClusters;
+}
+
+#ifdef FF_64_NUM_SUPPORT
+FF_T_UINT64 FF_GetFreeSize(FF_IOMAN *pIoman) {
+	FF_T_UINT32	i;
+	FF_T_UINT32 FreeClusters;
+	FF_T_UINT64 FreeSize;
+	
+	if(pIoman) {
+		FreeClusters = pIoman->pPartition->FreeClusterCount;
+		FreeSize = (FF_T_UINT64) ((FF_T_UINT64)FreeClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
+		return FreeSize;
+	}
+	return 0;
+}
+#endif

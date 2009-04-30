@@ -131,6 +131,7 @@ typedef struct {
 	FF_T_UINT32		NumClusters;		///< Number of clusters.
 	FF_T_UINT32		RootDirCluster;		///< Cluster number of the root directory entry.
 	FF_T_UINT32		LastFreeCluster;
+	FF_T_UINT32		FreeClusterCount;	///< Records free space on mount.
 	FF_T_BOOL		PartitionMounted;	///< FF_TRUE if the partition is mounted, otherwise FF_FALSE.
 } FF_PARTITION;
 
@@ -167,13 +168,13 @@ typedef struct {
 //---------- PROTOTYPES (in order of appearance)
 
 // PUBLIC (Interfaces):
-FF_IOMAN	*FF_CreateIOMAN		(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_T_SINT8 *pError);
-FF_T_SINT8	FF_DestroyIOMAN		(FF_IOMAN *pIoman);
+FF_IOMAN	*FF_CreateIOMAN			(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_T_SINT8 *pError);
+FF_T_SINT8	FF_DestroyIOMAN			(FF_IOMAN *pIoman);
 FF_T_SINT8	FF_RegisterBlkDevice	(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
 FF_T_SINT8	FF_UnregisterBlkDevice	(FF_IOMAN *pIoman);
-FF_T_SINT8	FF_MountPartition	(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
-FF_T_SINT8	FF_UnMountPartition (FF_IOMAN *pIoman);
-FF_T_SINT8	FF_FlushCache		(FF_IOMAN *pIoman);
+FF_T_SINT8	FF_MountPartition		(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
+FF_T_SINT8	FF_UnMountPartition		(FF_IOMAN *pIoman);
+FF_T_SINT8	FF_FlushCache			(FF_IOMAN *pIoman);
 
 #ifdef FF_64_NUM_SUPPORT
 FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman);
@@ -182,8 +183,10 @@ FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman);
 #endif
 
 // PUBLIC  (To FullFAT Only):
-FF_BUFFER	*FF_GetBuffer		(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);
-void		FF_ReleaseBuffer	(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
+FF_T_SINT8	FF_IncreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
+FF_T_SINT8	FF_DecreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
+FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);
+void		FF_ReleaseBuffer		(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
 
 // PRIVATE (For this module only!):
 static void		FF_IOMAN_InitBufferDescriptors	(FF_IOMAN *pIoman);

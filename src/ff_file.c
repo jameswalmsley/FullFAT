@@ -258,19 +258,29 @@ FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	}
 
 	pFile->FileDeleted = FF_TRUE;
+	
+	FF_lockDIR(pIoman);
+	{
+		if(FF_isDirEmpty(pIoman, path)) {
+			FF_lockFAT(pIoman);
+			{
+				FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
+			}
+			FF_unlockFAT(pIoman);
+			
+			// Edit the Directory Entry! (So it appears as deleted);
+			FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+			EntryBuffer[0] = 0xE5;
+			FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+			
+			FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
 
-	if(FF_isDirEmpty(pIoman, path)) {
-		FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
-		
-		// Edit the Directory Entry! (So it appears as deleted);
-		FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
-		EntryBuffer[0] = 0xE5;
-		FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
-
-		FF_FlushCache(pIoman);
-	} else {
-		RetVal = FF_ERR_DIR_NOT_EMPTY;
+			FF_FlushCache(pIoman);
+		} else {
+			RetVal = FF_ERR_DIR_NOT_EMPTY;
+		}
 	}
+	FF_unlockDIR(pIoman);
 	
 	FF_Close(pFile); // Free the file pointer resources
 	// File is now lost!
@@ -290,17 +300,26 @@ FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 
 	pFile->FileDeleted = FF_TRUE;
 
-	FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
-	
+	FF_lockFAT(pIoman);	// Lock the FAT so its thread-safe.
+	{
+		FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
+	}
+	FF_unlockFAT(pIoman);
+
+	FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
+
 	// Edit the Directory Entry! (So it appears as deleted);
-	FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
-	EntryBuffer[0] = 0xE5;
-	FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+	FF_lockDIR(pIoman);
+	{
+		FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+		EntryBuffer[0] = 0xE5;
+		FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+	}
+	FF_unlockDIR(pIoman);
 
 	FF_FlushCache(pIoman);
 	
 	FF_Close(pFile); // Free the file pointer resources
-	// File is now lost!
 	return 0;
 }
 
@@ -350,19 +369,18 @@ static FF_T_UINT32 FF_GetSequentialClusters(FF_IOMAN *pIoman, FF_T_UINT32 StartC
 	return i;
 }
 
-static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 StartCluster, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
+static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
 	FF_T_UINT32 Sectors;
 	FF_T_UINT32 SequentialClusters = 0;
-	FF_T_UINT32 CurrentCluster = StartCluster;
 	FF_T_UINT32 nItemLBA;
-	FF_T_SINT32 RetVal;
+	FF_T_SINT32 RetVal;	
 
 	while(Count != 0) {
 		if((Count - 1) > 0) {
-			SequentialClusters = FF_GetSequentialClusters(pFile->pIoman, CurrentCluster, (Count - 1));
+			SequentialClusters = FF_GetSequentialClusters(pFile->pIoman, pFile->AddrCurrentCluster, (Count - 1));
 		}
 		Sectors = (SequentialClusters + 1) * pFile->pIoman->pPartition->SectorsPerCluster;
-		nItemLBA = FF_Cluster2LBA(pFile->pIoman, CurrentCluster);
+		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA);
 
 		do {
@@ -379,10 +397,12 @@ static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 StartCluster, FF_
 		}while(RetVal == FF_ERR_DRIVER_BUSY);	
 		
 		Count -= (SequentialClusters + 1);
-		CurrentCluster = FF_TraverseFAT(pFile->pIoman, CurrentCluster, (SequentialClusters + 1));
+		pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, (SequentialClusters + 1));
+		pFile->CurrentCluster += (SequentialClusters + 1);
 		buffer += Sectors * pFile->pIoman->BlkSize;
 		SequentialClusters = 0;
 	}
+
 	return 0;
 }
 
@@ -404,16 +424,21 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	if(nTotalClustersNeeded > pFile->iChainLength) {
 
 		NextCluster = pFile->AddrCurrentCluster;
-		
-		for(i = 0; i <= nClusterToExtend; i++) {
-			CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster);
-			NextCluster = FF_FindFreeCluster(pIoman);
-			FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
-			FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
+		FF_lockFAT(pIoman);
+		{
+			for(i = 0; i <= nClusterToExtend; i++) {
+				CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster);
+				NextCluster = FF_FindFreeCluster(pIoman);
+				FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
+				FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
+			}
+			
+			pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster);
 		}
-
-		pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster);
+		FF_unlockFAT(pIoman);
+		
 		pFile->iChainLength += i;
+		FF_DecreaseFreeClusters(pIoman, i);	// Keep Tab of Numbers for fast FreeSize()
 	}
 
 	return 0;
@@ -454,7 +479,6 @@ static FF_T_SINT32 FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT
 	}
 
 	return 0;
-
 }
 
 /**
@@ -579,19 +603,14 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		//---------- Read Clusters
 		if(nBytes >= nBytesPerCluster) {
-			FF_ReadClusters(pFile, pFile->AddrCurrentCluster, (nBytes / nBytesPerCluster), buffer);
+			FF_ReadClusters(pFile, (nBytes / nBytesPerCluster), buffer);
 			nBytesToRead = (nBytesPerCluster *  (nBytes / nBytesPerCluster));
-			
+
 			pFile->FilePointer	+= nBytesToRead;
 
-			if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, (nBytes / nBytesPerCluster));
-				pFile->CurrentCluster += (nBytes / nBytesPerCluster);
-			}
-
-			nBytes				-= nBytesToRead;
-			buffer				+= nBytesToRead;
-			nBytesRead			+= nBytesToRead;
+			nBytes			-= nBytesToRead;
+			buffer			+= nBytesToRead;
+			nBytesRead		+= nBytesToRead;
 		}
 
 		//---------- Read Remaining Blocks
@@ -919,10 +938,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 FF_T_SINT8 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	FF_BUFFER	*pBuffer;
 	FF_T_UINT32 iItemLBA;
-	FF_T_UINT32 iClusterNum			= FF_getClusterChainNumber	(pFile->pIoman, pFile->FilePointer, 1);
 	FF_T_UINT32 iRelPos				= FF_getMinorBlockEntry		(pFile->pIoman, pFile->FilePointer, 1);
-	FF_T_UINT32	iBytesPerCluster	= pFile->pIoman->pPartition->SectorsPerCluster * pFile->pIoman->pPartition->BlkSize;
-	FF_T_UINT32	fatEntry;
 	FF_T_UINT32 nClusterDiff;
 	
 	if(!pFile) {	// Ensure we don't have a Null file pointer on a Public interface.

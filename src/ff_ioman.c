@@ -45,6 +45,9 @@
 #include "ff_ioman.h"	// Includes ff_types.h, ff_safety.h, <stdio.h>
 #include "fat.h"
 
+extern FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
+extern FF_T_UINT32 FF_CountFreeClusters		(FF_IOMAN *pIoman);
+
 /**
  *	@public
  *	@brief	Creates an FF_IOMAN object, to initialise FullFAT
@@ -681,6 +684,9 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 	}
 
+	pPart->LastFreeCluster	= FF_FindFreeCluster(pIoman);
+	pPart->FreeClusterCount = FF_CountFreeClusters(pIoman);
+
 	return FF_ERR_NONE;
 }
 
@@ -757,6 +763,31 @@ FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
 	return RetVal;
 }
 
+
+FF_T_SINT8 FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
+
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		pIoman->pPartition->FreeClusterCount += Count;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return FF_ERR_NONE;
+}
+
+FF_T_SINT8 FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
+
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		pIoman->pPartition->FreeClusterCount -= Count;
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return FF_ERR_NONE;
+}
+
+
+
 #ifdef FF_64_NUM_SUPPORT
 /**
  *	@brief	Returns the number of bytes contained within the mounted partition or volume.
@@ -773,6 +804,7 @@ FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman) {
 	}
 	return 0;
 }
+
 #else
 FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman) {
 	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
