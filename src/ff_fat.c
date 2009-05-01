@@ -555,7 +555,7 @@ FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 		}while(!FF_isEndOfChain(pIoman, fatEntry));
 	}
 
-	return 0;
+	return FF_ERR_NONE;
 }
 
 

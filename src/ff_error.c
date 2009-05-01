@@ -74,7 +74,9 @@ const struct _FFERRTAB
     "FF_ERR_DIR_DIRECTORY_FULL",											FF_ERR_DIR_DIRECTORY_FULL,
     "FF_ERR_DIR_END_OF_DIR",												FF_ERR_DIR_END_OF_DIR,
     "FF_ERR_DIR_NOT_EMPTY",													FF_ERR_DIR_NOT_EMPTY,
-	"Could not extend File or Folder - No Free Space!",						FF_ERR_FAT_NO_FREE_CLUSTERS
+	"Could not extend File or Folder - No Free Space!",						FF_ERR_FAT_NO_FREE_CLUSTERS,
+	"Could not find the directory specified by the path.",					FF_ERR_DIR_INVALID_PATH,
+	"The Root Dir is full, and cannot be extended on Fat12 or 16 volumes.", FF_ERR_DIR_CANT_EXTEND_ROOT_DIR
 };
 
 /**
