@@ -71,6 +71,7 @@
 #define FF_ERR_DIR_NOT_EMPTY					-53	///< Cannot delete a directory that contains files or folders.
 
 // Fat Error Codes								-70 +
+#define FF_ERR_FAT_NO_FREE_CLUSTERS				-70	///< No more free space is available on the disk.
 
 #ifdef FF_DEBUG
 const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);

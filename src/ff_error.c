@@ -73,7 +73,8 @@ const struct _FFERRTAB
     "A file or folder of the same name already exists.",					FF_ERR_DIR_OBJECT_EXISTS,
     "FF_ERR_DIR_DIRECTORY_FULL",											FF_ERR_DIR_DIRECTORY_FULL,
     "FF_ERR_DIR_END_OF_DIR",												FF_ERR_DIR_END_OF_DIR,
-    "FF_ERR_DIR_NOT_EMPTY",													FF_ERR_DIR_NOT_EMPTY
+    "FF_ERR_DIR_NOT_EMPTY",													FF_ERR_DIR_NOT_EMPTY,
+	"Could not extend File or Folder - No Free Space!",						FF_ERR_FAT_NO_FREE_CLUSTERS
 };
 
 /**

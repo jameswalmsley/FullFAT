@@ -789,10 +789,8 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		pFile->FilePointer += nBytes;
-		
-		
-		
-		return nBytes;		// Return the number of bytes read.
+		nBytesWritten = nBytes;
+		//return nBytes;		// Return the number of bytes read.
 
 	} else {
 

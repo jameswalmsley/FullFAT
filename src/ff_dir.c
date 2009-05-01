@@ -281,7 +281,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
             //lastDirCluster = dirCluster;
             MyDir.CurrentItem = 0;
             dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
-			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] != '.') { // .. Dir Entry pointing to root dir.
+			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
 				dirCluster = pIoman->pPartition->RootDirCluster;
             }
             token = FF_strtok(path, mytoken, &it, &last, pathLen);
@@ -430,7 +430,7 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
 	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
 	
 	if((clusterNum + 1) > chainLength) {
-		return -3;	// End of Dir was reached!
+		return FF_ERR_DIR_END_OF_DIR;	// End of Dir was reached!
 	}
 
 	itemLBA = FF_Cluster2LBA(pIoman, clusterAddress)	+ FF_getMajorBlockNumber(pIoman, nEntry, (FF_T_UINT16)32);
@@ -442,7 +442,7 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
  
-    return 0;
+    return FF_ERR_NONE;
 }
 
 
@@ -726,7 +726,10 @@ FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UIN
 	FF_T_UINT16 nEntry;
 	
 	for(nEntry = 0; nEntry < 0xFFFF; nEntry++) {
-		FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer);
+		if(FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer) == FF_ERR_DIR_END_OF_DIR) {
+			FF_ExtendDirectory(pIoman, DirCluster);
+			return nEntry;
+		}
 		if(FF_isEndOfDir(EntryBuffer)) {	// If its the end of the Dir, then FreeDirents from here.
 			return nEntry;
 		}
@@ -955,6 +958,32 @@ static FF_T_SINT8 FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_I
 	return FF_ERR_NONE;
 }
 #endif
+
+FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
+	FF_T_UINT32 CurrentCluster;
+	FF_T_UINT32 NextCluster;
+
+	if(!pIoman->pPartition->FreeClusterCount) {
+		pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		if(pIoman->pPartition->FreeClusterCount == 0) {
+			return FF_ERR_FAT_NO_FREE_CLUSTERS;
+		}
+	}
+	
+	FF_lockFAT(pIoman);
+	{
+		CurrentCluster = FF_FindEndOfChain(pIoman, DirCluster);
+		NextCluster = FF_FindFreeCluster(pIoman);
+		FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
+		FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
+	}
+	FF_unlockFAT(pIoman);
+
+	FF_ClearCluster(pIoman, NextCluster);
+	FF_DecreaseFreeClusters(pIoman, 1);
+
+	return FF_ERR_NONE;
+}
 
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
