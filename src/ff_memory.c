@@ -157,6 +157,28 @@ void FF_toupper(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	}
 }
 
+FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 len) {
+	register FF_T_UINT16 i;
+	register FF_T_INT8	char1, char2;
+
+	for(i = 0; i < len; i++) {
+		char1 = str1[i];
+		char2 = str2[i];
+		if(char1 >= 'A' && char1 <= 'Z') {
+			char1 += 32;
+		}
+		if(char2 >= 'A' && char2 <= 'Z') {
+			char2 += 32;
+		}
+
+		if(char1 != char2) {
+			return FF_FALSE;
+		}
+	}
+
+	return FF_TRUE;
+}
+
 
 FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length) {
 	FF_T_UINT16 strLen = Length;

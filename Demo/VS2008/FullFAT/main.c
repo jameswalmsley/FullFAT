@@ -180,7 +180,8 @@ int main(void) {
 			getchar();
 			return -1;
 		}
-
+		
+//		FF_FindEntry(pIoman, 2, "4m", &mydir);
 
 		fSource = FF_Open(pIoman, "\\4m", FF_MODE_WRITE, &Error);
 		fDest = fopen("c:\\my1m", "wb");
@@ -191,6 +192,14 @@ int main(void) {
 		fwrite(mydata, 1, 1048576*4, fDest);
 		fclose(fDest);
 		FF_Close(fSource);
+/*
+		for(i = 0; i < 256; i++) {
+			sprintf(buffer, "%dthis-is-dir", i);
+			RetVal = FF_MkDir(pIoman, "\\jim", buffer);
+			if(RetVal) {
+				printf("%s\n", FF_GetErrMessage(RetVal));
+			}
+		}*/
 
 		//ff1 = FF_Open(pIoman, "\\hello.txt", FF_MODE_WRITE, NULL);
 
@@ -340,6 +349,8 @@ int main(void) {
 				printf("\n%d Items\n", i);
 				putchar('\n');
 			}
+
+
 
 			if(strstr(commandLine[cmdHistory], "mkdir")) {
 				tester = FF_MkDir(pIoman, workingDir, (commandLine[cmdHistory]+6));
@@ -495,6 +506,20 @@ int main(void) {
 #else
 				printf("Volume Size: %d (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
 #endif
+			}
+
+			if(strstr(commandLine[cmdHistory], "cmp")) {
+				sscanf((commandLine[cmdHistory] + 4), "%s %s", source, destination);
+				i = strlen(source);
+				if(i == strlen(destination)) {
+					if(FF_StrMatch(source, destination, i)) {
+						printf("Strings match!\n");
+					} else {
+						printf("Not a match!\n");
+					}
+				} else {
+					printf("Not a match!\n");
+				}
 			}
 
 			if(strstr(commandLine[cmdHistory], "cp")) {
