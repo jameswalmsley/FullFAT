@@ -379,11 +379,12 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 				if(pBuffer->Sector == Sector) {	// Sector is in cache, is it suitable?
 					if(Mode == FF_MODE_READ && pBuffer->Mode == FF_MODE_READ) {
 						pBuffer->NumHandles += 1;
-						if(FF_isFATSector(pIoman, Sector)) {
+						/*if(FF_isFATSector(pIoman, Sector)) {
 							pBuffer->Persistance += 2;
 						} else {
 							pBuffer->Persistance += 1;
-						}
+						}*/
+						pBuffer->Persistance += 1;
 						FF_ReleaseSemaphore(pIoman->pSemaphore);
 						return pBuffer;
 					}
