@@ -289,6 +289,7 @@ FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Nam
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
+				pBuffer->Persistance = 1;
 				RelEntry = FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
 				for(x = RelEntry; x < (pIoman->BlkSize / 32); x++) {
 					if(FF_getMajorBlockNumber(pIoman, pDirent->CurrentItem, 32) > i) {
@@ -654,6 +655,7 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
 	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_READ);
 	{
 		memcpy(buffer, (pBuffer->pBuffer + (relItem*32)), 32);
+		pBuffer->Persistance = 1;
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
  

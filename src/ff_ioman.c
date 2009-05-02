@@ -219,6 +219,7 @@ FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	FF_T_UINT16 i;
 	FF_BUFFER *pBuffer = pIoman->pBuffers;
+	pIoman->LastReplaced = 0;
 	for(i = 0; i < pIoman->CacheSize; i++) {
 		pBuffer->Mode			= 0;
 		pBuffer->NumHandles 	= 0;
@@ -415,9 +416,12 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 						bFoundBuffer = FF_TRUE;
 						x = i;					// Flag current sector as a candidate.
 					} else {
-						if(pBuffer->Persistance < Persistance) {
-							Persistance = pBuffer->Persistance;
-							x = i;
+						if(pBuffer->Persistance <= Persistance) {
+							if(i != pIoman->LastReplaced) {
+								Persistance = pBuffer->Persistance;
+								x = i;
+								bFoundBuffer = FF_TRUE;
+							}
 						}
 					}
 					y++;
@@ -425,6 +429,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 			}
 
 			if(bFoundBuffer) {
+				pIoman->LastReplaced = x;
 				// Process the suitable candidate.
 				pBuffer = (pIoman->pBuffers + x);
 				if(pBuffer->Modified == FF_TRUE) {

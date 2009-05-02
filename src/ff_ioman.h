@@ -147,6 +147,7 @@ typedef struct {
 	FF_BLK_DEVICE	*pBlkDevice;	///< Pointer to a Block device description.
 	FF_PARTITION	*pPartition;	///< Pointer to a partition description.
 	FF_BUFFER		*pBuffers;		///< Pointer to the first buffer description.
+	FF_T_UINT32		LastReplaced;	///< Marks which sector was last replaced in the cache.
 	FF_T_UINT16		BlkSize;		///< The Block size that IOMAN is configured to.
 	FF_T_UINT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
 	FF_T_UINT8		CacheSize;		///< Size of the cache in number of Sectors.

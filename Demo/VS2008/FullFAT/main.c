@@ -192,10 +192,10 @@ int main(void) {
 		fwrite(mydata, 1, 1048576*4, fDest);
 		fclose(fDest);
 		FF_Close(fSource);
-/*
-		for(i = 0; i < 256; i++) {
-			sprintf(buffer, "%dthis-is-dir", i);
-			RetVal = FF_MkDir(pIoman, "\\jim", buffer);
+
+		/*for(i = 0; i < 256; i++) {
+			sprintf(buffer, "%dthis-is-dir%d", i);
+			RetVal = FF_MkDir(pIoman, "\\james", buffer);
 			if(RetVal) {
 				printf("%s\n", FF_GetErrMessage(RetVal));
 			}
