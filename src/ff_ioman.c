@@ -418,7 +418,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 						x = i;					// Flag current sector as a candidate.
 					} else {
 						if(pBuffer->Persistance <= Persistance) {
-							if(i != pIoman->LastReplaced) {
+							if(i != (pIoman->LastReplaced % pIoman->CacheSize)) {
 								Persistance = pBuffer->Persistance;
 								x = i;
 								bFoundBuffer = FF_TRUE;
@@ -430,7 +430,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 			}
 
 			if(bFoundBuffer) {
-				pIoman->LastReplaced = x;
+				pIoman->LastReplaced += 1;
 				// Process the suitable candidate.
 				pBuffer = (pIoman->pBuffers + x);
 				if(pBuffer->Modified == FF_TRUE) {
