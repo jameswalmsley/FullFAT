@@ -77,7 +77,7 @@ static	FF_T_UINT8	FF_CreateChkSum	(const FF_T_UINT8 *pa_pShortName);
 void		FF_lockDIR		(FF_IOMAN *pIoman);
 void		FF_unlockDIR	(FF_IOMAN *pIoman);
 FF_T_UINT32			FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *FileName, FF_DIRENT *pDirent);
-FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path, FF_T_INT8 *DirName);
+FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path);
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 static void FF_ProcessShortName(FF_T_INT8 *name);
 FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);

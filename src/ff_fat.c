@@ -207,7 +207,7 @@ FF_T_SINT8 FF_ClearCluster(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			if(pBuffer) {
 				memset(pBuffer->pBuffer, 0x00, 512);
 			} else {
-				RetVal = -3;
+				RetVal = FF_ERR_DEVICE_DRIVER_FAILED;
 			}
 		}
 		FF_ReleaseBuffer(pIoman, pBuffer);

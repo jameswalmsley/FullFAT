@@ -1307,19 +1307,35 @@ FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *F
 	return MyFile.ObjectCluster;
 }
 
-FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path, FF_T_INT8 *DirName) {
+FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
 	FF_DIRENT	MyDir;
 	FF_T_UINT32 DirCluster;
+	FF_T_INT8	DirName[FF_MAX_FILENAME];
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT32 DotDotCluster;
-	FF_T_UINT8	i;
+	FF_T_UINT16	i;
 	FF_T_SINT8	RetVal = 0;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	DirCluster = FF_FindDir(pIoman, Path, (FF_T_UINT16) strlen(Path));
+	i = (FF_T_UINT16) strlen(Path);
+
+	while(i != 0) {
+		if(Path[i] == '\\' || Path[i] == '/') {
+			break;
+		}
+		i--;
+	}
+
+	strncpy(DirName, (Path + i + 1), FF_MAX_FILENAME);
+
+	if(i == 0) {
+		i = 1;
+	}
+
+	DirCluster = FF_FindDir(pIoman, Path, i);
 
 	if(DirCluster) {
 
@@ -1378,9 +1394,9 @@ FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path, FF_T_INT8 *DirName) {
 		
 		FF_FlushCache(pIoman);	// Ensure dir was flushed to the disk!
 
-		return 0;
+		return FF_ERR_NONE;
 	}
 	
-	return -3;
+	return FF_ERR_DIR_INVALID_PATH;
 }
 
