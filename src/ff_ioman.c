@@ -132,10 +132,11 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		pLong = (FF_T_UINT32 *) malloc(Size);
 		pIoman->pCacheMem = (FF_T_UINT8 *) pLong;
 		if(!pIoman->pCacheMem) {
+			pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFFERS;
 			FF_DestroyIOMAN(pIoman);
 			return NULL;
 		}
-		pIoman->MemAllocation |= FF_IOMAN_ALLOC_BUFFERS;
+		
 	}
 
 	pIoman->BlkSize		 = BlkSize;
