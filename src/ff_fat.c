@@ -446,7 +446,6 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 			return nCluster;
 		}
 	}
-
 	return 0;
 }
 

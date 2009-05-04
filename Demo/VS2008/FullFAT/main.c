@@ -105,7 +105,7 @@ int main(void) {
 	FILE *f = NULL, *fDest = NULL, *fXSource;
 	FF_FILE *fSource;
 	FF_BUFFER *pBuffer;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512, NULL);
+	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 65536, 512, NULL);
 	char buffer[COPY_BUFFER_SIZE];
 	char commandLine[10][1024];
 	char commandShadow[2600];
