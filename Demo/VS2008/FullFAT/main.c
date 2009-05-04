@@ -142,8 +142,8 @@ int main(void) {
 
 	SetConsoleTitle(TEXT("FullFAT"));
 	
-	//f = fopen("c:\\fcfat16.img", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	f = fopen("c:\\before.img", "rb+");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\Before.img", "rb+");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);

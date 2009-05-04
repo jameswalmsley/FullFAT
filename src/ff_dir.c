@@ -210,6 +210,7 @@ FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DI
 		
 		if(CurrentCluster > pDirent->CurrentCluster) {
 			pDirent->AddrCurrentCluster = FF_TraverseFAT(pIoman, pDirent->AddrCurrentCluster, 1);
+			pDirent->CurrentCluster += 1;
 			iItemLBA = FF_Cluster2LBA(pIoman, pDirent->AddrCurrentCluster) + RelBlockNum;
 			FF_ReleaseBuffer(pIoman, *ppBuffer);
 			*ppBuffer = FF_GetBuffer(pIoman, iItemLBA, FF_MODE_READ);
@@ -222,8 +223,6 @@ FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DI
 
 		DirBuffer = ((*ppBuffer)->pBuffer + (RelBlockPos * 32));
 	}
-
-	DirBuffer	= ((*ppBuffer)->pBuffer + (RelBlockPos * 32));
 
 	if(FF_getChar(DirBuffer, (FF_T_UINT16) 0) == FF_FAT_DELETED) {
 		RetVal |= FF_DIR_LFN_DELETED;
@@ -672,7 +671,7 @@ FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nE
 	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
 	
 	if((clusterNum + 1) > chainLength) {
-		return -3;	// End of Dir was reached!
+		return FF_ERR_DIR_END_OF_DIR;	// End of Dir was reached!
 	}
 
 	itemLBA = FF_Cluster2LBA(pIoman, clusterAddress)	+ FF_getMajorBlockNumber(pIoman, nEntry, (FF_T_UINT16)32);
@@ -946,6 +945,8 @@ FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UIN
 	FF_T_UINT16	i = 0;
 	FF_T_UINT16 nEntry;
 	FF_T_SINT8	RetVal;
+	FF_T_UINT32	DirLength;
+	FF_T_UINT32	iEndOfChain;
 	
 	for(nEntry = 0; nEntry < 0xFFFF; nEntry++) {
 		if(FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer) == FF_ERR_DIR_END_OF_DIR) {
@@ -956,6 +957,11 @@ FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UIN
 			return nEntry;
 		}
 		if(FF_isEndOfDir(EntryBuffer)) {	// If its the end of the Dir, then FreeDirents from here.
+			// Check Dir is long enough!
+			DirLength = FF_GetChainLength(pIoman, DirCluster, &iEndOfChain);
+			if((nEntry + Sequential) > (((pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize) * DirLength) / 32)) {
+				FF_ExtendDirectory(pIoman, DirCluster);
+			}
 			return nEntry;
 		}
 		if(EntryBuffer[0] == 0xE5) {
@@ -1042,7 +1048,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	}
 
 	if(x <= 11) {
-		FitsShort = FF_TRUE;
+		//FitsShort = FF_TRUE;
 	}
 
 	// Main part of the name
