@@ -60,7 +60,7 @@
 		FF_T_SINT8	FF_UnlinkClusterChain	(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count);
 		FF_T_UINT32	FF_TraverseFAT			(FF_IOMAN *pIoman, FF_T_UINT32 Start, FF_T_UINT32 Count);
 		FF_T_UINT32 FF_CreateClusterChain	(FF_IOMAN *pIoman);
-		FF_T_UINT32 FF_GetChainLength		(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster);
+		FF_T_UINT32 FF_GetChainLength		(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster, FF_T_UINT32 *piEndOfChain);
 		FF_T_UINT32 FF_FindEndOfChain		(FF_IOMAN *pIoman, FF_T_UINT32 Start);
 		FF_T_SINT8	FF_ClearCluster			(FF_IOMAN *pIoman, FF_T_UINT32 nCluster);
 #ifdef FF_64_NUM_SUPPORT

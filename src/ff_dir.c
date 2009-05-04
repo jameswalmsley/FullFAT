@@ -184,7 +184,7 @@ FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DI
 	FF_T_INT8	ShortName[13];
 	FF_T_UINT8	CheckSum = FF_getChar(DirBuffer, FF_FAT_LFN_CHECKSUM);
 
-	for(x = 0; x < numLFNs; x++) {
+	while(numLFNs > 0) {
 		
 		for(i = 0, y = 0; i < 5; i++, y += 2) {
 			pDirent->FileName[i + ((numLFNs - 1) * 13)] = DirBuffer[FF_FAT_LFN_NAME_1 + y];
@@ -214,7 +214,7 @@ FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DI
 			FF_ReleaseBuffer(pIoman, *ppBuffer);
 			*ppBuffer = FF_GetBuffer(pIoman, iItemLBA, FF_MODE_READ);
 			RetVal |= FF_DIR_LFN_TRAVERSED;
-		} else if(iItemLBA > ((*ppBuffer)->Sector + RelBlockNum)) {
+		} else if(iItemLBA > ((*ppBuffer)->Sector)) {
 			FF_ReleaseBuffer(pIoman, *ppBuffer);
 			*ppBuffer = FF_GetBuffer(pIoman, iItemLBA, FF_MODE_READ);
 			RetVal |= FF_DIR_LFN_TRAVERSED;
@@ -629,7 +629,7 @@ void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster);	// BottleNeck
+	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster, NULL);	// BottleNeck
 	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
@@ -666,7 +666,7 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
 FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster);	// BottleNeck
+	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster, NULL);	// BottleNeck
 	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck

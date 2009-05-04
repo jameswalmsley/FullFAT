@@ -421,7 +421,7 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	}
 
 	if(pFile->iChainLength == 0) {	// First extension requiring the chain length, 
-		pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster);
+		pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster, &pFile->iEndOfChain);
 	}
 
 	nClusterToExtend = (nTotalClustersNeeded - pFile->iChainLength);
