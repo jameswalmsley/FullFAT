@@ -778,28 +778,28 @@ FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
 
 FF_T_SINT8 FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 
-	FF_PendSemaphore(pIoman->pSemaphore);
-	{
+	//FF_PendSemaphore(pIoman->pSemaphore);
+	//{
 		if(!pIoman->pPartition->FreeClusterCount) {
 			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
 		}
 		pIoman->pPartition->FreeClusterCount += Count;
-	}
-	FF_ReleaseSemaphore(pIoman->pSemaphore);
+	//}
+	//FF_ReleaseSemaphore(pIoman->pSemaphore);
 
 	return FF_ERR_NONE;
 }
 
 FF_T_SINT8 FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 
-	FF_PendSemaphore(pIoman->pSemaphore);
-	{
+	//FF_lockFAT(pIoman);
+	//{
 		if(!pIoman->pPartition->FreeClusterCount) {
 			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
 		}
 		pIoman->pPartition->FreeClusterCount -= Count;
-	}
-	FF_ReleaseSemaphore(pIoman->pSemaphore);
+	//}
+	//FF_unlockFAT(pIoman);
 
 	return FF_ERR_NONE;
 }
