@@ -537,6 +537,7 @@ FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 	
 	FF_T_UINT32 fatEntry;
 	FF_T_UINT32 currentCluster, chainLength = 0;
+	FF_T_UINT32	iLen = 0;
 
 	fatEntry = StartCluster;
 
@@ -548,7 +549,9 @@ FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 			fatEntry = FF_getFatEntry(pIoman, fatEntry);
 			FF_putFatEntry(pIoman, currentCluster, 0x00000000);
 			currentCluster = fatEntry;
+			iLen ++;
 		}while(!FF_isEndOfChain(pIoman, fatEntry));
+		FF_IncreaseFreeClusters(pIoman, iLen);
 	} else {
 		// Truncation - This is quite hard, because we can only do it backwards.
 		do {
