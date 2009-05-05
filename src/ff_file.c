@@ -103,12 +103,15 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	
 
 	if(DirCluster) {
-		RetVal = FF_FindEntry(pIoman, DirCluster, filename, &Object, FF_TRUE);
-		if(RetVal >= 0) {
-			FileCluster = Object.ObjectCluster;//FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object);
-		} else {
-			FileCluster = 0;
-		}
+		//RetVal = //FF_FindEntry(pIoman, DirCluster, filename, &Object, FF_TRUE);
+		//if(RetVal >= 0) {
+			//FileCluster = Object.ObjectCluster;//FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object);
+		//} else {
+		//	FileCluster = 0;
+		//}
+
+		FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object);
+
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 			if(strlen(filename) == strlen(Object.FileName)) {
 				if(Object.Filesize == 0 && FF_StrMatch(filename, Object.FileName, strlen(filename)) == FF_TRUE) {

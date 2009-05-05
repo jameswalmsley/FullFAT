@@ -114,7 +114,7 @@ FF_T_SINT8 FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT 
 	
 	return -1;
 }
-
+/*
 FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name) {
 
 	FF_DIRENT MyDir;
@@ -124,6 +124,31 @@ FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8
 	}
 	
 	return FF_TRUE;
+}*/
+
+FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name) {
+
+        FF_T_UINT16 i;
+        FF_T_UINT8      EntryBuffer[32];
+        FF_T_UINT8      Attrib;
+
+        for(i = 0; i < 0xFFFF; i++) {
+                FF_FetchEntry(pIoman, DirCluster, i, EntryBuffer);
+                Attrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
+                if(FF_getChar(EntryBuffer, 0x00) != 0xE5) {
+                        if(Attrib != FF_FAT_ATTR_LFN) {
+                                FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
+                                if(FF_isEndOfDir(EntryBuffer)) {
+                                        return FF_FALSE;
+                                }
+                                if(strcmp(name, (FF_T_INT8 *)EntryBuffer) == 0) {
+                                        return FF_TRUE;
+                                }
+                        }
+                }
+        }
+        
+        return FF_FALSE;
 }
 
 FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
@@ -253,7 +278,7 @@ FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DI
 	return RetVal;
 }
 
-
+/*
 FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs) {
 	
 	FF_T_UINT32		iItemLBA;
@@ -376,7 +401,7 @@ FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Nam
 	} while(!FF_isEndOfChain(pIoman, fatEntry));
 
 	return FF_ERR_DIR_END_OF_DIR;
-}
+}*/
 
 
 /**
@@ -456,6 +481,39 @@ FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Nam
 /**
  *	@private
  **/
+
+FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
+    FF_T_UINT32         dirCluster = pIoman->pPartition->RootDirCluster;
+    FF_T_INT8       mytoken[FF_MAX_FILENAME];
+    FF_T_INT8       *token;
+    FF_T_UINT16     it = 0;         // Re-entrancy Variables for FF_strtok()
+    FF_T_BOOL       last = FF_FALSE;
+    FF_DIRENT       MyDir;
+
+    if(pathLen == 1) {      // Must be the root dir! (/ or \)
+            return pIoman->pPartition->RootDirCluster;
+    }
+    
+    if(path[pathLen-1] == '\\' || path[pathLen-1] == '/') {
+            pathLen--;      
+    }
+
+    token = FF_strtok(path, mytoken, &it, &last, pathLen);
+
+     do{
+            //lastDirCluster = dirCluster;
+            MyDir.CurrentItem = 0;
+            dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
+                        if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
+                                dirCluster = pIoman->pPartition->RootDirCluster;
+            }
+            token = FF_strtok(path, mytoken, &it, &last, pathLen);
+    }while(token != NULL);
+
+    return dirCluster;
+}
+
+/*
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
     FF_T_UINT32		dirCluster = pIoman->pPartition->RootDirCluster;
     FF_T_INT8       mytoken[FF_MAX_FILENAME];
@@ -493,6 +551,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
 
     return dirCluster;
 }
+*/
 
 #ifdef FF_LFN_SUPPORT
 /**
@@ -1339,12 +1398,12 @@ FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
 
 	if(DirCluster) {
 
-		if(!FF_FindEntry(pIoman, DirCluster, DirName, &MyDir, FF_TRUE)) {
-			return FF_ERR_DIR_OBJECT_EXISTS;
-		}
-		/*if(FF_FindEntryInDir(pIoman, DirCluster, DirName, 0x00, &MyDir)) {
+		/*if(!FF_FindEntry(pIoman, DirCluster, DirName, &MyDir, FF_TRUE)) {
 			return FF_ERR_DIR_OBJECT_EXISTS;
 		}*/
+		if(FF_FindEntryInDir(pIoman, DirCluster, DirName, 0x00, &MyDir)) {
+			return FF_ERR_DIR_OBJECT_EXISTS;
+		}
 
 		strncpy(MyDir.FileName, DirName, FF_MAX_FILENAME);
 		MyDir.Filesize		= 0;
