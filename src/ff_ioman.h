@@ -100,7 +100,9 @@ typedef struct {
 	FF_T_UINT8		Mode;			///< Read or Write mode.
 	FF_T_UINT16		NumHandles;		///< Number of objects using this buffer.
 	FF_T_UINT16		Persistance;	///< For the persistance algorithm.
+	FF_T_UINT32		LRU;			///< For the Least Recently Used algorithm.
 	FF_T_BOOL		Modified;		///< If the sector was modified since read.
+	FF_T_BOOL		Valid;			///< Initially FALSE.
 	FF_T_UINT8		*pBuffer;		///< Pointer to the cache block.
 } FF_BUFFER;
 

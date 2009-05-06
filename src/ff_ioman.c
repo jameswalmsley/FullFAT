@@ -225,9 +225,11 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 		pBuffer->Mode			= 0;
 		pBuffer->NumHandles 	= 0;
 		pBuffer->Persistance 	= 0;
+		pBuffer->LRU			= 0;
 		pBuffer->Sector 		= 0;
 		pBuffer->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + pIoman->BlkSize * i);
 		pBuffer->Modified		= FF_FALSE;
+		pBuffer->Valid			= FF_FALSE;
 		pBuffer++;
 	}
 }
@@ -363,98 +365,110 @@ static FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
 	return FF_FALSE;
 }
 
-
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
-	
-	FF_BUFFER	*pBuffer	= pIoman->pBuffers;
-	FF_T_UINT16	Persistance = 0;
-	FF_T_UINT16 i,x = 0, y = 0;
-	FF_T_BOOL	bFoundBuffer = FF_FALSE;
+	FF_BUFFER	*pBuffer;
+	FF_BUFFER	*pBufLRU	= NULL;
+	FF_BUFFER	*pBufLHITS	= NULL;
+	FF_BUFFER	*pBufMatch	= NULL;
 
-	while(1) {	// Loop infinitely until we can return with a buffer.
+	FF_T_UINT32	i;
+
+	while(!pBufMatch) {
 		FF_PendSemaphore(pIoman->pSemaphore);
 		{
-			// Find Matching Sectors.
 			for(i = 0; i < pIoman->CacheSize; i++) {
 				pBuffer = (pIoman->pBuffers + i);
-				if(pBuffer->Sector == Sector) {	// Sector is in cache, is it suitable?
-					if(Mode == FF_MODE_READ && pBuffer->Mode == FF_MODE_READ) {
-						pBuffer->NumHandles += 1;
-						/*if(FF_isFATSector(pIoman, Sector)) {
-							pBuffer->Persistance += 2;
-						} else {
-							pBuffer->Persistance += 1;
-						}*/
-						pBuffer->Persistance += 1;
-						FF_ReleaseSemaphore(pIoman->pSemaphore);
-						return pBuffer;
-					}
+				if(pBuffer->Sector == Sector && pBuffer->Valid == FF_TRUE) {
+					pBufMatch = pBuffer;
+				} else {
+					if(pBuffer->NumHandles == 0) {
+						pBuffer->LRU += 1;
 
-					if(pBuffer->Mode == FF_MODE_WRITE && pBuffer->NumHandles == 0) {	// This buffer has no attached handles.
-						pBuffer->Mode = Mode;
-						pBuffer->NumHandles = 1;
-						pBuffer->Persistance += 1;
-						FF_ReleaseSemaphore(pIoman->pSemaphore);
-						return pBuffer;
-					}
+						if(!pBufLRU) {
+							pBufLRU = pBuffer;
+						}
+						if(!pBufLHITS) {
+							pBufLHITS = pBuffer;
+						}
 
-					if(pBuffer->Mode == FF_MODE_READ && Mode == FF_MODE_WRITE && pBuffer->NumHandles == 0) {
-						pBuffer->Mode = Mode;
-						pBuffer->Modified = FF_TRUE;
-						pBuffer->NumHandles = 1;
-						pBuffer->Persistance += 1;
-						FF_ReleaseSemaphore(pIoman->pSemaphore);
-						return pBuffer;
-					}
-				}
-			}
-
-			// No Matches, find a suitable sector to replace.
-			for(i = 0; i < pIoman->CacheSize; i++) {
-				pBuffer = (pIoman->pBuffers + i);
-				if(pBuffer->NumHandles == 0) {	// Possible candidate for replacement.
-					if(y == 0) {
-						Persistance = pBuffer->Persistance;
-						bFoundBuffer = FF_TRUE;
-						x = i;					// Flag current sector as a candidate.
-					} else {
-						if(pBuffer->Persistance <= Persistance) {
-							if(i != (pIoman->LastReplaced % pIoman->CacheSize)) {
-								Persistance = pBuffer->Persistance;
-								x = i;
-								bFoundBuffer = FF_TRUE;
+						if(pBuffer->LRU >= pBufLRU->LRU) {
+							if(pBuffer->LRU == pBufLRU->LRU) {
+								if(pBuffer->Persistance > pBufLRU->Persistance) {
+									pBufLRU = pBuffer;
+								}
+							} else {
+								pBufLRU = pBuffer;
 							}
 						}
+
+						if(pBuffer->Persistance < pBufLHITS->Persistance) {
+							pBufLHITS = pBuffer;
+						}
 					}
-					y++;
 				}
 			}
 
-			if(bFoundBuffer) {
-				pIoman->LastReplaced += 1;
-				// Process the suitable candidate.
-				pBuffer = (pIoman->pBuffers + x);
-				if(pBuffer->Modified == FF_TRUE) {
-					FF_IOMAN_FlushBuffer(pIoman, pBuffer->Sector, pBuffer->pBuffer);
+			if(pBufMatch) {
+				// A Match was found process!
+				if(Mode == FF_MODE_READ && pBufMatch->Mode == FF_MODE_READ) {
+					pBufMatch->NumHandles += 1;
+					pBufMatch->Persistance += 1;
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return pBufMatch;
 				}
-				pBuffer->Mode = Mode;
-				pBuffer->Persistance = 1;
-				pBuffer->NumHandles = 1;
-				pBuffer->Sector = Sector;
-				pBuffer->Modified = FF_FALSE;
-				if(Mode == FF_MODE_WRITE) {
-					pBuffer->Modified = FF_TRUE;
-				}
-				FF_IOMAN_FillBuffer(pIoman, Sector, pBuffer->pBuffer);
-				FF_ReleaseSemaphore(pIoman->pSemaphore);
-				return pBuffer;
-			}
 
+				if(pBufMatch->Mode == FF_MODE_WRITE && pBufMatch->NumHandles == 0) {	// This buffer has no attached handles.
+					pBufMatch->Mode = Mode;
+					pBufMatch->NumHandles = 1;
+					pBufMatch->Persistance += 1;
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return pBufMatch;
+				}
+
+				if(pBufMatch->Mode == FF_MODE_READ && Mode == FF_MODE_WRITE && pBufMatch->NumHandles == 0) {
+					pBufMatch->Mode = Mode;
+					pBufMatch->Modified = FF_TRUE;
+					pBufMatch->NumHandles = 1;
+					pBufMatch->Persistance += 1;
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return pBufMatch;
+				}
+
+				pBufMatch = NULL;	// Sector is already in use, keep yielding until its available!
+
+			} else {
+				// Choose a suitable buffer!
+				if(pBufLRU) {
+					// Process the suitable candidate.
+					if(pBufLRU->Modified == FF_TRUE) {
+						FF_IOMAN_FlushBuffer(pIoman, pBufLRU->Sector, pBufLRU->pBuffer);
+					}
+					pBufLRU->Mode = Mode;
+					pBufLRU->Persistance = 1;
+					pBufLRU->LRU = 0;
+					pBufLRU->NumHandles = 1;
+					pBufLRU->Sector = Sector;
+					
+					if(Mode == FF_MODE_WRITE) {
+						pBufLRU->Modified = FF_TRUE;
+					} else {
+						pBufLRU->Modified = FF_FALSE;
+					}
+
+					FF_IOMAN_FillBuffer(pIoman, Sector, pBufLRU->pBuffer);
+					pBufLRU->Valid = FF_TRUE;
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return pBufLRU;
+				}
+				
+			}
 		}
 		FF_ReleaseSemaphore(pIoman->pSemaphore);
 
 		FF_Yield();
 	}
+
+	return pBufMatch;	// Return the Matched Buffer!
 }
 
 
@@ -467,12 +481,12 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
  *
  **/
 void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
-	if(pIoman && pBuffer) {
-		// Protect description changes with a semaphore.
-		FF_PendSemaphore(pIoman->pSemaphore);
-			pBuffer->NumHandles--;
-		FF_ReleaseSemaphore(pIoman->pSemaphore);
+	// Protect description changes with a semaphore.
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		pBuffer->NumHandles--;
 	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
 
 /**

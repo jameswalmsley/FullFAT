@@ -158,11 +158,12 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	FF_T_UINT16		nameLen;
 	FF_T_INT8		Filename[FF_MAX_FILENAME];
 	FF_T_INT8		MyFname[FF_MAX_FILENAME];
+	FF_T_BOOL		bBreak = FF_FALSE;
 	
 	pDirent->CurrentItem = 0;
 	nameLen = (FF_T_UINT16) strlen(name);
 
-	while(1) {	
+	while(!bBreak) {	
 		if(FF_FindNextInDir(pIoman, DirCluster, pDirent)) {
 			break;	// end of dir, file not found!
 		}
@@ -193,6 +194,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	return 0;
 }
 
+/*
 #define FF_DIR_LFN_TRAVERSED	0x01
 #define FF_DIR_LFN_DELETED		0x02
 
@@ -276,7 +278,7 @@ FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DI
 	pDirent->Attrib = FF_getChar(DirBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
 
 	return RetVal;
-}
+}*/
 
 /*
 FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs) {
@@ -1018,7 +1020,7 @@ FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UIN
 		if(FF_isEndOfDir(EntryBuffer)) {	// If its the end of the Dir, then FreeDirents from here.
 			// Check Dir is long enough!
 			DirLength = FF_GetChainLength(pIoman, DirCluster, &iEndOfChain);
-			if((nEntry + Sequential) > (((pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize) * DirLength) / 32)) {
+			if((nEntry + Sequential) > (FF_T_UINT16)(((pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize) * DirLength) / 32)) {
 				FF_ExtendDirectory(pIoman, DirCluster);
 			}
 			return nEntry;

@@ -57,6 +57,8 @@
 #include "testdriver_win32.h"
 #include "../../../src/fullfat.h"
 
+//#include "C:\Documents and Settings\UserXP\My Documents\Visual Studio 2008\Projects\SmartCACHE\SmartCACHE\SmartCache.h"
+
 #include "md5.h"
 
 
@@ -81,7 +83,7 @@ void FF_PrintCache(FF_IOMAN *pIoman) {
 		} else {
 			sprintf(modified, "NO");
 		}
-		printf("ID: %3d, LBA %10d, Mode: %5s, Hndls: %5d, Persist: %5d, Diff: %3s\n", i, pBuffer->Sector, mode, pBuffer->NumHandles, pBuffer->Persistance, modified);
+		printf("ID: %3d, LBA %10d, Mode: %5s, Hndls: %5d, LRU: %5d, Diff: %3s\n", i, pBuffer->Sector, mode, pBuffer->NumHandles, pBuffer->LRU, modified);
 	}
 }
 
@@ -121,6 +123,7 @@ int main(void) {
 	FF_T_INT32 i;
 	FF_DIRENT mydir;
 	FF_T_SINT8 Error;
+//	T_SCACHE *pCache;
 
 	char *mydata;
 	char mystring[] = "Hello";
@@ -142,8 +145,8 @@ int main(void) {
 
 	SetConsoleTitle(TEXT("FullFAT"));
 	
-	f = fopen("c:\\before.img", "rb+");
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	//f = fopen("c:\\before.img", "rb+");
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	//f = fopen("c:\\Before.img", "rb+");
 	//f1 = open("\\\\.\\PHYSICALDRIVE1",  O_RDWR | O_BINARY);
 	//f1 = open("c:\\ramdisk.dat",  O_RDWR | O_BINARY);
@@ -156,10 +159,13 @@ int main(void) {
 	printf("FullFAT by James Walmsley - Windows Demonstration\n");
 	printf("Use the command help for more information\n\n");
 
+
+	//pCache = SC_CreateCache((SC_WRITE_BLOCKS) fnWrite_512, (SC_READ_BLOCKS) fnRead_512, f);
 	
 
 	if(f) {
 		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+		//FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) SC_fnReadBlocks, pCache);
 /*			
 		pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_WRITE);
 
@@ -183,16 +189,16 @@ int main(void) {
 		
 //		FF_FindEntry(pIoman, 2, "4m", &mydir);
 
-		fSource = FF_Open(pIoman, "\\4m", FF_MODE_WRITE, &Error);
+/*		fSource = FF_Open(pIoman, "\\4m", FF_MODE_WRITE, &Error);
 		fDest = fopen("c:\\my1m", "wb");
 		FF_Write(fSource, 1, 1048576*4, mydata);
 		/*for(i = 0; i < 1048576*4; i++) {
 			FF_PutC(fSource, mydata[i]);
 		}*/
-		fwrite(mydata, 1, 1048576*4, fDest);
+/*		fwrite(mydata, 1, 1048576*4, fDest);
 		fclose(fDest);
 		FF_Close(fSource);
-
+*/
 		/*for(i = 0; i < 256; i++) {
 			sprintf(buffer, "%dthis-is-dir%d", i);
 			RetVal = FF_MkDir(pIoman, "\\james", buffer);
@@ -353,7 +359,14 @@ int main(void) {
 
 
 			if(strstr(commandLine[cmdHistory], "mkdir")) {
-				tester = FF_MkDir(pIoman, workingDir, (commandLine[cmdHistory]+6));
+
+				if(strlen(workingDir) == 1) {
+					sprintf(buffer, "\\%s", (commandLine[cmdHistory]+6)); 
+				} else {
+					sprintf(buffer, "%s\\%s", workingDir, (commandLine[cmdHistory]+6));
+				}
+
+				tester = FF_MkDir(pIoman, buffer);
 
 				if(tester) {
 					printf("%s", FF_GetErrMessage(tester));

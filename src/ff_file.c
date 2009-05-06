@@ -62,7 +62,6 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	FF_T_UINT32 DirCluster, FileCluster;
 	FF_T_UINT32	nBytesPerCluster;
 	FF_T_INT8	filename[FF_MAX_FILENAME];
-	FF_T_SINT8	RetVal;
 
 	FF_T_UINT16	i;
 
@@ -114,7 +113,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 			if(strlen(filename) == strlen(Object.FileName)) {
-				if(Object.Filesize == 0 && FF_StrMatch(filename, Object.FileName, strlen(filename)) == FF_TRUE) {
+				if(Object.Filesize == 0 && FF_StrMatch(filename, Object.FileName, (FF_T_UINT16) strlen(filename)) == FF_TRUE) {
 					// The file really was found!
 					FileCluster = 1;
 				} 
