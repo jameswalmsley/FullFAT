@@ -211,11 +211,15 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	return (FF_FILE *)NULL;
 }
 
-static FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
+FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
 	
-	FF_DIRENT MyDir;
-	FF_T_SINT8	RetVal = 0;
+	FF_DIRENT	MyDir;
+	FF_T_SINT8	RetVal = FF_ERR_NONE;
 	FF_T_UINT8	i = 0;
+
+	if(!pIoman) {
+		return FF_FALSE;
+	}
 	
 	RetVal = FF_FindFirst(pIoman, &MyDir, Path);
 	while(RetVal == 0) {
