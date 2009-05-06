@@ -435,7 +435,7 @@ FF_T_SINT8 FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Va
  *	@return	The number of the cluster found to be free.
  *	@return 0 on error.
  **/
-FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
+FF_T_UINT32 FF_FindFreeClusterOLD(FF_IOMAN *pIoman) {
 	FF_T_UINT32 nCluster;
 	FF_T_UINT32 fatEntry;
 
@@ -447,6 +447,57 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 		}
 	}
 	return 0;
+}
+
+FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
+	FF_BUFFER	*pBuffer;
+	FF_T_UINT32	i, x, nCluster = pIoman->pPartition->LastFreeCluster;
+	FF_T_UINT32	FatOffset;
+	FF_T_UINT32	FatSector;
+	FF_T_UINT32	FatSectorEntry;
+	FF_T_UINT32	EntriesPerSector;
+	FF_T_UINT32 FatEntry = 1;
+
+	if(pIoman->pPartition->Type == FF_T_FAT12) {	// FAT12 tables are too small to optimise, and would make it very complicated!
+		return FF_FindFreeClusterOLD(pIoman);
+	}
+
+	if(pIoman->pPartition->Type == FF_T_FAT32) {
+		EntriesPerSector = pIoman->BlkSize / 4;
+		FatOffset = nCluster * 4;
+	} else {
+		EntriesPerSector = pIoman->BlkSize / 2;
+		FatOffset = nCluster * 2;
+	}
+
+	FatSector = (FatOffset / pIoman->pPartition->BlkSize);
+	
+	for(i = FatSector; i < pIoman->pPartition->SectorsPerFAT; i++) {
+		pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA + i, FF_MODE_READ);
+		{
+			for(x = nCluster % EntriesPerSector; x < EntriesPerSector; x++) {
+				if(pIoman->pPartition->Type == FF_T_FAT32) {
+					FatOffset = x * 4;
+					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
+					FatEntry = FF_getLong(pBuffer->pBuffer, FatSectorEntry);
+					FatEntry &= 0x0fffffff;	// Clear the top 4 bits.
+				} else {
+					FatOffset = x * 2;
+					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
+					FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FatSectorEntry);
+				}
+				if(FatEntry == 0x00000000) {
+					FF_ReleaseBuffer(pIoman, pBuffer);
+					pIoman->pPartition->LastFreeCluster = nCluster;
+					
+					return nCluster;
+				}
+				
+				nCluster++;
+			}	
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
+	}
 }
 
 /**
@@ -563,7 +614,7 @@ FF_T_SINT8 FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_
 }
 
 
-FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman) {
+FF_T_UINT32 FF_CountFreeClustersOLD(FF_IOMAN *pIoman) {
 	FF_T_UINT32 i;
 	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
 	FF_T_UINT32 FatEntry;
@@ -574,6 +625,58 @@ FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman) {
 		if(!FatEntry) {
 			FreeClusters++;
 		}
+	}
+
+	return FreeClusters;
+}
+
+
+FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman) {
+	FF_BUFFER	*pBuffer;
+	FF_T_UINT32	i, x, nCluster = 0;
+	FF_T_UINT32	FatOffset;
+	FF_T_UINT32	FatSector;
+	FF_T_UINT32	FatSectorEntry;
+	FF_T_UINT32	EntriesPerSector;
+	FF_T_UINT32 FatEntry = 1;
+	FF_T_UINT32	FreeClusters = 0;
+
+	if(pIoman->pPartition->Type == FF_T_FAT12) {	// FAT12 tables are too small to optimise, and would make it very complicated!
+		return FF_CountFreeClustersOLD(pIoman);
+	}
+
+	if(pIoman->pPartition->Type == FF_T_FAT32) {
+		EntriesPerSector = pIoman->BlkSize / 4;
+		FatOffset = nCluster * 4;
+	} else {
+		EntriesPerSector = pIoman->BlkSize / 2;
+		FatOffset = nCluster * 2;
+	}
+
+	FatSector = (FatOffset / pIoman->pPartition->BlkSize);
+	
+	for(i = 0; i < pIoman->pPartition->SectorsPerFAT; i++) {
+		pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA + i, FF_MODE_READ);
+		{
+			for(x = nCluster % EntriesPerSector; x < EntriesPerSector; x++) {
+				if(pIoman->pPartition->Type == FF_T_FAT32) {
+					FatOffset = x * 4;
+					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
+					FatEntry = FF_getLong(pBuffer->pBuffer, FatSectorEntry);
+					FatEntry &= 0x0fffffff;	// Clear the top 4 bits.
+				} else {
+					FatOffset = x * 2;
+					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
+					FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FatSectorEntry);
+				}
+				if(FatEntry == 0x00000000) {
+					FreeClusters += 1;
+				}
+				
+				nCluster++;
+			}	
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
 	}
 
 	return FreeClusters;
