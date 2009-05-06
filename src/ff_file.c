@@ -231,9 +231,9 @@ static FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
 
 FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	FF_FILE *pFile;
-	FF_T_SINT8 Error = 0;
+	FF_T_SINT8 Error = FF_ERR_NONE;
 	FF_T_UINT8 EntryBuffer[32];
-	FF_T_SINT8 RetVal = 0;
+	FF_T_SINT8 RetVal = FF_ERR_NONE;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
