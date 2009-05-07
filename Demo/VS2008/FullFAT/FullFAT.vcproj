@@ -218,6 +218,14 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="SmartCACHE"
+				>
+				<File
+					RelativePath="..\..\..\..\Visual Studio 2008\Projects\SmartCACHE\SmartCACHE\SmartCache.c"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"

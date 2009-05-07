@@ -57,7 +57,7 @@
 #include "testdriver_win32.h"
 #include "../../../src/fullfat.h"
 
-//#include "C:\Documents and Settings\UserXP\My Documents\Visual Studio 2008\Projects\SmartCACHE\SmartCACHE\SmartCache.h"
+#include "C:\Documents and Settings\UserXP\My Documents\Visual Studio 2008\Projects\SmartCACHE\SmartCACHE\SmartCache.h"
 
 #include "md5.h"
 
@@ -123,7 +123,7 @@ int main(void) {
 	FF_T_INT32 i;
 	FF_DIRENT mydir;
 	FF_T_SINT8 Error;
-//	T_SCACHE *pCache;
+	T_SCACHE *pCache;
 
 	char *mydata;
 	char mystring[] = "Hello";
@@ -160,12 +160,12 @@ int main(void) {
 	printf("Use the command help for more information\n\n");
 
 
-	//pCache = SC_CreateCache((SC_WRITE_BLOCKS) fnWrite_512, (SC_READ_BLOCKS) fnRead_512, f);
+	pCache = SC_CreateCache((SC_WRITE_BLOCKS) fnWrite_512, (SC_READ_BLOCKS) fnRead_512, f);
 	
 
 	if(f) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
-		//FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) SC_fnReadBlocks, pCache);
+		//FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) SC_fnReadBlocks, pCache);
 /*			
 		pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_WRITE);
 

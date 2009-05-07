@@ -4,10 +4,16 @@
 #include "FFTerm-Types.h"
 #include "FFTerm-Error.h"
 
+//#define FFT_ECHO_INPUT
+
 #define FFT_MAX_CMD_NAME		10
 #define FFT_MAX_CMD_PROMPT		10
 
 #define FFT_MAX_CMD_LINE_INPUT	255
+
+#define FFT_RETURN				0x0D
+#define FFT_BACKSPACE			0x08
+#define FFT_CRLF				"\n"
 
 //#define FFT_GETCH(X)
 

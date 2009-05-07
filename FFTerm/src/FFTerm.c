@@ -149,18 +149,52 @@ FF_T_SINT32 FFTerm_RemoveCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName)
 
 
 FF_T_SINT32 FFTerm_GetCommandLine(FFT_CONSOLE *pConsole) {
-	FF_T_UINT32	i;
+	FF_T_UINT32	i = 0;
 	FF_T_INT8	*pBuf = pConsole->strCmdLine;
 	FF_T_INT32	c;
+	FF_T_BOOL	bBreak = FF_FALSE;
 
-	for(i = 0; i < FFT_MAX_CMD_LINE_INPUT; i++) {
-		c = fgetc(pConsole->pStdIn);
-		if(c >= -1) {
-			fputc(c, pConsole->pStdOut);
+	while(!bBreak) {
+		if((c = fgetc(pConsole->pStdIn)) >= 0) {
+			
+			switch(c) {
+				case FFT_RETURN:
+				{
+					fputc('\n', pConsole->pStdOut);
+
+					pBuf[i] = '\0';
+					bBreak = FF_TRUE;
+					break;
+				}
+
+				case FFT_BACKSPACE:
+				{
+					fprintf(pConsole->pStdOut, "\b \b");
+					if(i > 0) {
+						i--;
+						pBuf--;
+						*pBuf = '\0';
+					}
+					break;
+				}
+
+				default:
+				{
+					if(i < (FFT_MAX_CMD_LINE_INPUT - 1)) {
+						*(pBuf++) = (FF_T_INT8) c;
+						*pBuf = '\0';
+#ifdef FFT_ECHO_INPUT
+						fputc(c, pConsole->pStdOut);
+#endif
+						i++;
+					}
+					break;
+				}
+			}
 		}
 	}
-
-	return 0;
+	
+	return FFT_ERR_NONE;
 
 }
 
@@ -175,7 +209,7 @@ FF_T_SINT32 FFTerm_StartConsole(FFT_CONSOLE *pConsole) {
 		// Get Command Line
 		FFTerm_GetCommandLine(pConsole);
 
-		// Process Command Line
+		// Process Command Line into Arguments
 
 		// Execute Relevent Commands
 	}
