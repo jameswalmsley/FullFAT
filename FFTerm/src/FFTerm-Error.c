@@ -50,11 +50,12 @@ const struct _FFTERRTAB
 {
 	"Unknown or Generic Error! - Please contact FFTerm DEV - james@worm.me.uk",	-1000,
     "No Error.",															FFT_ERR_NONE,
-	"Generic Error - Unknown Cause.",										FFT_ERR_GENRIC,
+	"Generic Error - Unknown Cause.",										FFT_ERR_GENERIC,
     "Null Pointer provided, (probably for IOMAN).",							FFT_ERR_NULL_POINTER,
     "Not enough memory (malloc() returned NULL).",							FFT_ERR_NOT_ENOUGH_MEMORY,
 	"The length of the provided command name exceeds the allowed limit.",	FFT_ERR_CMD_NAME_TOO_LONG,
-	"Command Not Found!",													FFT_ERR_CMD_NOT_FOUND
+	"Command Not Found!",													FFT_ERR_CMD_NOT_FOUND,
+	"Command already exists!",												FFT_ERR_CMD_ALREADY_EXISTS
 };
 
 /**
