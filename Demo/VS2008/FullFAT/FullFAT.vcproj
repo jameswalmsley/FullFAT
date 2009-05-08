@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="FullFAT"
 	ProjectGUID="{28DA3267-EC8B-4FC1-983A-204349E3E477}"
 	RootNamespace="FullFAT"
@@ -171,6 +171,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\cmd.c"
+				>
+			</File>
+			<File
+				RelativePath=".\fullfat.c"
+				>
+			</File>
+			<File
 				RelativePath=".\main.c"
 				>
 			</File>
@@ -219,10 +227,18 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="SmartCACHE"
+				Name="FFTerm"
 				>
 				<File
-					RelativePath="..\..\..\..\Visual Studio 2008\Projects\SmartCACHE\SmartCACHE\SmartCache.c"
+					RelativePath="..\..\..\FFTerm\src\FFTerm-Commands.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\FFTerm\src\FFTerm-Error.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\FFTerm\src\FFTerm.c"
 					>
 				</File>
 			</Filter>
@@ -232,6 +248,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\cmd.h"
+				>
+			</File>
 			<File
 				RelativePath=".\testdriver_win32.h"
 				>
@@ -285,6 +305,26 @@
 				</File>
 				<File
 					RelativePath="..\..\..\src\fullfat.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="FFTerm"
+				>
+				<File
+					RelativePath="..\..\..\FFTerm\src\FFTerm-Commands.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\FFTerm\src\FFTerm-Error.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\FFTerm\src\FFTerm-Types.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\FFTerm\src\FFTerm.h"
 					>
 				</File>
 			</Filter>
