@@ -31,9 +31,9 @@ void WinConsoleSetup(void){
 	HANDLE hConsole = GetStdHandle( STD_INPUT_HANDLE );
 	GetConsoleMode( hConsole, &mode );
 
-	mode &= ~ENABLE_PROCESSED_INPUT;
-	mode &= ~ENABLE_ECHO_INPUT;
-	mode &= ~ENABLE_LINE_INPUT;
+	//mode &= ~ENABLE_PROCESSED_INPUT;
+	//mode &= ~ENABLE_ECHO_INPUT;
+	//mode &= ~ENABLE_LINE_INPUT;
 	SetConsoleMode( hConsole, mode );
 }
 
@@ -53,7 +53,7 @@ int main(void) {
 		Error = FFTerm_AddCmd(pConsole, "hello", hello, NULL);
 		Error = FFTerm_AddCmd(pConsole, "hello2", hello, NULL);
 		Error = FFTerm_RemoveCmd(pConsole, "hello");
-		Error = FFTerm_AddCmd(pConsole, "hello", hello, FFTerm_GetErrMessage);
+		Error = FFTerm_AddCmd(pConsole, "hello", hello, NULL);
 		
 		FFTerm_StartConsole(pConsole);
 	}

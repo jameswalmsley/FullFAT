@@ -28,17 +28,23 @@
 
 
 #define FFT_KILL_CONSOLE		-666	///< Special return value from any Command to kill the console.
+#define FFT_COMMAND_DESCRIPTION	-1001	///< Special Error Code for getting a Command Description.
 
 typedef int					 (*FFT_FN_COMMAND)		(int argc, char **argv);
 typedef int					 (*FFT_FN_COMMAND_EX)	(int argc, char **argv, void *pParam);	/// Extended Command function.
 typedef const FF_T_INT8*	 (*FFT_FN_GETERRSTR)	(FF_T_SINT32 pa_iErrorCode);
+
+typedef struct {
+	const FF_T_INT8 * const strErrorString;
+    const FF_T_SINT32 iErrorCode;
+} FFT_ERR_TABLE;
 
 typedef struct _FFT_COMMAND {
 	FF_T_INT8			cmdName[FFT_MAX_CMD_NAME];
 	FFT_FN_COMMAND		fnCmd;
 	FFT_FN_COMMAND_EX	fnCmdEx;
 	void				*CmdExParam;
-	FFT_FN_GETERRSTR	fnErrStr;
+	const FFT_ERR_TABLE		*ErrTable;
 	struct _FFT_COMMAND	*pNextCmd;		///< Pointer to the next command in the linked list.
 } FFT_COMMAND;
 
@@ -55,14 +61,17 @@ typedef struct {
 				FILE		*pStdOut;
 } FFT_CONSOLE;
 
+
+
 extern FF_T_SINT32 FFTerm_HookDefaultCommands(FFT_CONSOLE *pConsole);
 FFT_CONSOLE		*FFTerm_CreateConsole	(FF_T_INT8 *pa_strCmdPrompt, FILE *pa_pStdIn, FILE * pa_pStdOut, FF_T_SINT32 *pError);
 FF_T_SINT32		 FFTerm_StartConsole	(FFT_CONSOLE *pConsole);
 FFT_COMMAND		*FFTerm_GetCmd			(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FF_T_SINT32 *pError);
-FF_T_SINT32		 FFTerm_AddCmd			(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND pa_fnCmd, FFT_FN_GETERRSTR pa_fnErrStr);
-FF_T_SINT32		 FFTerm_AddExCmd		(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND_EX pa_fnCmd, FFT_FN_GETERRSTR pa_fnErrStr, void *pParam);
+FF_T_SINT32		 FFTerm_AddCmd			(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND pa_fnCmd, const FFT_ERR_TABLE *pa_ErrTable);
+FF_T_SINT32		 FFTerm_AddExCmd		(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND_EX pa_fnCmd, const FFT_ERR_TABLE *pa_ErrTable, void *pParam);
 FF_T_SINT32		 FFTerm_RemoveCmd		(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName);
 FF_T_SINT32		 FFTerm_SetConsoleMode	(FFT_CONSOLE *pConsole, FF_T_UINT32 Mode);
 FF_T_SINT32		 FFTerm_GetConsoleMode	(FFT_CONSOLE *pConsole, FF_T_UINT32 *Mode);
+const FF_T_INT8 *FFTerm_LookupErrMessage(const FFT_ERR_TABLE *pa_pErrTable, FF_T_SINT32 iErrorCode);
 
 #endif

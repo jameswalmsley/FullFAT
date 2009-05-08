@@ -3,7 +3,7 @@
 #include <string.h>
 #include "FFTerm.h"
 
-FF_T_SINT32 FFTerm_AddCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND pa_fnCmd, FFT_FN_GETERRSTR pa_fnErrStr) {
+FF_T_SINT32 FFTerm_AddCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND pa_fnCmd, const FFT_ERR_TABLE *pa_ErrTable) {
 	
 	FFT_COMMAND *pCommand;
 
@@ -33,7 +33,7 @@ FF_T_SINT32 FFTerm_AddCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FF
 			pCommand->pNextCmd	= (FFT_COMMAND *) NULL;
 			pCommand->fnCmd		= pa_fnCmd;
 			pCommand->fnCmdEx	= NULL;
-			pCommand->fnErrStr  = pa_fnErrStr;
+			pCommand->ErrTable  = pa_ErrTable;
 			strcpy(pCommand->cmdName, pa_cmdName);
 		}
 
@@ -44,7 +44,7 @@ FF_T_SINT32 FFTerm_AddCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FF
 }
 
 
-FF_T_SINT32 FFTerm_AddExCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND_EX pa_fnCmd, FFT_FN_GETERRSTR pa_fnErrStr, void *pParam) {
+FF_T_SINT32 FFTerm_AddExCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, FFT_FN_COMMAND_EX pa_fnCmd, const FFT_ERR_TABLE *pa_ErrTable, void *pParam) {
 	
 	FFT_COMMAND *pCommand;
 
@@ -74,7 +74,7 @@ FF_T_SINT32 FFTerm_AddExCmd(FFT_CONSOLE *pConsole, const FF_T_INT8 *pa_cmdName, 
 			pCommand->pNextCmd	= (FFT_COMMAND *) NULL;
 			pCommand->fnCmdEx	= pa_fnCmd;
 			pCommand->fnCmd		= NULL;
-			pCommand->fnErrStr  = pa_fnErrStr;
+			pCommand->ErrTable  = pa_ErrTable;
 			pCommand->CmdExParam = pParam;
 			strcpy(pCommand->cmdName, pa_cmdName);
 		}
@@ -389,8 +389,8 @@ FF_T_SINT32 FFTerm_StartConsole(FFT_CONSOLE *pConsole) {
 				}
 
 				if(Result) {
-					if(pCommand->fnErrStr) {
-						fprintf(pConsole->pStdOut, "Command returned with message: \"%s\"\n", pCommand->fnErrStr(Result));
+					if(pCommand->ErrTable) {
+						fprintf(pConsole->pStdOut, "Command returned with message: \"%s\"\n", FFTerm_LookupErrMessage(pCommand->ErrTable, Result));
 					} else {
 						fprintf(pConsole->pStdOut, "Command returned with Code (%d)\n", Result);
 					}
@@ -409,6 +409,17 @@ FF_T_SINT32 FFTerm_StartConsole(FFT_CONSOLE *pConsole) {
 	return FFT_ERR_NONE;
 }
 
+
+const FF_T_INT8 *FFTerm_LookupErrMessage(const FFT_ERR_TABLE *pa_pErrTable, FF_T_SINT32 iErrorCode) {
+	const FFT_ERR_TABLE *pErrTable = pa_pErrTable;
+	while (pErrTable->strErrorString){
+        if (pErrTable->iErrorCode == iErrorCode) {
+            return pErrTable->strErrorString;
+        }
+		pErrTable++;
+    }
+	return pa_pErrTable->strErrorString;
+}
 
 // Allows another thread to kill the chosen console.
 FF_T_SINT32 FFTerm_KillConsole(FFT_CONSOLE *pConsole) {
