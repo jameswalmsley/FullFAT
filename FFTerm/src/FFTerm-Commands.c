@@ -8,23 +8,26 @@ const FFT_ERR_TABLE CmdExitErrorTable[] =
 };
 
 FF_T_SINT32 FFTerm_CmdExit(FF_T_SINT32 argc, FF_T_INT8 **argv) {
-	return FFT_KILL_CONSOLE;
+	if(argc) {
+		return FFT_KILL_CONSOLE;
+	}
+	return 0;
 }
 
 FF_T_SINT32 FFTerm_CmdHelp(FF_T_SINT32 argc, FF_T_INT8 **argv, FFT_CONSOLE *pConsole) {
 	FFT_COMMAND *pCommand = pConsole->pCommands;
-	printf("Available Commands:\n");
+	printf("\nAvailable Commands:\n\n");
 	
 	while(pCommand) {
 		printf("%s", pCommand->cmdName);
 		if(pCommand->ErrTable) {
-			printf(" - \"%s\"", FFTerm_LookupErrMessage(pCommand->ErrTable, FFT_COMMAND_DESCRIPTION));
+			printf("\t - %s", FFTerm_LookupErrMessage(pCommand->ErrTable, FFT_COMMAND_DESCRIPTION));
 		}
 		printf("\n");
 		pCommand = pCommand->pNextCmd;
 	}
 
-	printf("For more information about each command, type [command name] help\n");
+	printf("\nFor more information about each command, type [command name] help\n\n");
 	
 	return FFT_ERR_NONE;
 }
