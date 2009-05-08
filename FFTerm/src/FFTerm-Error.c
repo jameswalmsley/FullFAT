@@ -55,7 +55,8 @@ const struct _FFTERRTAB
     "Not enough memory (malloc() returned NULL).",							FFT_ERR_NOT_ENOUGH_MEMORY,
 	"The length of the provided command name exceeds the allowed limit.",	FFT_ERR_CMD_NAME_TOO_LONG,
 	"Command Not Found!",													FFT_ERR_CMD_NOT_FOUND,
-	"Command already exists!",												FFT_ERR_CMD_ALREADY_EXISTS
+	"Command already exists!",												FFT_ERR_CMD_ALREADY_EXISTS,
+	"Command prompt is too long.",											FFT_ERR_CMD_PROMPT_TOO_LONG
 };
 
 /**

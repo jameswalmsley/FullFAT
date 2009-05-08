@@ -13,7 +13,7 @@ FFT_CONSOLE *FFTerm_CreateConsole(FF_T_INT8 *pa_strCmdPrompt, FILE *pa_pStdIn, F
 
 	if(strlen(pa_strCmdPrompt) > FFT_MAX_CMD_PROMPT) {
 		if(pError) {
-			*pError = FFT_MAX_CMD_PROMPT;
+			*pError = FFT_ERR_CMD_PROMPT_TOO_LONG;
 		}
 
 		return (FFT_CONSOLE *) NULL;
@@ -24,6 +24,7 @@ FFT_CONSOLE *FFTerm_CreateConsole(FF_T_INT8 *pa_strCmdPrompt, FILE *pa_pStdIn, F
 		pConsole->bKill = FF_FALSE;
 		pConsole->pStdIn = pa_pStdIn;
 		pConsole->pStdOut = pa_pStdOut;
+		pConsole->Mode = FFT_MODE_DEFAULT;
 		strcpy(pConsole->strCmdPrompt, pa_strCmdPrompt);
 		return pConsole;
 	}
@@ -160,7 +161,10 @@ FF_T_SINT32 FFTerm_GetCommandLine(FFT_CONSOLE *pConsole) {
 			switch(c) {
 				case FFT_RETURN:
 				{
-					fputc('\n', pConsole->pStdOut);
+
+					if((pConsole->Mode & (FFT_ENABLE_ECHO_INPUT | FFT_ENABLE_WINDOWS))) {
+						fputc('\n', pConsole->pStdOut);
+					}
 
 					pBuf[i] = '\0';
 					bBreak = FF_TRUE;
@@ -183,9 +187,10 @@ FF_T_SINT32 FFTerm_GetCommandLine(FFT_CONSOLE *pConsole) {
 					if(i < (FFT_MAX_CMD_LINE_INPUT - 1)) {
 						*(pBuf++) = (FF_T_INT8) c;
 						*pBuf = '\0';
-#ifdef FFT_ECHO_INPUT
-						fputc(c, pConsole->pStdOut);
-#endif
+						if((pConsole->Mode & FFT_ENABLE_ECHO_INPUT)) {
+							fputc(c, pConsole->pStdOut);
+						}
+
 						i++;
 					}
 					break;
@@ -198,6 +203,34 @@ FF_T_SINT32 FFTerm_GetCommandLine(FFT_CONSOLE *pConsole) {
 
 }
 
+FF_T_SINT32 FFTerm_SetConsoleMode(FFT_CONSOLE *pConsole, FF_T_UINT32 Mode) {
+	if(!pConsole) {
+		return FFT_ERR_NULL_POINTER;
+	}
+
+	pConsole->Mode = Mode;
+
+	return FFT_ERR_NONE;
+}
+
+FF_T_SINT32 FFTerm_GetConsoleMode(FFT_CONSOLE *pConsole, FF_T_UINT32 *Mode) {
+	if(!pConsole) {
+		return FFT_ERR_NULL_POINTER;
+	}
+
+	if(Mode) {
+		*Mode = pConsole->Mode;
+		return FFT_ERR_NONE;
+	}
+
+	return FFT_ERR_NULL_POINTER;
+}
+
+FF_T_SINT32 FFTerm_PrintPrompt(FFT_CONSOLE *pConsole) {
+	fprintf(pConsole->pStdOut, "%s", pConsole->strCmdPrompt);
+	return FFT_ERR_NONE;
+}
+
 // Starts the console.
 FF_T_SINT32 FFTerm_StartConsole(FFT_CONSOLE *pConsole) {
 
@@ -206,10 +239,14 @@ FF_T_SINT32 FFTerm_StartConsole(FFT_CONSOLE *pConsole) {
 	}
 
 	while(pConsole->bKill != FF_TRUE) {
+		
+		FFTerm_PrintPrompt(pConsole);
+
 		// Get Command Line
 		FFTerm_GetCommandLine(pConsole);
 
 		// Process Command Line into Arguments
+		printf("\n CMDLINE: %s\n", pConsole->strCmdLine);
 
 		// Execute Relevent Commands
 	}

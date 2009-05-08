@@ -20,18 +20,13 @@ void WinConsoleSetup(void){
 }
 
 int main(void) {
-	HANDLE WinConsole;
-	DWORD	Mode;
 
 	FFT_CONSOLE *pConsole;
 	FF_T_SINT32 Error = FFT_ERR_NONE;
 
-	WinConsole = GetStdHandle(STD_INPUT_HANDLE);
-	
-	//SetConsoleMode(WinConsole, 0x0000);
-	WinConsoleSetup();
+	//WinConsoleSetup();
 
-	pConsole = FFTerm_CreateConsole("FullFAT", stdin, stdout, &Error);
+	pConsole = FFTerm_CreateConsole("FullFAT \\> ", stdin, stdout, &Error);
 
 	setbuf(stdin, NULL);
 
