@@ -77,10 +77,16 @@ int main(void) {
 
 			if(pConsole) {
 				//---------- Add Commands to the console.
-				FFTerm_AddExCmd(pConsole, "pwd",	pwd_cmd, pwdInfo, &Env);	// See cmd.c for their implementations.
-				FFTerm_AddExCmd(pConsole, "ls",		ls_cmd,  lsInfo,  &Env);
-				FFTerm_AddExCmd(pConsole, "cd",		cd_cmd,  cdInfo,  &Env);
-				FFTerm_AddExCmd(pConsole, "md5",	md5_cmd, md5Info, &Env);
+				FFTerm_AddExCmd(pConsole, "prompt", cmd_prompt, promptInfo, &Env);	// special command named prompt used as a command prompt if hooked.
+				FFTerm_AddExCmd(pConsole, "pwd",	pwd_cmd,	pwdInfo,	&Env);	// See cmd.c for their implementations.
+				FFTerm_AddExCmd(pConsole, "ls",		ls_cmd,		lsInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "cd",		cd_cmd,		cdInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "cp",		cp_cmd,		cpInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "icp",	icp_cmd,	icpInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "xcp",	xcp_cmd,	xcpInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "md5",	md5_cmd,	md5Info,	&Env);
+				FFTerm_AddExCmd(pConsole, "mkdir",	mkdir_cmd,	mkdirInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "info",	info_cmd,	infoInfo,	&Env);
 
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);

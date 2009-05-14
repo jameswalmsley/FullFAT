@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="FullFAT"
 	ProjectGUID="{28DA3267-EC8B-4FC1-983A-204349E3E477}"
 	RootNamespace="FullFAT"
@@ -179,10 +179,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\main.c"
-				>
-			</File>
-			<File
 				RelativePath=".\md5.c"
 				>
 			</File>
@@ -230,15 +226,15 @@
 				Name="FFTerm"
 				>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm-Commands.c"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm-Commands.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm-Error.c"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm-Error.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm.c"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm.c"
 					>
 				</File>
 			</Filter>
@@ -312,19 +308,19 @@
 				Name="FFTerm"
 				>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm-Commands.h"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm-Commands.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm-Error.h"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm-Error.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm-Types.h"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm-Types.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\FFTerm\src\FFTerm.h"
+					RelativePath="..\..\..\..\FFTerm\src\FFTerm.h"
 					>
 				</File>
 			</Filter>

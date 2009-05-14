@@ -1,5 +1,5 @@
 /*****************************************************************************
- *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *  FFTerm - Simple & Platform independent, Thread-Safe Terminal/Console     *
  *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
  *                                                                           *
  *  This program is free software: you can redistribute it and/or modify     *
@@ -21,12 +21,12 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FFTerm.        *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
- *  See http://worm.me.uk/fullfat for more information.                      *
- *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
+ *  See http://worm.me.uk/ffterm for more information.                       *
+ *  Or  http://ffterm.googlecode.com/ for latest releases and the wiki.      *
  *****************************************************************************/
 
 #ifndef _FFTERM_COMMANDS_H_
@@ -35,8 +35,6 @@
 #include "FFTerm.h"
 #include "FFTerm-Types.h"
 
-
 FF_T_SINT32 FFTerm_HookDefaultCommands(FFT_CONSOLE *pConsole);
-
 
 #endif

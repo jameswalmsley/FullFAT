@@ -40,14 +40,26 @@ typedef struct {	// Pass an environment for the FullFAT commands.
 	FF_T_INT8	WorkingDir[2600];
 } FF_ENVIRONMENT;
 
+extern const FFT_ERR_TABLE promptInfo[];
 extern const FFT_ERR_TABLE pwdInfo[];
 extern const FFT_ERR_TABLE lsInfo[];
 extern const FFT_ERR_TABLE cdInfo[];
 extern const FFT_ERR_TABLE md5Info[];
+extern const FFT_ERR_TABLE cpInfo[];
+extern const FFT_ERR_TABLE icpInfo[];
+extern const FFT_ERR_TABLE xcpInfo[];
+extern const FFT_ERR_TABLE mkdirInfo[];
+extern const FFT_ERR_TABLE infoInfo[];
 
-int pwd_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int ls_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int cd_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int md5_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int cmd_prompt	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int pwd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int ls_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int cd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int md5_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int cp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int icp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int xcp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int mkdir_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int info_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 
 #endif

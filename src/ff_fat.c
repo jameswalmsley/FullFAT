@@ -498,6 +498,8 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 		}
 		FF_ReleaseBuffer(pIoman, pBuffer);
 	}
+
+	return 0;
 }
 
 /**

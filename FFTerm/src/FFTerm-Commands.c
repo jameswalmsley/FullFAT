@@ -1,5 +1,5 @@
 /*****************************************************************************
- *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *  FFTerm - Simple & Platform independent, Thread-Safe Terminal/Console     *
  *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
  *                                                                           *
  *  This program is free software: you can redistribute it and/or modify     *
@@ -21,32 +21,37 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FFTerm.        *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
- *  See http://worm.me.uk/fullfat for more information.                      *
- *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
+ *  See http://worm.me.uk/ffterm for more information.                       *
+ *  Or  http://ffterm.googlecode.com/ for latest releases and the wiki.      *
  *****************************************************************************/
 
 #include "FFTerm-Commands.h"
 #include "FFTerm.h"
 
-const FFT_ERR_TABLE CmdExitErrorTable[] =
-{
-	"Causes the active console to terminate.",			FFT_COMMAND_DESCRIPTION,
-	NULL
-};
-
-FF_T_SINT32 FFTerm_CmdExit(FF_T_SINT32 argc, FF_T_INT8 **argv) {
+static int FFTerm_CmdExit(int argc, char **argv) {
 	if(argc) {
 		return FFT_KILL_CONSOLE;
 	}
 	return 0;
 }
 
-FF_T_SINT32 FFTerm_CmdHelp(FF_T_SINT32 argc, FF_T_INT8 **argv, FFT_CONSOLE *pConsole) {
+const FFT_ERR_TABLE FFTerm_CmdExitInfo[] =
+{
+	"Causes the active console to terminate.",			FFT_COMMAND_DESCRIPTION,
+	NULL
+};
+
+static int FFTerm_CmdHelp(int argc, char **argv, FFT_CONSOLE *pConsole) {
 	FFT_COMMAND *pCommand = pConsole->pCommands;
+	/**
+	 *	Removing the following notice without a commercial license is illegal.
+	 **/
+	printf("\nFFTerm v%s by James Walmsley (c)2009\n", FFT_VERSION_NUMBER);
+	printf("For more information about FFTerm, see http://worm.me.uk/ffterm/\n");
 	printf("\nAvailable Commands:\n\n");
 	
 	while(pCommand) {
@@ -62,10 +67,16 @@ FF_T_SINT32 FFTerm_CmdHelp(FF_T_SINT32 argc, FF_T_INT8 **argv, FFT_CONSOLE *pCon
 	
 	return FFT_ERR_NONE;
 }
+const FFT_ERR_TABLE FFTerm_CmdHelpInfo[] =
+{
+	"This help information screen.",			FFT_COMMAND_DESCRIPTION,
+	NULL
+};
+
 
 FF_T_SINT32 FFTerm_HookDefaultCommands(FFT_CONSOLE *pConsole) {
-	FFTerm_AddCmd(pConsole, "exit", (FFT_FN_COMMAND)FFTerm_CmdExit, CmdExitErrorTable);
-	FFTerm_AddExCmd(pConsole, "help", (FFT_FN_COMMAND_EX)FFTerm_CmdHelp, NULL, pConsole);
+	FFTerm_AddCmd(pConsole, "exit", FFTerm_CmdExit, FFTerm_CmdExitInfo);
+	FFTerm_AddExCmd(pConsole, "help", FFTerm_CmdHelp, FFTerm_CmdHelpInfo, pConsole);
 	return FFT_ERR_NONE;
 }
 
