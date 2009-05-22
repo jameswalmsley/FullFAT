@@ -819,6 +819,22 @@ FF_T_SINT8 FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 }
 
 
+/**
+ *	@brief	Returns the Block-size of a mounted Partition
+ *
+ *	@param	pIoman		FF_IOMAN Object returned from FF_CreateIOMAN()
+ *
+ *	@return	The blocksize of the partition. A value less than 0 when an error occurs.
+ *
+ **/
+FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman) {
+	
+	if(pIoman) {
+		return (FF_T_SINT32) pIoman->pPartition->BlkSize;
+	}
+
+	return FF_ERR_NULL_POINTER;
+}
 
 #ifdef FF_64_NUM_SUPPORT
 /**

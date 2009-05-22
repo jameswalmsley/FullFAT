@@ -178,6 +178,7 @@ FF_T_SINT8	FF_UnregisterBlkDevice	(FF_IOMAN *pIoman);
 FF_T_SINT8	FF_MountPartition		(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
 FF_T_SINT8	FF_UnMountPartition		(FF_IOMAN *pIoman);
 FF_T_SINT8	FF_FlushCache			(FF_IOMAN *pIoman);
+FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman);
 
 #ifdef FF_64_NUM_SUPPORT
 FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman);
