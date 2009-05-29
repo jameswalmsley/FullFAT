@@ -49,6 +49,7 @@ int main(void) {
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
 	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	 
 	//f = fopen("c:\\Write.img", "rb+");
 
 	if(f) {
@@ -76,6 +77,7 @@ int main(void) {
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);
 
 			if(pConsole) {
+				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
 				FFTerm_AddExCmd(pConsole, "prompt", cmd_prompt, promptInfo, &Env);	// special command named prompt used as a command prompt if hooked.
 				FFTerm_AddExCmd(pConsole, "pwd",	pwd_cmd,	pwdInfo,	&Env);	// See cmd.c for their implementations.

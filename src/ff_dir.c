@@ -484,7 +484,7 @@ FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Nam
  *	@private
  **/
 
-FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
+FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen) {
     FF_T_UINT32         dirCluster = pIoman->pPartition->RootDirCluster;
     FF_T_INT8       mytoken[FF_MAX_FILENAME];
     FF_T_INT8       *token;
@@ -871,7 +871,7 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
  *	@return -2 if Dir was not found.
  *
  **/
-FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path) {
+FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path) {
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT16	PathLen = (FF_T_UINT16) strlen(path);
@@ -1368,7 +1368,7 @@ FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *F
 	return MyFile.ObjectCluster;
 }
 
-FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
+FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	FF_DIRENT	MyDir;
 	FF_T_UINT32 DirCluster;
 	FF_T_INT8	DirName[FF_MAX_FILENAME];

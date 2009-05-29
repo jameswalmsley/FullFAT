@@ -63,7 +63,7 @@ typedef struct {
 		FF_T_SINT8	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_FindEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs);
-		FF_T_SINT8	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_INT8 *path);
+		FF_T_SINT8	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path);
 		FF_T_SINT8	FF_FindNext		(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
 		void		FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer);
 		FF_T_SINT8	FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry);
@@ -77,10 +77,11 @@ static	FF_T_UINT8	FF_CreateChkSum	(const FF_T_UINT8 *pa_pShortName);
 void		FF_lockDIR		(FF_IOMAN *pIoman);
 void		FF_unlockDIR	(FF_IOMAN *pIoman);
 FF_T_UINT32			FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *FileName, FF_DIRENT *pDirent);
-FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, FF_T_INT8 *Path);
+FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path);
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 static void FF_ProcessShortName(FF_T_INT8 *name);
 FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
+FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen);
 
 #endif
 

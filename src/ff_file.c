@@ -55,7 +55,7 @@
  *	@return	NULL pointer on Error, in which case pError should be checked for more information.
  *	@return	pError can be:
  **/
-FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError) {
+FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError) {
 	FF_FILE		*pFile;
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
@@ -211,7 +211,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 
 	return (FF_FILE *)NULL;
 }
 
-FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
+FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	
 	FF_DIRENT	MyDir;
 	FF_T_SINT8	RetVal = FF_ERR_NONE;
@@ -233,7 +233,7 @@ FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, FF_T_INT8 *Path) {
 	return FF_TRUE;
 }
 
-FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
+FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_FILE *pFile;
 	FF_T_SINT8 Error = FF_ERR_NONE;
 	FF_T_UINT8 EntryBuffer[32];
@@ -279,7 +279,7 @@ FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, FF_T_INT8 *path) {
 	return RetVal;
 }
 
-FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, FF_T_INT8 *path) {
+FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_FILE *pFile;
 	FF_T_SINT8 Error = 0;
 	FF_T_UINT8 EntryBuffer[32];

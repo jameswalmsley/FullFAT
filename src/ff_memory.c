@@ -180,7 +180,7 @@ FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 
 }
 
 
-FF_T_INT8 *FF_strtok(FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length) {
+FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length) {
 	FF_T_UINT16 strLen = Length;
 	FF_T_UINT16 i,y, tokenStart, tokenEnd = 0;
 

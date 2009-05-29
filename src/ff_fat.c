@@ -479,12 +479,12 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman) {
 				if(pIoman->pPartition->Type == FF_T_FAT32) {
 					FatOffset = x * 4;
 					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
-					FatEntry = FF_getLong(pBuffer->pBuffer, FatSectorEntry);
+					FatEntry = FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)FatSectorEntry);
 					FatEntry &= 0x0fffffff;	// Clear the top 4 bits.
 				} else {
 					FatOffset = x * 2;
 					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
-					FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FatSectorEntry);
+					FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, (FF_T_UINT16)FatSectorEntry);
 				}
 				if(FatEntry == 0x00000000) {
 					FF_ReleaseBuffer(pIoman, pBuffer);
@@ -664,12 +664,12 @@ FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman) {
 				if(pIoman->pPartition->Type == FF_T_FAT32) {
 					FatOffset = x * 4;
 					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
-					FatEntry = FF_getLong(pBuffer->pBuffer, FatSectorEntry);
+					FatEntry = FF_getLong(pBuffer->pBuffer, (FF_T_UINT16)FatSectorEntry);
 					FatEntry &= 0x0fffffff;	// Clear the top 4 bits.
 				} else {
 					FatOffset = x * 2;
 					FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
-					FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FatSectorEntry);
+					FatEntry = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, (FF_T_UINT16)FatSectorEntry);
 				}
 				if(FatEntry == 0x00000000) {
 					FreeClusters += 1;
