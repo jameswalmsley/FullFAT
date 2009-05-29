@@ -1,0 +1,34 @@
+\documentclass[final,a4paper,12pt]{article}
+\usepackage{listings}
+\usepackage{moreverb}
+\lstset{language=C}
+\begin{document}
+\title{\Huge{FullFAT\footnote {FullFAT is \copyright  2009 James Walmsley, all Rights Reserved.}}\\\Large{Embedded FAT 12/16/32 Filesystem Driver}}
+\author{James~Walmsley \thanks{Author of FullFAT and Embedded Software engineer. See http://worm.me.uk/}}
+\date{June 2009}
+\maketitle
+
+\begin {abstract} 
+FullFAT is a thread-safe FAT Filesystem driver for embedded systems. Written in a clear ANSI C style it compiles on almost any compiler, and provides simple to use abstractions allowing a developer to use FAT on any platform or environment. This paper aims to provide a clear and easy to understand manual for FullFAT, documenting all of its features, and providing simple examples. Also included is a list of other software by James Walmsley, that can aid integration of FullFAT into more advanced systems, and increase FullFAT's performance.
+\end {abstract}
+
+\newpage
+\tableofcontents
+
+\newpage
+\section{Introduction}
+\input{pages/intro.tex}
+
+\newpage
+\section{API Reference}
+\input{pages/api.tex}
+
+\newpage
+\section{Thanks}
+\input{pages/thanks.tex}
+
+\newpage
+\section{Licensing}
+\input{pages/licensing.tex}
+
+\end{document}
