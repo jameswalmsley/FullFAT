@@ -33,7 +33,7 @@
 #define _CMD_H_
 
 #include "../../../src/fullfat.h"
-#include "../../../FFTerm/src/FFTerm.h"
+#include "../../../../FFTerm/src/FFTerm.h"
 
 typedef struct {	// Pass an environment for the FullFAT commands.
 	FF_IOMAN	*pIoman;

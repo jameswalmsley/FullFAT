@@ -30,7 +30,7 @@
  *****************************************************************************/
 #include "cmd.h"	// The Demo's Header File
 #include "../../../src/fullfat.h"
-#include "../../../FFTerm/src/FFTerm.h"
+#include "../../../../FFTerm/src/FFTerm.h"
 #include "testdriver_win32.h"
 
 #define PARTITION_NUMBER	0
