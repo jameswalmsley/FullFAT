@@ -440,3 +440,16 @@ const FFT_ERR_TABLE infoInfo[] =
 	"Displays information about the currently mounted partition.",	FFT_COMMAND_DESCRIPTION,
 	NULL
 };
+
+
+int mount_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
+	return -4;
+}
+
+const FFT_ERR_TABLE mountInfo[] =
+{
+	"Used to mount various partitions and volumes.",	FFT_COMMAND_DESCRIPTION,
+	"Command Not Yet Implemented",						-4,
+	NULL
+};
+

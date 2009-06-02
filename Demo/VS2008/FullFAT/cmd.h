@@ -50,6 +50,7 @@ extern const FFT_ERR_TABLE icpInfo[];
 extern const FFT_ERR_TABLE xcpInfo[];
 extern const FFT_ERR_TABLE mkdirInfo[];
 extern const FFT_ERR_TABLE infoInfo[];
+extern const FFT_ERR_TABLE mountInfo[];
 
 int cmd_prompt	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int pwd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
@@ -61,5 +62,6 @@ int icp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int xcp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkdir_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int info_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int mount_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 
 #endif
