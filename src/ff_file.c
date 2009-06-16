@@ -226,9 +226,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_T_
 				pFile->Mode |= (FF_MODE_READ | FF_MODE_WRITE);
 			}
 
-			if((pFile->Mode & FF_MODE_APPEND)) {
+			/*if((pFile->Mode & FF_MODE_APPEND)) {
 				pFile->AppendPointer = pFile->Filesize;
-			}
+			}*/
 
 			/*
 				Add pFile onto the end of our linked list of FF_FILE objects.
@@ -867,7 +867,9 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	// Make sure a write is after the append point.
 	if((pFile->Mode & FF_MODE_APPEND)) {
-		FF_Seek(pFile, pFile->AppendPointer, FF_SEEK_SET);
+		if(pFile->FilePointer < pFile->Filesize) {
+			FF_Seek(pFile, 0, FF_SEEK_END);
+		}
 	}
 
 	pIoman = pFile->pIoman;
@@ -1068,7 +1070,9 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 
 	// Make sure a write is after the append point.
 	if((pFile->Mode & FF_MODE_APPEND)) {
-		FF_Seek(pFile, pFile->AppendPointer, FF_SEEK_SET);
+		if(pFile->FilePointer < pFile->Filesize) {
+			FF_Seek(pFile, 0, FF_SEEK_END);
+		}
 	}
 	
 	// Handle File Space Allocation.
