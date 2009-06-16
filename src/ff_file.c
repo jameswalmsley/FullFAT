@@ -140,7 +140,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_T_
 		i = 1;
 	}
 	
+
 	DirCluster = FF_FindDir(pIoman, path, i);
+
 	
 
 	if(DirCluster) {
@@ -336,6 +338,16 @@ FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 			EntryBuffer[0] = 0xE5;
 			FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+
+			FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
+			{
+				if(FF_StrMatch(pIoman->pPartition->PathCache.Path, path, (FF_T_UINT16)strlen(path))) {
+					pIoman->pPartition->PathCache.Path[0] = '\0';
+					pIoman->pPartition->PathCache.DirCluster = 0;
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+				}
+			}
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
 			
 			FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
 

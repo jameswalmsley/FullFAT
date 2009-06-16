@@ -176,7 +176,7 @@ FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 
 	register FF_T_UINT16 i;
 	register FF_T_INT8	char1, char2;
 
-	if(strlen(str1) != strlen(str2)) {
+	if(strlen(str1) != strlen(str2) != len) {
 		return FF_FALSE;
 	}
 

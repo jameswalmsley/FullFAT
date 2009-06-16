@@ -517,9 +517,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
             //lastDirCluster = dirCluster;
             MyDir.CurrentItem = 0;
             dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
-			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
+			/*if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
 				dirCluster = pIoman->pPartition->RootDirCluster;
-            }
+            }*/
             token = FF_strtok(path, mytoken, &it, &last, pathLen);
     }while(token != NULL);
 
@@ -701,9 +701,9 @@ static void FF_PlaceTime(FF_T_UINT8 *EntryBuffer, FF_T_UINT32 Offset) {
 	FF_GetSystemTime(&str_t);
 				
 	myShort = 0;
-	myShort |= ((str_t.Hour << 11) & 0xF800);
-	myShort |= ((str_t.Min  <<  5) & 0x07E0);
-	myShort |= ((str_t.Second / 2) & 0x001F);
+	myShort |= ((str_t.Hour    << 11) & 0xF800);
+	myShort |= ((str_t.Minute  <<  5) & 0x07E0);
+	myShort |= ((str_t.Second   /  2) & 0x001F);
 	FF_putShort(EntryBuffer, (FF_T_UINT16) Offset, myShort);
 }
 
@@ -725,7 +725,7 @@ static void FF_GetTime(FF_SYSTEMTIME *pTime, FF_T_UINT8 *EntryBuffer, FF_T_UINT3
 	FF_T_UINT16 myShort;
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) Offset);
 	pTime->Hour		= (((myShort & 0xF800) >> 11) & 0x001F);
-	pTime->Min		= (((myShort & 0x07E0) >>  5) & 0x003F);
+	pTime->Minute	= (((myShort & 0x07E0) >>  5) & 0x003F);
 	pTime->Second	= 2 * (myShort & 0x01F);
 }
 
@@ -759,6 +759,11 @@ void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 	// Get the modified Time & Date
 	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_TIME);
 	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_DATE);
+	// Get the last accessed Date.
+	FF_GetDate(&pDirent->AccessedTime, EntryBuffer, FF_FAT_DIRENT_LASTACC_DATE);
+	pDirent->AccessedTime.Hour		= 0;
+	pDirent->AccessedTime.Minute	= 0;
+	pDirent->AccessedTime.Second	= 0;
 #endif
 	// Get the filesize.
 	pDirent->Filesize = FF_getLong(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
@@ -931,26 +936,16 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 
 #ifdef FF_TIME_SUPPORT
 	// Get the creation Time & Date
-	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_CREATE_TIME);
-	pDirent->CreateTime.Hour		= (((myShort & 0xF800) >> 11) & 0x001F);
-	pDirent->CreateTime.Min			= (((myShort & 0x07E0) >>  5) & 0x003F);
-	pDirent->CreateTime.Second		= 2 * (myShort & 0x01F);
-
-	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_CREATE_DATE);
-	pDirent->CreateTime.Year		= 1980 + (((myShort & 0xFE00) >> 9) & 0x07F);
-	pDirent->CreateTime.Month		= (((myShort & 0x01E0) >> 5) & 0x000F);
-	pDirent->CreateTime.Day			= myShort & 0x01F;
-
+	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_CREATE_TIME);
+	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_CREATE_DATE);
 	// Get the modified Time & Date
-	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_LASTMOD_TIME);
-	pDirent->ModifiedTime.Hour		= (((myShort & 0xF800) >> 11) & 0x001F);
-	pDirent->ModifiedTime.Min		= (((myShort & 0x07E0) >>  5) & 0x003F);
-	pDirent->ModifiedTime.Second	= 2 * (myShort & 0x01F);
-
-	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_LASTMOD_DATE);
-	pDirent->ModifiedTime.Year		= 1980 + (((myShort & 0xFE00) >> 9) & 0x07F);
-	pDirent->ModifiedTime.Month		= (((myShort & 0x01E0) >> 5) & 0x000F);
-	pDirent->ModifiedTime.Day		= myShort & 0x01F;
+	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_TIME);
+	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_DATE);
+	// Get the last accessed Date.
+	FF_GetDate(&pDirent->AccessedTime, EntryBuffer, FF_FAT_DIRENT_LASTACC_DATE);
+	pDirent->AccessedTime.Hour		= 0;
+	pDirent->AccessedTime.Minute	= 0;
+	pDirent->AccessedTime.Second	= 0;
 #endif
 
 	// Get the filesize.
@@ -1393,7 +1388,28 @@ FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	return FF_ERR_NONE;
 }
 
-
+static void FF_MakeNameCompliant(FF_T_INT8 *Name) {
+	
+	if(Name[0] == 0xE5) {	// Support Japanese KANJI symbol.
+		Name[0] = 0x05;
+	}
+	
+	while(*Name) {
+		if(*Name < 0x20 || *Name == 0x7F || *Name == 0x22 || *Name == 0x7C) {	// Leave all extended chars as they are.
+			*Name = '_';
+		}
+		if(*Name >= 0x2A && *Name <= 0x2F && *Name != 0x2B && *Name != 0x2E) {
+			*Name = '_';
+		}
+		if(*Name >= 0x3A && *Name <= 0x3F) {
+			*Name = '_';
+		}
+		if(*Name >= 0x5B && *Name <= 0x5C) {
+			*Name = '_';
+		}
+		Name++;
+	}
+}
 
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
@@ -1407,7 +1423,10 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 	FF_T_UINT8	CheckSum;
 #endif
 
+	FF_MakeNameCompliant(pDirent->FileName);	// Ensure we don't break the Dir tables.
 	memset(EntryBuffer, 0, 32);
+
+
 
 	if(NameLen % 13) {
 		numLFNs ++;

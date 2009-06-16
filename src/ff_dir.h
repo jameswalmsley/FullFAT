@@ -57,6 +57,7 @@ typedef struct {
 #ifdef FF_TIME_SUPPORT	
 	FF_SYSTEMTIME	CreateTime;		///< Date and Time Created.
 	FF_SYSTEMTIME	ModifiedTime;	///< Date and Time Modified.
+	FF_SYSTEMTIME	AccessedTime;	///< Date of Last Access.
 #endif
 
 	//---- Book Keeping for FF_Find Functions

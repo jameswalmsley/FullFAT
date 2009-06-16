@@ -52,7 +52,7 @@ typedef struct _FF_SYSTEMTIME{
 	FF_T_UINT16 Month;		///< Month	(e.g. 1 = Jan, 12 = Dec).
 	FF_T_UINT16	Day;		///< Day	(1 - 31).
 	FF_T_UINT16 Hour;		///< Hour	(0 - 23).
-	FF_T_UINT16 Min;		///< Min	(0 - 59).
+	FF_T_UINT16 Minute;		///< Min	(0 - 59).
 	FF_T_UINT16 Second;		///< Second	(0 - 59).
 } FF_SYSTEMTIME;
 

@@ -63,7 +63,7 @@
 FF_T_SINT32	FF_GetSystemTime(FF_SYSTEMTIME *pTime) {
 	
 	pTime->Hour		= 0;
-	pTime->Min		= 0;
+	pTime->Minute	= 0;
 	pTime->Second	= 0;
 	pTime->Day		= 0;
 	pTime->Month	= 0;
@@ -95,7 +95,7 @@ FF_T_SINT32	FF_GetSystemTime(FF_SYSTEMTIME *pTime) {
 	GetLocalTime(&str_t);	
 	
 	pTime->Hour		= str_t.wHour;
-	pTime->Min		= str_t.wMinute;
+	pTime->Minute	= str_t.wMinute;
 	pTime->Second	= str_t.wSecond;
 	pTime->Day		= str_t.wDay;
 	pTime->Month	= str_t.wMonth;
