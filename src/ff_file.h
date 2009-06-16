@@ -42,9 +42,16 @@
 #include "ff_ioman.h"
 #include "ff_dir.h"
 
+#ifdef FF_USE_NATIVE_STDIO
+#include <stdio.h>
+#define FF_SEEK_SET	SEEK_SET
+#define FF_SEEK_CUR	SEEK_CUR
+#define FF_SEEK_END	SEEK_END
+#else
 #define FF_SEEK_SET	1
 #define FF_SEEK_CUR	2
 #define FF_SEEK_END	3
+#endif
 
 typedef struct _FF_FILE {
 	FF_IOMAN	*pIoman;			///< Ioman Pointer!
@@ -55,6 +62,7 @@ typedef struct _FF_FILE {
 	FF_T_UINT32 AddrCurrentCluster;	///< Address of the current cluster.
 	FF_T_UINT32 iEndOfChain;		///< Address of the last cluster in the chain.
 	FF_T_UINT32 FilePointer;		///< Current Position Pointer.
+	FF_T_UINT32	AppendPointer;		///< Points to the Append from position. (The original filesize at open).
 	FF_T_UINT8	Mode;				///< Mode that File Was opened in.
 	FF_T_UINT32 DirCluster;			///< Cluster Number that the Dirent is in.
 	FF_T_UINT16 DirEntry;			///< Dirent Entry Number describing this file.
@@ -66,14 +74,14 @@ typedef struct _FF_FILE {
 //---------- PROTOTYPES
 // PUBLIC (Interfaces):
 
-FF_FILE		*FF_Open		(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError);
+FF_FILE		*FF_Open		(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_T_SINT8 *pError);
 FF_T_SINT8	 FF_Close		(FF_FILE *pFile);
-FF_T_INT32	 FF_GetC		(FF_FILE *pFile);
+FF_T_SINT32	 FF_GetC		(FF_FILE *pFile);
 FF_T_SINT32	 FF_Read		(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_SINT32	 FF_Write		(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_BOOL	 FF_isEOF		(FF_FILE *pFile);
 FF_T_SINT8	 FF_Seek		(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin);
-FF_T_SINT8	 FF_PutC		(FF_FILE *pFile, FF_T_UINT8 Value);
+FF_T_SINT32	 FF_PutC		(FF_FILE *pFile, FF_T_UINT8 Value);
 FF_T_UINT32	 FF_Tell		(FF_FILE *pFile);
 FF_T_SINT8	 FF_RmFile		(FF_IOMAN *pIoman, const FF_T_INT8 *path);
 FF_T_SINT8	 FF_RmDir		(FF_IOMAN *pIoman, const FF_T_INT8 *path);
@@ -84,4 +92,3 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size);
 static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 
 #endif
-

@@ -106,6 +106,8 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_PART;
 		pIoman->pPartition->LastFreeCluster = 0;
 		pIoman->pPartition->PartitionMounted = FF_FALSE;	// This should be checked by FF_Open();
+		pIoman->pPartition->PathCache.DirCluster = 0;
+		pIoman->pPartition->PathCache.Path[0] = '\0';
 	} else {
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
@@ -136,7 +138,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 			FF_DestroyIOMAN(pIoman);
 			return NULL;
 		}
-		
+
 	}
 
 	pIoman->BlkSize		 = BlkSize;
@@ -242,12 +244,12 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-static FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
+/*static FF_T_BOOL FF_IOMAN_ModeValid(FF_T_UINT8 Mode) {
 	if(Mode == FF_MODE_READ || Mode == FF_MODE_WRITE) {
 		return FF_TRUE;
 	}
 	return FF_FALSE;
-}
+}*/
 
 
 /**
@@ -327,16 +329,16 @@ static FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_
  *	@return		FF_ERR_NONE on Success.
  **/
 FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
-	
+
 	FF_T_UINT16 i,x;
 
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->Modified == FF_TRUE) {
-				
+
 				FF_IOMAN_FlushBuffer(pIoman, (pIoman->pBuffers + i)->Sector, (pIoman->pBuffers + i)->pBuffer);
-				
+
 				// Buffer has now been flushed, mark it as a read buffer and unmodified.
 				(pIoman->pBuffers + i)->Mode = FF_MODE_READ;
 				(pIoman->pBuffers + i)->Modified = FF_FALSE;
@@ -358,12 +360,12 @@ FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
 	return FF_ERR_NONE;
 }
 
-static FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
+/*static FF_T_BOOL FF_isFATSector(FF_IOMAN *pIoman, FF_T_UINT32 Sector) {
 	if(Sector >= pIoman->pPartition->FatBeginLBA && Sector < (pIoman->pPartition->FatBeginLBA + pIoman->pPartition->ReservedSectors)) {
 		return FF_TRUE;
 	}
 	return FF_FALSE;
-}
+}*/
 
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 	FF_BUFFER	*pBuffer;
@@ -448,7 +450,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 					pBufLRU->LRU = 0;
 					pBufLRU->NumHandles = 1;
 					pBufLRU->Sector = Sector;
-					
+
 					if(Mode == FF_MODE_WRITE) {
 						pBufLRU->Modified = FF_TRUE;
 					} else {
@@ -460,7 +462,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 					FF_ReleaseSemaphore(pIoman->pSemaphore);
 					return pBufLRU;
 				}
-				
+
 			}
 		}
 		FF_ReleaseSemaphore(pIoman->pSemaphore);
@@ -617,9 +619,9 @@ static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
  *	@param	pIoman			FF_IOMAN object.
  *	@param	PartitionNumber	The primary partition number to be mounted. (0 - 3).
  *
- *	@return	0 on success. 
- *	@return FF_ERR_NULL_POINTER if a pIoman object wasn't provided. 
- *	@return FF_ERR_IOMAN_INVALID_PARTITION_NUM if the partition number is out of range. 
+ *	@return	0 on success.
+ *	@return FF_ERR_NULL_POINTER if a pIoman object wasn't provided.
+ *	@return FF_ERR_IOMAN_INVALID_PARTITION_NUM if the partition number is out of range.
  *	@return FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION if no partition was found.
  *	@return FF_ERR_IOMAN_INVALID_FORMAT if the master boot record or partition boot block didn't provide sensible data.
  *	@return FF_ERR_IOMAN_NOT_FAT_FORMATTED if the volume or partition couldn't be determined to be FAT. (@see ff_config.h)
@@ -700,7 +702,7 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
 	pPart->NumClusters		= pPart->DataSectors / pPart->SectorsPerCluster;
-	
+
 	if(FF_DetermineFatType(pIoman)) {
 		return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 	}
@@ -717,13 +719,13 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 }
 
 FF_T_SINT8 FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
-	
+
 	FF_T_SINT8 RetVal = FF_ERR_NONE;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
-	
+
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
 		if(pIoman->pPartition->PartitionMounted == FF_FALSE) {
@@ -748,7 +750,7 @@ FF_T_SINT8 FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
  *
  *	@return		FF_TRUE if an active handle is found, else FF_FALSE.
  *
- *	@pre		This function must be wrapped with the cache handling semaphore.	
+ *	@pre		This function must be wrapped with the cache handling semaphore.
  **/
 static FF_T_BOOL FF_ActiveHandles(FF_IOMAN *pIoman) {
 	FF_T_UINT32	i;
@@ -776,7 +778,7 @@ FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
 		if(!FF_ActiveHandles(pIoman)) {
 			if(pIoman->FirstFile == NULL) {
 				FF_FlushCache(pIoman);			// Flush any unwritten sectors to disk.
-				pIoman->pPartition->PartitionMounted = FF_FALSE;	
+				pIoman->pPartition->PartitionMounted = FF_FALSE;
 			} else {
 				RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;
 			}
@@ -828,7 +830,7 @@ FF_T_SINT8 FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
  *
  **/
 FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman) {
-	
+
 	if(pIoman) {
 		return (FF_T_SINT32) pIoman->pPartition->BlkSize;
 	}

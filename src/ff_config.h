@@ -45,12 +45,19 @@
 
 //---------- File Allocation Method
 // Comment out the prefered method.
-#define FF_ALLOC_DEFAULT	// Only allocate as much as is needed. (Provides good performance, without wasting space).
+//#define FF_ALLOC_DEFAULT		// Only allocate as much as is needed. (Provides good performance, without wasting space).
 //#define FF_ALLOC_DOUBLE		// Doubles the size of a file each time allocation is required. (When high-performance writing is required).
+
+//---------- Use Native STDIO.h
+//#define FF_USE_NATIVE_STDIO		// Makes FullFAT conform to values provided by your native STDIO.h file.
 
 //---------- Get Free Space on Mount
 //#define FF_MOUNT_FIND_FREE
 
+//---------- Path Cache
+#define FF_PATH_CACHE			// Enables a simply Path Caching mechanism that increases performance of repeated operations
+								// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
+								// This command requires FF_MAX_PATH number of bytes of memory.
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT
 
@@ -58,16 +65,38 @@
 #define FF_64_NUM_SUPPORT
 
 //---------- Debugging Features
-#define FF_DEBUG
+#define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
 
 //---------- Actively Determine if partition is FAT
-#define FF_FAT_CHECK	// This is experimental, so if FullFAT won't mount your volume, comment this out
-						// Also report the problem to james@worm.me.uk
+#define FF_FAT_CHECK			// This is experimental, so if FullFAT won't mount your volume, comment this out
+								// Also report the problem to james@worm.me.uk
 
 #ifdef FF_LFN_SUPPORT
 #define FF_MAX_FILENAME		260
 #else
 #define	FF_MAX_FILENAME		13
+#endif
+
+#ifdef FF_USE_NATIVE_STDIO
+#ifdef	MAX_PATH
+#define FF_MAX_PATH MAX_PATH
+#else
+#define FF_MAX_PATH	2600
+#endif
+#else
+#define FF_MAX_PATH	2600
+#endif
+
+#ifndef FF_ALLOC_DEFAULT
+#ifndef FF_ALLOC_DOUBLE
+#error	A file allocation method must be specified. See ff_config.h file.
+#endif
+#endif
+
+#ifndef FF_ALLOC_DOUBLE
+#ifndef FF_ALLOC_DEFAULT
+#error	A file allocation method must be specified. See ff_config.h file.
+#endif
 #endif
 
 #endif

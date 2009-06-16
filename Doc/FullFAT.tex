@@ -1,7 +1,32 @@
 \documentclass[final,a4paper,12pt]{article}
+\usepackage{textcomp}
 \usepackage{listings}
+\usepackage{color}
 \usepackage{moreverb}
-\lstset{language=C}
+\definecolor{listinggray}{gray}{0.9}
+\definecolor{lbcolor}{rgb}{0.9,0.9,0.9}
+\lstset{
+	%backgroundcolor=\color{lbcolor},
+	tabsize=4,
+	rulecolor=,
+	language=C,
+        basicstyle=\scriptsize,
+        upquote=false,
+        aboveskip={1.5\baselineskip},
+        columns=fixed,
+        showstringspaces=false,
+        extendedchars=true,
+        breaklines=true,
+        prebreak = \raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+        frame=single,
+        showtabs=false,
+        showspaces=false,
+        showstringspaces=false,
+        identifierstyle=\ttfamily,
+        keywordstyle=\color[rgb]{0,0,1},
+        commentstyle=\color[rgb]{0,1,0},
+        stringstyle=\color[rgb]{1,0,0},
+}
 \begin{document}
 \title{\Huge{FullFAT\footnote {FullFAT is \copyright  2009 James Walmsley, all Rights Reserved.}}\\\Large{Embedded FAT 12/16/32 Filesystem Driver}}
 \author{James~Walmsley \thanks{Author of FullFAT and Embedded Software engineer. See http://worm.me.uk/}}
@@ -10,6 +35,7 @@
 
 \begin {abstract} 
 FullFAT is a thread-safe FAT Filesystem driver for embedded systems. Written in a clear ANSI C style it compiles on almost any compiler, and provides simple to use abstractions allowing a developer to use FAT on any platform or environment. This paper aims to provide a clear and easy to understand manual for FullFAT, documenting all of its features, and providing simple examples. Also included is a list of other software by James Walmsley, that can aid integration of FullFAT into more advanced systems, and increase FullFAT's performance.
+
 \end {abstract}
 
 \newpage
@@ -24,6 +50,7 @@ FullFAT is a thread-safe FAT Filesystem driver for embedded systems. Written in 
 
 \newpage
 \section{Integration}
+\input{pages/integration.tex}
 
 \newpage
 \section{Performance}

@@ -54,6 +54,7 @@
 #define FF_MODE_READ			0x01		///< Buffer / FILE Mode for Read Access.
 #define	FF_MODE_WRITE			0x02		///< Buffer / FILE Mode for Write Access.
 #define FF_MODE_APPEND			0x04		///< FILE Mode Append Access.
+#define	FF_MODE_UPDATE			0x08		///< FILE Mode Update.
 #define FF_MODE_DIR				0x80		///< Special Mode to open a Dir.
 
 #define FF_BUF_MAX_HANDLES		65536		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
@@ -66,7 +67,7 @@
 
 /**
  *	A special information structure for the FullFAT mass storage device
- *	driver model. 
+ *	driver model.
  **/
 typedef struct {
 	FF_T_UINT16 BlkSize;
@@ -106,6 +107,11 @@ typedef struct {
 	FF_T_UINT8		*pBuffer;		///< Pointer to the cache block.
 } FF_BUFFER;
 
+typedef struct {
+	FF_T_INT8	Path[FF_MAX_PATH];
+	FF_T_UINT32	DirCluster;
+} FF_PATHCACHE;
+
 /**
  *	@private
  *	@brief	FullFAT identifies a partition with the following data.
@@ -135,6 +141,9 @@ typedef struct {
 	FF_T_UINT32		LastFreeCluster;
 	FF_T_UINT32		FreeClusterCount;	///< Records free space on mount.
 	FF_T_BOOL		PartitionMounted;	///< FF_TRUE if the partition is mounted, otherwise FF_FALSE.
+#ifdef FF_PATH_CACHE
+	FF_PATHCACHE	PathCache;
+#endif
 } FF_PARTITION;
 
 
@@ -145,6 +154,10 @@ typedef struct {
  *
  *	FullFAT functions around an object like this.
  **/
+#define FF_FAT_LOCK			0x01
+#define FF_DIR_LOCK			0x02
+#define FF_PATHCACHE_LOCK	0x04
+
 typedef struct {
 	FF_BLK_DEVICE	*pBlkDevice;	///< Pointer to a Block device description.
 	FF_PARTITION	*pPartition;	///< Pointer to a partition description.
@@ -193,7 +206,7 @@ FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode
 void		FF_ReleaseBuffer		(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
 
 // PRIVATE (For this module only!):
-static void		FF_IOMAN_InitBufferDescriptors	(FF_IOMAN *pIoman);
+static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
 
 #endif
 

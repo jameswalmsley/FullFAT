@@ -30,6 +30,7 @@
  *****************************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -88,7 +89,7 @@ signed int fnRead_512(unsigned char *buffer, unsigned long sector, unsigned shor
 	fread(buffer, 512, sectors, pParam);
 	return sectors;
 }
-
+/*
 signed int fnNewRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 	unsigned long long address;
 	int retVal;
@@ -107,7 +108,7 @@ signed int fnNewWrite_512(unsigned char *buffer, unsigned long sector, unsigned 
 	retVal = write((int)pParam, buffer, 512);
 	return sectors;
 }
-
+*/
 signed int fnWrite_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 	unsigned long long address;
 	unsigned long retVal;

@@ -28,248 +28,89 @@
  *  See http://worm.me.uk/fullfat for more information.                      *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
-
-/**
- *	This file calls unit-tests for all modules, and displays the results.
- *	On sucessful completion it will enter a Demonstration Terminal allowing
- *	you to ls through a file-system on a connected device.
- *
- *	You should ensure all Unit-tests are passed on your platform.
- **/
-
-/*
-	NOTE THIS DEMO IS HIGHLY SUBJECT TO CHANGE:
-	AND MOST UNIT TESTS HAVE NOT BEEN INCLUDED AT THIS POINT:
-
-	SIMPLY USE A BASIC DEMO
-*/
-
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <windows.h>
-#include <winbase.h>
-#include <conio.h>
+//#include "cmd.h"	// The Demo's Header File
 #include "../../src/fullfat.h"
+#include "../../../FFTerm/src/FFTerm.h"
+//#include "testdriver_win32.h"
 
-#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
+#define PARTITION_NUMBER	0
 
-void test_512(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test_2048(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-
-void FF_PrintDir(FF_DIRENT *pDirent) {
-	unsigned char attr[5] = { '-','-','-','-', '\0' };
-	if(pDirent->Attrib & FF_FAT_ATTR_READONLY)
-			attr[0] = 'R';
-	if(pDirent->Attrib & FF_FAT_ATTR_HIDDEN)
-			attr[1] = 'H';
-	if(pDirent->Attrib & FF_FAT_ATTR_SYSTEM)
-			attr[2] = 'S';
-	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
-			attr[3] = 'D';
-
-	printf("%s %12u %s\n", attr, (unsigned int)pDirent->Filesize, pDirent->FileName);
-}
+typedef struct {	// Pass an environment for the FullFAT commands.
+	FF_IOMAN	*pIoman;
+	FF_T_INT8	WorkingDir[2600];
+} FF_ENVIRONMENT;
 
 int main(void) {
-	LARGE_INTEGER ticksPerSecond;
-	LARGE_INTEGER start_ticks, end_ticks, cputime;
-	FILE *f, *fDest;
-	FF_FILE *fSource;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 8192, 512);
 
-	char Error;
+	FFT_CONSOLE *pConsole;				// FFTerm Console Pointer.
+	FILE *f;							// FILE Stream pointer for Windows FullFAT driver.
+	FF_T_SINT32	Error = FF_ERR_NONE;
+	FF_IOMAN *pIoman;
+	FF_ENVIRONMENT Env;
 
-	char buffer[COPY_BUFFER_SIZE];
-	char commandLine[1024];
-	char commandShadow[2600];
-	char source[260], destination[260];
-	char workingDir[2600] = "\\";
-	char tester;
-	unsigned long BytesRead;
-	FF_T_UINT32 i;
-	FF_DIRENT mydir;
-	float time, transferRate;
-	//f = fopen("c:\\driveimage", "rb");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb");
+	//----------- Initialise the environment
+	Env.pIoman = NULL;
+	strcpy(Env.WorkingDir, "\\");
 
-	QueryPerformanceFrequency(&ticksPerSecond);
+	// Open a File Stream for FullFAT's I/O driver to work on.
+	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 
-	printf("FullFAT by James Walmsley - Windows Demonstration\n");
-	printf("Use the command help for more information\n\n");
+	//f = fopen("c:\\Write.img", "rb+");
 
-	if(f) {
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) test_512, (FF_READ_BLOCKS) test_512, f);
-		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
-			fclose(f);
-			printf("FullFAT couldn't mount the specified partition\n");
+	if(!f) {
+		//---------- Create FullFAT IO Manager
+		pIoman = FF_CreateIOMAN(NULL, 8192, 512, (FF_T_SINT8 *)&Error);
+
+		if(pIoman) {
+			//---------- Register a Block Device with FullFAT
+			//FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+
+			//---------- Try to Mount the Partition with FullFAT
+			/*if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
+				if(f) {
+					fclose(f);
+				}
+				FF_DestroyIOMAN(pIoman);
+				printf("FullFAT Couldn't mount the specified parition!\n");
+				getchar();
+				return -1;
+			}*/
+
+			Env.pIoman = pIoman;
+
+			//---------- Create the Console
+			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);
+
+			if(pConsole) {
+				FFTerm_SetConsoleMode(pConsole, 0);
+				//---------- Add Commands to the console.
+/*				FFTerm_AddExCmd(pConsole, "prompt", cmd_prompt, promptInfo, &Env);	// special command named prompt used as a command prompt if hooked.
+				FFTerm_AddExCmd(pConsole, "pwd",	pwd_cmd,	pwdInfo,	&Env);	// See cmd.c for their implementations.
+				FFTerm_AddExCmd(pConsole, "ls",		ls_cmd,		lsInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "cd",		cd_cmd,		cdInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "cp",		cp_cmd,		cpInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "icp",	icp_cmd,	icpInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "xcp",	xcp_cmd,	xcpInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "md5",	md5_cmd,	md5Info,	&Env);
+				FFTerm_AddExCmd(pConsole, "mkdir",	mkdir_cmd,	mkdirInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "info",	info_cmd,	infoInfo,	&Env);
+*/
+				//---------- Start the console.
+				FFTerm_StartConsole(pConsole);
+				FF_DestroyIOMAN(pIoman);
+				printf("\n\nConsole Was Terminated, END OF Demonstration!, Press ENTER to exit!\n");
+				getchar();
+				return 0;
+			}
+
+			printf("Could not start the console: %s\n", FFTerm_GetErrMessage(Error));
 			getchar();
 			return -1;
 		}
-
-		while(1) {
-			printf("FullFAT:%s>",workingDir);
-			for(i = 0; i < 1024; i++) {
-				commandLine[i] = getch();
-				putch(commandLine[i]);
-				if(commandLine[i] == '\r') {
-					putch('\n');
-					commandLine[i] = '\0';
-					break;
-				}
-			}
-			if(strstr(commandLine, "cd")) {
-
-				if(commandLine[3] != '\\' && commandLine[3] != '/') {
-					if(strlen(workingDir) == 1) {
-						sprintf(commandShadow, "\\%s", (commandLine + 3));
-					} else {
-						sprintf(commandShadow, "%s\\%s", workingDir, (commandLine + 3));
-					}
-				} else {
-					sprintf(commandShadow, "%s", (commandLine + 3));
-				}
-
-				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
-					sprintf(workingDir, "%s", commandShadow);
-				} else {
-					printf("Path %s Not Found\n", commandShadow);
-				}
-			}
-
-			if(strstr(commandLine, "ls") || strstr(commandLine, "dir")) {
-				i = 0;
-				tester = 0;
-				tester = FF_FindFirst(pIoman, &mydir, workingDir);
-				while(tester == 0) {
-					FF_PrintDir(&mydir);
-					i++;
-					tester = FF_FindNext(pIoman, &mydir);
-				}
-				printf("\n%d Items\n", (int)i);
-				putchar('\n');
-			}
-
-
-
-			if(strstr(commandLine, "view")) {
-				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (commandLine+5));
-				} else {
-					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
-				}
-
-				fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
-				if(fSource) {
-					for(i = 0; i < fSource->Filesize; i++) {
-						printf("%c", (char)FF_GetC(fSource));
-					}
-
-					FF_Close(fSource);
-				}else {
-					if(Error == FF_ERR_FILE_NOT_FOUND) {
-						printf("File Not Found!\n");
-					} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
-						printf("File In Use!\n");
-					} else {
-						printf("Couldn't Open file! Unknown Error \n");
-					}
-				}
-			}
-
-			if(strstr(commandLine, "pwd")) {
-				printf("%s\n", workingDir);
-			}
-
-			if(strstr(commandLine, "help")) {
-				printf("The following commands are available:\n\n");
-				printf("pwd \t\t- Print the working directory\n");
-				printf("ls or dir \t- List the contents of the working directory\n");
-				printf("cd \t\t- Change working directory e.g. cd path_to_dir\n");
-				printf("cp \t\t- Copy a file to the hard disk.\n");
-				printf("\t\t  e.g. cp filename c:\\filename\n");
-				printf("exit \t\t- Quits the FullFAT test suite.\n");
-				printf("\nFullFAT is developed and maintained by James Walmsley\n");
-				printf("\nVisit www.worm.me.uk/fullfat for more information, and contact details\n\n");
-			}
-
-			if(strstr(commandLine, "info")) {
-				switch(pIoman->pPartition->Type) {
-					case FF_T_FAT32:
-						printf("FAT32 Formatted Drive\n"); break;
-					case FF_T_FAT16:
-						printf("FAT16 Formatted Drive\n"); break;
-					case FF_T_FAT12:
-						printf("FAT12 Formatted Drive\n"); break;
-				}
-
-				printf("Block Size: %d\n", pIoman->pPartition->BlkSize);
-				printf("Cluster Size: %dKb\n", (pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster) / 1024);
-#ifdef FF_64_NUM_SUPPORT
-				printf("Volume Size: %llu (%u MB)\n", FF_GetVolumeSize(pIoman), (unsigned int)(FF_GetVolumeSize(pIoman) / 1048576));
-#else
-				printf("Volume Size: %u (%u MB)\n", (unsigned int) FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
-#endif
-			}
-
-			if(strstr(commandLine, "cp")) {
-				sscanf((commandLine + 3), "%s %s", source, destination);
-
-				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (source));
-				} else {
-					sprintf(buffer, "%s\\%s", workingDir, (source));
-				}
-
-				fDest = fopen(destination, "wb");
-				if(fDest) {
-					fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
-					if(fSource) {
-						QueryPerformanceCounter(&start_ticks);
-						do{
-							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
-							fwrite(buffer, BytesRead, 1, fDest);
-							QueryPerformanceCounter(&end_ticks);
-							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
-							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
-							transferRate = (fSource->FilePointer / time) / 1024;
-							printf("%3.0f%% - %10u Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), (unsigned int) fSource->FilePointer, transferRate);
-						}while(BytesRead > 0);
-						printf("%3.0f%% - %10u Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), (unsigned int) fSource->FilePointer, transferRate);
-						fclose(fDest);
-						FF_Close(fSource);
-					} else {
-						fclose(fDest);
-						if(Error == FF_ERR_FILE_NOT_FOUND) {
-							printf("File Not Found!\n");
-						} else if (Error == FF_ERR_FILE_ALREADY_OPEN) {
-							printf("File In Use!\n");
-						} else {
-							printf("Couldn't Open file! Unknown Error \n");
-						}
-					}
-				} else {
-					printf("Error Opening Destination\n");
-				}
-				strcpy(source, "");
-				strcpy(destination, "");
-			}
-
-			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
-				fclose(f);
-				return 0;
-			}
-		}
-
-	} else {
-
-		printf("Couldn't Open Block Device\n");
-		printf("Run command prompt as Administrator\n");
-		getchar();
 	}
 
-	return 0;
+	printf("Could not open the I/O Block device\n");
+	getchar();
+	return -1;
+
 }

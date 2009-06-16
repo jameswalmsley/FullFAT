@@ -61,7 +61,6 @@ static void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
 	} else {
 		sprintf(dest, "%s", src);
 	}
-
 }
 
 /**
@@ -74,6 +73,9 @@ int cmd_prompt(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	} else {
 		printf("FullFAT%s>", pEnv->WorkingDir);
 	}
+	if(argv) {
+
+	}
 	return 0;
 }
 const FFT_ERR_TABLE promptInfo[] =
@@ -83,8 +85,12 @@ const FFT_ERR_TABLE promptInfo[] =
 };
 
 int pwd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	printf("Current directory:\n");
-	printf("%s\n", pEnv->WorkingDir);
+	if(argc == 1) {
+		printf("Current directory:\n");
+		printf("%s\n", pEnv->WorkingDir);
+	} else {
+		printf("Usage: %s\n", argv[0]);
+	}
 	return 0;	
 }
 
@@ -97,15 +103,23 @@ const FFT_ERR_TABLE pwdInfo[] =
 int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_DIRENT mydir;
-
 	int  i = 0;
 	char tester = 0;
 	
-	tester = FF_FindFirst(pIoman, &mydir, pEnv->WorkingDir);
-	while(tester == 0) {
-		FF_PrintDir(&mydir);
-		i++;
-		tester = FF_FindNext(pIoman, &mydir);
+	if(argc == 1) {
+		tester = FF_FindFirst(pIoman, &mydir, pEnv->WorkingDir);
+		while(tester == 0) {
+			FF_PrintDir(&mydir);
+			i++;
+			tester = FF_FindNext(pIoman, &mydir);
+		}
+	} else {
+		tester = FF_FindFirst(pIoman, &mydir, argv[1]);
+		while(tester == 0) {
+			FF_PrintDir(&mydir);
+			i++;
+			tester = FF_FindNext(pIoman, &mydir);
+		}
 	}
 	
 	printf("\n%d Items\n", i);
@@ -178,7 +192,7 @@ int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			sprintf(buffer, "%s", argv[1]);
 		}
 
-		fSource = FF_Open(pIoman, buffer, FF_MODE_READ, &Error);
+		fSource = FF_Open(pIoman, buffer, "rb", &Error);
 
 		if(fSource) {
 			md5_init(&state);
@@ -230,10 +244,10 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	if(argc == 3) {
 		ProcessPath(path, argv[1], pEnv);
-		fSource = FF_Open(pIoman, path, FF_MODE_READ, &Error);
+		fSource = FF_Open(pIoman, path, "rb", &Error);
 		if(fSource) {
 			ProcessPath(path, argv[2], pEnv);
-			fDest = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+			fDest = FF_Open(pIoman, path, "wb", &Error);
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);  
@@ -290,7 +304,7 @@ int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	if(argc == 3) {
 		ProcessPath(path, argv[1], pEnv);
-		fSource = FF_Open(pIoman, path, FF_MODE_READ, &Error);
+		fSource = FF_Open(pIoman, path, "rb", &Error);
 		if(fSource) {
 			fDest = fopen(argv[2], "rb+");
 			if(fDest) {
@@ -354,7 +368,7 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			SourceSize = ftell(fSource);
 			fseek(fSource, 0, SEEK_SET);
 			ProcessPath(path, argv[2], pEnv);
-			fDest = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+			fDest = FF_Open(pIoman, path, "w", &Error);
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);  
@@ -419,22 +433,26 @@ const FFT_ERR_TABLE mkdirInfo[] =
 int info_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 	FF_IOMAN		*pIoman = pEv->pIoman;
 	FF_PARTITION	*pPart	= pEv->pIoman->pPartition;
-	switch(pPart->Type) {
-		case FF_T_FAT32:
-			printf("FAT32 Formatted\n"); break;
-		case FF_T_FAT16:
-			printf("FAT16 Formatted\n"); break;
-		case FF_T_FAT12:
-			printf("FAT12 Formatted\n"); break;
+	
+	if(argc == 1) {
+		switch(pPart->Type) {
+			case FF_T_FAT32:
+				printf("FAT32 Formatted\n"); break;
+			case FF_T_FAT16:
+				printf("FAT16 Formatted\n"); break;
+			case FF_T_FAT12:
+				printf("FAT12 Formatted\n"); break;
+		}
+		printf("FullFAT Driver Blocksize: \t%d\n", pIoman->BlkSize);
+		printf("Partition Blocksize: \t\t%d\n", pPart->BlkSize);
+		printf("Cluster Size: \t\t\t%dKb\n", (pPart->BlkSize * pPart->SectorsPerCluster) / 1024);
+		printf("Volume Size: \t\t\t%llu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+		printf("Volume Free: \t\t\t%llu (%d MB)\n", FF_GetFreeSize(pIoman), (unsigned int) (FF_GetFreeSize(pIoman) / 1048576));
+	} else {
+		printf("Usage: %s\n", argv[0]);
 	}
-	printf("FullFAT Driver Blocksize: \t%d\n", pIoman->BlkSize);
-	printf("Partition Blocksize: \t\t%d\n", pPart->BlkSize);
-	printf("Cluster Size: \t\t\t%dKb\n", (pPart->BlkSize * pPart->SectorsPerCluster) / 1024);
-	printf("Volume Size: \t\t\t%llu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
-	printf("Volume Free: \t\t\t%llu (%d MB)\n", FF_GetFreeSize(pIoman), (unsigned int) (FF_GetFreeSize(pIoman) / 1048576));
 	return 0;
 }
-
 const FFT_ERR_TABLE infoInfo[] =
 {
 	"Displays information about the currently mounted partition.",	FFT_COMMAND_DESCRIPTION,

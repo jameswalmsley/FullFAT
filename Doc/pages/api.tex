@@ -1,3 +1,27 @@
-The API.
-\subsection{FF\textunderscore Open()}
-FF\textunderscore Open() opens a file!
+The FullFAT API tries to be concise and easy to use, while providing a lot of flexibility to cover the needs of all possible scenarios.
+
+If FullFAT doesn't provide a service or function natively, then it should be very easy for a developer to easily recreate such functionality using the other provided API functions.
+\newline
+\newline
+\textbf{NOTE:} Current API is subject to change before the 1.0 release. Pay particular attention to the FF\textunderscore Open() function, which is likely to match the ANSI C fopen() standard library function for the 1.0 release.
+
+
+\subsection{FF\textunderscore CreateIOMAN()}
+
+FF\textunderscore CreateIOMAN() creates the FF\textunderscore IOMAN type object, that is required for all FullFAT API functions except the FILE I/O functions. This allows FullFAT to be completely re-entrant throughout any execution context, and also provides the possibility to have multiple concurrent instances of FullFAT running in a single or multi-threaded environment. Inn other words, FullFAT can use multiple devices and partitions, while keeping each device completely isolated.
+
+\begin{lstlisting}
+#include "fullfat.h" 				// Include FullFAT's type definitions.
+
+FF_IOMAN *pIoman;					// Declare an I/O Manager pointer.
+
+pIoman = FF_CreateIOMAN();
+
+\end{lstlisting}
+
+
+\subsection{FF\textunderscore DestroyIOMAN()}
+
+This function deestroys the IOMAN object and cleans all memory or resources used.
+
+This function will only succeed when there are no actively mounted partitions. \textbf{See: FF\textunderscore UnmountPartition}.

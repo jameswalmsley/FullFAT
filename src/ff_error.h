@@ -64,6 +64,7 @@
 #define FF_ERR_FILE_IS_READ_ONLY				-33	///< Tried to FF_Open() a file marked read only.
 #define FF_ERR_FILE_INVALID_PATH				-34	///< The path of the file was not found.
 #define FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE	-35
+#define FF_ERR_FILE_NOT_OPENED_IN_READ_MODE		-36
 
 // Directory Error Codes						-50 +
 #define FF_ERR_DIR_OBJECT_EXISTS				-50	///< A file or folder of the same name already exists in the current directory.

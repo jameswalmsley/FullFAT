@@ -485,7 +485,7 @@ FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Nam
  **/
 
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen) {
-    FF_T_UINT32         dirCluster = pIoman->pPartition->RootDirCluster;
+    FF_T_UINT32     dirCluster = pIoman->pPartition->RootDirCluster;
     FF_T_INT8       mytoken[FF_MAX_FILENAME];
     FF_T_INT8       *token;
     FF_T_UINT16     it = 0;         // Re-entrancy Variables for FF_strtok()
@@ -493,12 +493,23 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
     FF_DIRENT       MyDir;
 
     if(pathLen == 1) {      // Must be the root dir! (/ or \)
-            return pIoman->pPartition->RootDirCluster;
+		return pIoman->pPartition->RootDirCluster;
     }
     
     if(path[pathLen-1] == '\\' || path[pathLen-1] == '/') {
-            pathLen--;      
+		pathLen--;      
     }
+	
+#ifdef FF_PATH_CACHE	// Is the requested path in the PATH CACHE?
+	FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
+	{
+		if(FF_StrMatch(pIoman->pPartition->PathCache.Path, path, pathLen)) {
+			FF_ReleaseSemaphore(pIoman->pSemaphore);
+			return pIoman->pPartition->PathCache.DirCluster;
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+#endif
 
     token = FF_strtok(path, mytoken, &it, &last, pathLen);
 
@@ -506,11 +517,23 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
             //lastDirCluster = dirCluster;
             MyDir.CurrentItem = 0;
             dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
-                        if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
-                                dirCluster = pIoman->pPartition->RootDirCluster;
+			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
+				dirCluster = pIoman->pPartition->RootDirCluster;
             }
             token = FF_strtok(path, mytoken, &it, &last, pathLen);
     }while(token != NULL);
+
+#ifdef FF_PATH_CACHE	// Update the PATH CACHE with a new PATH
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
+			memcpy(pIoman->pPartition->PathCache.Path, path, pathLen);
+			pIoman->pPartition->PathCache.Path[pathLen] = '\0';
+			pIoman->pPartition->PathCache.DirCluster = dirCluster;
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+#endif
 
     return dirCluster;
 }
@@ -673,7 +696,7 @@ void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 	
 	memcpy(pDirent->FileName, EntryBuffer, 11);	// Copy the filename into the Dirent object.
 	FF_ProcessShortName(pDirent->FileName);		// Format the shortname, for pleasant viewing.
-	FF_tolower(pDirent->FileName, strlen(pDirent->FileName));
+	FF_tolower(pDirent->FileName, (FF_T_UINT32)strlen(pDirent->FileName));
 	// Get the item's Cluster address.
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
 	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
@@ -697,6 +720,9 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
 	if(pIoman->pPartition->Type != FF_T_FAT32) {
 		if(DirCluster == pIoman->pPartition->RootDirCluster) {
 			chainLength = pIoman->pPartition->RootDirSectors / pIoman->pPartition->SectorsPerCluster;
+			if(!chainLength) {		// Some media has RootDirSectors < SectorsPerCluster. This is wrong, as it should be atleast 1 cluster!
+				chainLength = 1;
+			}
 			clusterAddress = DirCluster;
 			clusterNum = 0;
 			if(nEntry > ((pIoman->pPartition->RootDirSectors * pIoman->pPartition->BlkSize) / 32)) {

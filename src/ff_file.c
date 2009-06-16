@@ -42,6 +42,45 @@
 
 #include "ff_file.h"
 
+static FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
+	FF_T_UINT8 ModeBits = 0x00;
+	while(*Mode) {
+		switch(*Mode) {
+			case 'r':	// Allow Read
+			case 'R':
+				ModeBits |= FF_MODE_READ;
+				break;
+
+			case 'w':	// Allow Write
+			case 'W':
+				ModeBits |= FF_MODE_WRITE;
+				break;
+
+			case 'a':	// Append new writes to the end of the file.
+			case 'A':
+				ModeBits |= FF_MODE_APPEND;
+				ModeBits &= ~FF_MODE_UPDATE;
+				break;
+
+			case '+':	// Update the file, don't Append!
+				ModeBits |= FF_MODE_UPDATE;
+				ModeBits &= ~FF_MODE_APPEND;
+				break;
+
+			case 'D':
+				ModeBits |= FF_MODE_DIR;
+				break;
+
+			default:	// b|B flags not supported (Binary mode is native anyway).
+				break;
+		}
+		Mode++;
+	}
+
+	return ModeBits;
+}
+
+
 /**
  *	@public
  *	@brief	Opens a File for Access
@@ -55,7 +94,7 @@
  *	@return	NULL pointer on Error, in which case pError should be checked for more information.
  *	@return	pError can be:
  **/
-FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_SINT8 *pError) {
+FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_T_SINT8 *pError) {
 	FF_FILE		*pFile;
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
@@ -82,6 +121,9 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 		}
 		return (FF_FILE *)NULL;
 	}
+
+	// Get the Mode Bits.
+	pFile->Mode = FF_GetModeBits(Mode);
 
 	i = (FF_T_UINT16) strlen(path);
 
@@ -121,7 +163,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 		}
 
 		if(!FileCluster) {
-			if(Mode == FF_MODE_WRITE) {
+			if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND)) {
 				FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object);
 				Object.CurrentItem += 1;
 			}
@@ -129,7 +171,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 		
 		if(FileCluster) {
 			if(Object.Attrib == FF_FAT_ATTR_DIR) {
-				if(Mode != FF_MODE_DIR) {
+				if(!(pFile->Mode & FF_MODE_DIR)) {
 					// Not the object, File Not Found!
 					free(pFile);
 					if(pError) {
@@ -140,7 +182,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 			}
 			
 			//---------- Ensure Read-Only files don't get opened for Writing.
-			if(Mode == FF_MODE_WRITE) {
+			if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND) || (pFile->Mode & FF_MODE_UPDATE)) {
 				if((Object.Attrib & FF_FAT_ATTR_READONLY)) {
 					free(pFile);
 					if(pError) {
@@ -155,7 +197,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 			pFile->Filesize				= Object.Filesize;
 			pFile->CurrentCluster		= 0;
 			pFile->AddrCurrentCluster	= pFile->ObjectCluster;
-			pFile->Mode					= Mode;
+			//pFile->Mode					= Mode;
 			pFile->Next					= NULL;
 			pFile->DirCluster			= DirCluster;
 			pFile->DirEntry				= Object.CurrentItem - 1;
@@ -163,6 +205,30 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 			pFile->iChainLength			= 0;
 			pFile->iEndOfChain			= 0;
 			pFile->FileDeleted			= FF_FALSE;
+
+			// File Permission Processing
+			// Only "w" and "w+" mode strings can erase a file's contents.
+			// Any other combinations will not cause an erase.
+			if((pFile->Mode & FF_MODE_UPDATE)) {
+				if((pFile->Mode & ~FF_MODE_UPDATE) == FF_MODE_WRITE) {
+					pFile->Filesize = 0;
+					pFile->FilePointer = 0;
+				}
+			} else {
+				if((pFile->Mode == FF_MODE_WRITE)) {
+					pFile->Filesize = 0;
+					pFile->FilePointer = 0;
+				}
+			}
+
+			// Mark update mode files as Read and Writable.
+			if((pFile->Mode & FF_MODE_UPDATE)) {
+				pFile->Mode |= (FF_MODE_READ | FF_MODE_WRITE);
+			}
+
+			if((pFile->Mode & FF_MODE_APPEND)) {
+				pFile->AppendPointer = pFile->Filesize;
+			}
 
 			/*
 				Add pFile onto the end of our linked list of FF_FILE objects.
@@ -211,6 +277,12 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_T_
 	return (FF_FILE *)NULL;
 }
 
+
+/**
+ *	@public
+ *	@brief	Tests if a Directory contains any other files or folders.
+ *
+ **/
 FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	
 	FF_DIRENT	MyDir;
@@ -243,7 +315,7 @@ FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	pFile = FF_Open(pIoman, path, FF_MODE_DIR, &Error);
+	pFile = FF_Open(pIoman, path, "D", &Error);
 
 	if(!pFile) {
 		return Error;	// File in use or File not found!
@@ -284,7 +356,7 @@ FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_T_SINT8 Error = 0;
 	FF_T_UINT8 EntryBuffer[32];
 
-	pFile = FF_Open(pIoman, path, FF_MODE_READ, &Error);
+	pFile = FF_Open(pIoman, path, "r", &Error);
 
 	if(!pFile) {
 		return Error;	// File in use or File not found!
@@ -522,6 +594,10 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		return FF_ERR_NULL_POINTER;
 	}
 
+	if(!(pFile->Mode & FF_MODE_READ)) {
+		return FF_ERR_FILE_NOT_OPENED_IN_READ_MODE;
+	}
+
 	pIoman = pFile->pIoman;
 
 	if(pFile->FilePointer == pFile->Filesize) {
@@ -702,7 +778,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
  *	@return -3 Device access failed.
  *
  **/
-FF_T_INT32 FF_GetC(FF_FILE *pFile) {
+FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32		fileLBA;
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT8		retChar;
@@ -713,6 +789,10 @@ FF_T_INT32 FF_GetC(FF_FILE *pFile) {
 	
 	if(!pFile) {
 		return FF_ERR_NULL_POINTER;
+	}
+
+	if(!(pFile->Mode & FF_MODE_READ)) {
+		return FF_ERR_FILE_NOT_OPENED_IN_READ_MODE;
 	}
 	
 	if(pFile->FilePointer >= pFile->Filesize) {
@@ -753,7 +833,17 @@ FF_T_UINT32 FF_Tell(FF_FILE *pFile) {
 }
 
 
-
+/**
+ *	@public
+ *	@brief	Writes data to a File.
+ *
+ *	@param	pFile			FILE Pointer.
+ *	@param	ElementSize		Size of an Element of Data to be copied. (in bytes). 
+ *	@param	Count			Number of Elements of Data to be copied. (ElementSize * Count must not exceed ((2^31)-1) bytes. (2GB). For best performance, multiples of 512 bytes or Cluster sizes are best.
+ *	@param	buffer			Byte-wise buffer containing the data to be written.
+ *
+ *	@return
+ **/
 FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
 	FF_T_UINT32 nBytes = ElementSize * Count;
 	FF_T_UINT32	nBytesWritten = 0;
@@ -771,8 +861,13 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		return FF_ERR_NULL_POINTER;
 	}
 
-	if((pFile->Mode & FF_MODE_WRITE) != FF_MODE_WRITE) {
+	if(!(pFile->Mode & FF_MODE_WRITE)) {
 		return FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE;
+	}
+
+	// Make sure a write is after the append point.
+	if((pFile->Mode & FF_MODE_APPEND)) {
+		FF_Seek(pFile, pFile->AppendPointer, FF_SEEK_SET);
 	}
 
 	pIoman = pFile->pIoman;
@@ -787,7 +882,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	
 	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
 	if(nClusterDiff) {
-		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+		if(pFile->CurrentCluster != FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
 			pFile->CurrentCluster += nClusterDiff;
 		}
@@ -947,8 +1042,17 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 }
 
 
-
-FF_T_SINT8 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
+/**
+ *	@public
+ *	@brief	Writes a char to a FILE.
+ *
+ *	@param	pFile		FILE Pointer.
+ *	@param	pa_cValue	Char to be placed in the file.
+ *
+ *	@return	Returns the value written to the file, or a value less than 0.
+ *
+ **/
+FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	FF_BUFFER	*pBuffer;
 	FF_T_UINT32 iItemLBA;
 	FF_T_UINT32 iRelPos				= FF_getMinorBlockEntry		(pFile->pIoman, pFile->FilePointer, 1);
@@ -958,8 +1062,13 @@ FF_T_SINT8 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	if((pFile->Mode & FF_MODE_WRITE) != FF_MODE_WRITE) {
+	if(!(pFile->Mode & FF_MODE_WRITE)) {
 		return FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE;
+	}
+
+	// Make sure a write is after the append point.
+	if((pFile->Mode & FF_MODE_APPEND)) {
+		FF_Seek(pFile, pFile->AppendPointer, FF_SEEK_SET);
 	}
 	
 	// Handle File Space Allocation.
@@ -978,6 +1087,9 @@ FF_T_SINT8 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	
 	pBuffer = FF_GetBuffer(pFile->pIoman, iItemLBA, FF_MODE_WRITE);
 	{
+		if(!pBuffer) {
+			return FF_ERR_DEVICE_DRIVER_FAILED;
+		}
 		FF_putChar(pBuffer->pBuffer, (FF_T_UINT16) iRelPos, pa_cValue);
 	}
 	FF_ReleaseBuffer(pFile->pIoman, pBuffer);
@@ -986,7 +1098,7 @@ FF_T_SINT8 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	if(pFile->Filesize < (pFile->FilePointer)) {
 		pFile->Filesize += 1;
 	}
-	return 0;
+	return pa_cValue;
 }
 
 
