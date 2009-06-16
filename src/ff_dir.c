@@ -524,15 +524,17 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
     }while(token != NULL);
 
 #ifdef FF_PATH_CACHE	// Update the PATH CACHE with a new PATH
-	FF_PendSemaphore(pIoman->pSemaphore);
-	{
-		if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
-			memcpy(pIoman->pPartition->PathCache.Path, path, pathLen);
-			pIoman->pPartition->PathCache.Path[pathLen] = '\0';
-			pIoman->pPartition->PathCache.DirCluster = dirCluster;
+	 if(dirCluster) {	// Only cache if the dir was actually found!
+		FF_PendSemaphore(pIoman->pSemaphore);
+		{
+			if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
+				memcpy(pIoman->pPartition->PathCache.Path, path, pathLen);
+				pIoman->pPartition->PathCache.Path[pathLen] = '\0';
+				pIoman->pPartition->PathCache.DirCluster = dirCluster;
+			}
 		}
-	}
-	FF_ReleaseSemaphore(pIoman->pSemaphore);
+		FF_ReleaseSemaphore(pIoman->pSemaphore);
+	 }
 #endif
 
     return dirCluster;
@@ -691,6 +693,54 @@ static void FF_ProcessShortName(FF_T_INT8 *name) {
 
 }
 
+#ifdef FF_TIME_SUPPORT
+static void FF_PlaceTime(FF_T_UINT8 *EntryBuffer, FF_T_UINT32 Offset) {
+	FF_T_UINT16		myShort;
+	FF_SYSTEMTIME	str_t;
+
+	FF_GetSystemTime(&str_t);
+				
+	myShort = 0;
+	myShort |= ((str_t.Hour << 11) & 0xF800);
+	myShort |= ((str_t.Min  <<  5) & 0x07E0);
+	myShort |= ((str_t.Second / 2) & 0x001F);
+	FF_putShort(EntryBuffer, (FF_T_UINT16) Offset, myShort);
+}
+
+static void FF_PlaceDate(FF_T_UINT8 *EntryBuffer, FF_T_UINT32 Offset) {
+	FF_T_UINT16		myShort;
+	FF_SYSTEMTIME	str_t;
+
+	FF_GetSystemTime(&str_t);
+	
+	myShort = 0;
+	myShort |= (((str_t.Year- 1980)  <<  9) & 0xFE00) ;
+	myShort |= ((str_t.Month <<  5) & 0x01E0);
+	myShort |= (str_t.Day & 0x001F);
+	FF_putShort(EntryBuffer, (FF_T_UINT16) Offset, myShort);
+}
+
+
+static void FF_GetTime(FF_SYSTEMTIME *pTime, FF_T_UINT8 *EntryBuffer, FF_T_UINT32 Offset) {
+	FF_T_UINT16 myShort;
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) Offset);
+	pTime->Hour		= (((myShort & 0xF800) >> 11) & 0x001F);
+	pTime->Min		= (((myShort & 0x07E0) >>  5) & 0x003F);
+	pTime->Second	= 2 * (myShort & 0x01F);
+}
+
+static void FF_GetDate(FF_SYSTEMTIME *pTime, FF_T_UINT8 *EntryBuffer, FF_T_UINT32 Offset) {
+	FF_T_UINT16 myShort;
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) Offset);
+	pTime->Year		= 1980 + (((myShort & 0xFE00) >> 9) & 0x07F);
+	pTime->Month	= (((myShort & 0x01E0) >> 5) & 0x000F);
+	pTime->Day		= myShort & 0x01F;
+}
+
+
+
+#endif
+
 void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 	FF_T_UINT16 myShort;
 	
@@ -702,7 +752,14 @@ void FF_PopulateShortDirent(FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
 	pDirent->ObjectCluster |= myShort;
-
+#ifdef FF_TIME_SUPPORT
+	// Get the creation Time & Date
+	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_CREATE_TIME);
+	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_CREATE_DATE);
+	// Get the modified Time & Date
+	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_TIME);
+	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_DATE);
+#endif
 	// Get the filesize.
 	pDirent->Filesize = FF_getLong(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
 	// Get the attribute.
@@ -871,6 +928,30 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
 	pDirent->ObjectCluster |= myShort;
+
+#ifdef FF_TIME_SUPPORT
+	// Get the creation Time & Date
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_CREATE_TIME);
+	pDirent->CreateTime.Hour		= (((myShort & 0xF800) >> 11) & 0x001F);
+	pDirent->CreateTime.Min			= (((myShort & 0x07E0) >>  5) & 0x003F);
+	pDirent->CreateTime.Second		= 2 * (myShort & 0x01F);
+
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_CREATE_DATE);
+	pDirent->CreateTime.Year		= 1980 + (((myShort & 0xFE00) >> 9) & 0x07F);
+	pDirent->CreateTime.Month		= (((myShort & 0x01E0) >> 5) & 0x000F);
+	pDirent->CreateTime.Day			= myShort & 0x01F;
+
+	// Get the modified Time & Date
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_LASTMOD_TIME);
+	pDirent->ModifiedTime.Hour		= (((myShort & 0xF800) >> 11) & 0x001F);
+	pDirent->ModifiedTime.Min		= (((myShort & 0x07E0) >>  5) & 0x003F);
+	pDirent->ModifiedTime.Second	= 2 * (myShort & 0x01F);
+
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16) FF_FAT_DIRENT_LASTMOD_DATE);
+	pDirent->ModifiedTime.Year		= 1980 + (((myShort & 0xFE00) >> 9) & 0x07F);
+	pDirent->ModifiedTime.Month		= (((myShort & 0x01E0) >> 5) & 0x000F);
+	pDirent->ModifiedTime.Day		= myShort & 0x01F;
+#endif
 
 	// Get the filesize.
 	pDirent->Filesize = FF_getLong(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
@@ -1086,6 +1167,9 @@ FF_T_SINT8 FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirClust
 		FF_putShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH + (32 * relItem)), (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
 		FF_putShort(pBuffer->pBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW  + (32 * relItem)), (FF_T_UINT16)(pDirent->ObjectCluster));
 		FF_putLong(pBuffer->pBuffer,  (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE  + (32 * relItem)), pDirent->Filesize);
+#ifdef FF_TIME_SUPPORT
+	FF_PlaceDate((pBuffer->pBuffer + (32 * relItem)), FF_FAT_DIRENT_LASTACC_DATE);	// Last accessed date.
+#endif
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
  
@@ -1309,6 +1393,8 @@ FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	return FF_ERR_NONE;
 }
 
+
+
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	
 	FF_T_UINT8	EntryBuffer[32];
@@ -1320,6 +1406,7 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 #ifdef FF_LFN_SUPPORT
 	FF_T_UINT8	CheckSum;
 #endif
+
 	memset(EntryBuffer, 0, 32);
 
 	if(NameLen % 13) {
@@ -1346,6 +1433,14 @@ FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *
 #else
 				numLFNs = 0;
 #endif				
+				
+#ifdef FF_TIME_SUPPORT
+				FF_PlaceTime(EntryBuffer, FF_FAT_DIRENT_CREATE_TIME);
+				FF_PlaceDate(EntryBuffer, FF_FAT_DIRENT_CREATE_DATE);
+				FF_PlaceTime(EntryBuffer, FF_FAT_DIRENT_LASTMOD_TIME);
+				FF_PlaceDate(EntryBuffer, FF_FAT_DIRENT_LASTMOD_DATE);
+#endif
+
 				FF_putChar(EntryBuffer,  (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB), pDirent->Attrib);
 				FF_putShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH), (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
 				FF_putShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW), (FF_T_UINT16)(pDirent->ObjectCluster));

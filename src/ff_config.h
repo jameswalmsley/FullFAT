@@ -36,33 +36,43 @@
 */
 
 //---------- ENDIANESS
-#define FF_LITTLE_ENDIAN
-//#define FF_BIG_ENDIAN
+#define FF_LITTLE_ENDIAN		// Choosing the Byte-order of your system is important.	
+//#define FF_BIG_ENDIAN			// You may be able to provide better Byte-order swapping routines to FullFAT.
+								// See ff_memory.c for more information.
 
 //---------- LFN (Long File-name) SUPPORT
-// Comment this out if you don't want to worry about Patent Issues.
-#define FF_LFN_SUPPORT
+#define FF_LFN_SUPPORT			// Comment this out if you don't want to worry about Patent Issues.
+								// FullFAT works great with LFNs and without. You choose, its your project!
+
+//---------- TIME SUPPORT
+#define FF_TIME_SUPPORT			// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
+								// Note, by default ff_time.c is set-up for the Windows Demonstration. Please see ff_time.c to disable.
 
 //---------- File Allocation Method
-// Comment out the prefered method.
-//#define FF_ALLOC_DEFAULT		// Only allocate as much as is needed. (Provides good performance, without wasting space).
+								// Uncomment the prefered method. (Can only choose a single method).
+#define FF_ALLOC_DEFAULT		// Only allocate as much as is needed. (Provides good performance, without wasting space).
 //#define FF_ALLOC_DOUBLE		// Doubles the size of a file each time allocation is required. (When high-performance writing is required).
 
 //---------- Use Native STDIO.h
-//#define FF_USE_NATIVE_STDIO		// Makes FullFAT conform to values provided by your native STDIO.h file.
+//#define FF_USE_NATIVE_STDIO	// Makes FullFAT conform to values provided by your native STDIO.h file.
 
 //---------- Get Free Space on Mount
-//#define FF_MOUNT_FIND_FREE
+//#define FF_MOUNT_FIND_FREE	// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
+								// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
 
 //---------- Path Cache
 #define FF_PATH_CACHE			// Enables a simply Path Caching mechanism that increases performance of repeated operations
 								// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
-								// This command requires FF_MAX_PATH number of bytes of memory.
+								// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 //---------- FAT12 SUPPORT
-#define FF_FAT12_SUPPORT
+#define FF_FAT12_SUPPORT		// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
+								// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
+								// therefore savings can be made by not having it.
 
 //---------- 64-Bit Number Support
-#define FF_64_NUM_SUPPORT
+#define FF_64_NUM_SUPPORT		// This helps to give information about the FreeSpace and VolumeSize of a partition or volume.
+								// If you cannot support 64-bit integers, then FullFAT still works, its just that the functions:
+								// FF_GetFreeSize() and FF_GetVolumeSize() don't make sense when reporting sizes > 4GB.
 
 //---------- Debugging Features
 #define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
@@ -70,6 +80,9 @@
 //---------- Actively Determine if partition is FAT
 #define FF_FAT_CHECK			// This is experimental, so if FullFAT won't mount your volume, comment this out
 								// Also report the problem to james@worm.me.uk
+
+
+//---------- AUTOMATIC SETTINGS DO NOT EDIT -- These configure your options from above, and check sanity!
 
 #ifdef FF_LFN_SUPPORT
 #define FF_MAX_FILENAME		260
@@ -87,15 +100,27 @@
 #define FF_MAX_PATH	2600
 #endif
 
-#ifndef FF_ALLOC_DEFAULT
 #ifndef FF_ALLOC_DOUBLE
-#error	A file allocation method must be specified. See ff_config.h file.
+#ifndef FF_ALLOC_DEFAULT
+#error	FullFAT Invalid ff_config.h file: A file allocation method must be specified. See ff_config.h file.
 #endif
 #endif
 
-#ifndef FF_ALLOC_DOUBLE
-#ifndef FF_ALLOC_DEFAULT
-#error	A file allocation method must be specified. See ff_config.h file.
+#ifdef FF_ALLOC_DOUBLE
+#ifdef FF_ALLOC_DEFAULT
+#error FullFAT Invalid ff_config.h file: Must choose a single option for File Allocation Method. DOUBLE or DEFAULT. See ff_config.h file.
+#endif
+#endif
+
+#ifndef FF_LITTLE_ENDIAN
+#ifndef FF_BIG_ENDIAN
+#error	FullFAT Invalid ff_config.h file: An ENDIANESS must be defined for your platform. See ff_config.h file.
+#endif
+#endif
+
+#ifdef FF_LITTLE_ENDIAN
+#ifdef FF_BIG_ENDIAN
+#error FullFAT Invalid ff_config.h file: Cannot be BIG and LITTLE ENDIAN, choose either or BIG or LITTLE. See ff_config.h file.
 #endif
 #endif
 

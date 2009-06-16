@@ -45,6 +45,7 @@
 #include "ff_fat.h"
 #include "fat.h"
 #include "ff_memory.h"
+#include "ff_time.h"
 #include <string.h>
 
 typedef struct {
@@ -52,6 +53,11 @@ typedef struct {
 	FF_T_UINT8	Attrib;
 	FF_T_UINT32 Filesize;
 	FF_T_UINT32	ObjectCluster;
+
+#ifdef FF_TIME_SUPPORT	
+	FF_SYSTEMTIME	CreateTime;		///< Date and Time Created.
+	FF_SYSTEMTIME	ModifiedTime;	///< Date and Time Modified.
+#endif
 
 	//---- Book Keeping for FF_Find Functions
 	FF_T_UINT16	CurrentItem;	

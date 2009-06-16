@@ -55,7 +55,15 @@
  *	@public
  *	@brief	8 bit memory access routines. 
  **/
-#ifndef FF_INLINE
+/*
+	These functions swap the byte-orders of shorts and longs. A getChar function is provided
+	incase there is a system that doesn't have byte-wise access to all memory.
+
+	These functions can be replaced with your own platform specific byte-order swapping routines
+	for more efficiency.
+
+	The provided functions should work on almost all platforms.
+*/
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT8) (pBuffer[offset]);
 }
@@ -67,7 +75,7 @@ FF_T_UINT16 FF_getShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
 	return (FF_T_UINT32) (pBuffer[offset] & 0x000000FF) | ((FF_T_UINT32) (pBuffer[offset+1] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+2] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+3] << 24) & 0xFF000000);
 }
-#endif
+
 void FF_putChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value) {
 	pBuffer[offset] = Value;
 }
@@ -94,21 +102,15 @@ void FF_putLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT32 Value) {
 	Please contact james@worm.me.uk if they don't work, and also any fix.
 */
 FF_T_UINT8 FF_getChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-	return (FF_T_UINT8) (pBuffer[offset]);
+        return (FF_T_UINT8) (pBuffer[offset]);
 }
 
 FF_T_UINT16 FF_getShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-    /* RTED: Using efficient function for SH2A core architecture */
-    FF_T_UINT16 usResult;
-    swapIndirectShort(&usResult, (FF_T_UINT16*)(pBuffer + offset));
-	return usResult;
+        return (FF_T_UINT16) ((pBuffer[offset] & 0xFF00)  << 8) | ((FF_T_UINT16) (pBuffer[offset+1]) & 0x00FF);
 }
 
 FF_T_UINT32 FF_getLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset) {
-    /* RTED: Using efficient function for SH2A core architecture */
-    FF_T_UINT32 ulResult;
-    swapIndirectLong(&ulResult, (FF_T_UINT32*)(pBuffer + offset));
-	return ulResult;
+        return (FF_T_UINT32) ((pBuffer[offset] << 24) & 0xFF0000) | ((FF_T_UINT32) (pBuffer[offset+1] << 16) & 0x00FF0000) | ((FF_T_UINT32) (pBuffer[offset+2] << 8) & 0x0000FF00) | ((FF_T_UINT32) (pBuffer[offset+3]) & 0x000000FF);
 }
 
 void FF_putChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value) {
@@ -116,11 +118,17 @@ void FF_putChar(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value) {
 }
 
 void FF_putShort(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT16 Value) {
-    swapIndirectShort((PUSHORT)(pBuffer + offset), &Value);
+	FF_T_UINT8 *Val		= (FF_T_UINT8 *) &Value;
+	pBuffer[offset]		= Val[1];
+	pBuffer[offset + 1] = Val[0];
 }
 
 void FF_putLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT32 Value) {
-    swapIndirectLong((PULONG)(pBuffer + offset), &Value);
+    FF_T_UINT8 *Val		= (FF_T_UINT8 *) &Value;
+	pBuffer[offset]		= Val[3];
+	pBuffer[offset + 1] = Val[2];
+	pBuffer[offset + 2] = Val[1];
+	pBuffer[offset + 3] = Val[0];
 }
 #endif
 
@@ -129,13 +137,9 @@ void FF_putLong(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT32 Value) {
  *	library. Which will be optional. (To allow the use of system specific versions).
  */
 
-//strtok() is not threadsafe, here's one that is! (but it works differently!!)
-// returns the iteration value that should passed into the iteration arg
-// 0 means its finished!
-// Token is a buffer, of the maxlength of a token!
-
 /**
  *	@private
+ *	@brief	Converts an ASCII string to lowercase.
  **/
 void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	FF_T_UINT32 i;
@@ -147,6 +151,10 @@ void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	}
 }
 
+/**
+ *	@private
+ *	@brief	Converts an ASCII string to uppercase.
+ **/
 void FF_toupper(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	FF_T_UINT32 i;
 	for(i = 0; i < strLen; i++) {
@@ -157,9 +165,20 @@ void FF_toupper(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	}
 }
 
+
+/**
+ *	@private
+ *	@brief	Compares 2 strings for the specified length, and returns FF_TRUE is they are identical
+ *			otherwise FF_FALSE is returned.
+ *
+ **/
 FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 len) {
 	register FF_T_UINT16 i;
 	register FF_T_INT8	char1, char2;
+
+	if(strlen(str1) != strlen(str2)) {
+		return FF_FALSE;
+	}
 
 	for(i = 0; i < len; i++) {
 		char1 = str1[i];
@@ -179,7 +198,11 @@ FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 
 	return FF_TRUE;
 }
 
-
+/**
+ *	@private
+ *	@brief	A re-entrant Strtok function. No documentation is provided :P
+ *			Use at your own risk. (This is for FullFAT's use only).
+ **/
 FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length) {
 	FF_T_UINT16 strLen = Length;
 	FF_T_UINT16 i,y, tokenStart, tokenEnd = 0;

@@ -56,7 +56,12 @@
 // Directory Entry Offsets
 #define FF_FAT_DIRENT_SHORTNAME		0x000
 #define FF_FAT_DIRENT_ATTRIB		0x00B
+#define FF_FAT_DIRENT_CREATE_TIME	0x00E	///< Creation Time.
+#define FF_FAT_DIRENT_CREATE_DATE	0x010	///< Creation Date.
+#define FF_FAT_DIRENT_LASTACC_DATE	0x012	///< Date of Last Access.
 #define FF_FAT_DIRENT_CLUS_HIGH		0x014
+#define FF_FAT_DIRENT_LASTMOD_TIME	0x016	///< Time of Last modification.
+#define FF_FAT_DIRENT_LASTMOD_DATE	0x018	///< Date of Last modification.
 #define FF_FAT_DIRENT_CLUS_LOW		0x01A
 #define FF_FAT_DIRENT_FILESIZE		0x01C
 #define FF_FAT_LFN_ORD				0x000
