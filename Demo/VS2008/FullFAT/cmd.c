@@ -47,7 +47,7 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
 #ifdef FF_TIME_SUPPORT
-	printf("%0.2d.%0.2d.%0.2d  %0.2d:%0.2d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Min, attr, pDirent->Filesize, pDirent->FileName);
+	printf("%0.2d.%0.2d.%0.2d  %0.2d:%0.2d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
 #else
 	printf("%s %12lu %s\n", attr, pDirent->Filesize, pDirent->FileName);
 #endif
