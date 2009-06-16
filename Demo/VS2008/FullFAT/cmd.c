@@ -46,8 +46,11 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 			attr[2] = 'S';
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
-
+#ifdef FF_TIME_SUPPORT
+	printf("%0.2d.%0.2d.%0.2d  %0.2d:%0.2d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Min, attr, pDirent->Filesize, pDirent->FileName);
+#else
 	printf("%s %12lu %s\n", attr, pDirent->Filesize, pDirent->FileName);
+#endif
 }
 
 static void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
@@ -460,7 +463,7 @@ const FFT_ERR_TABLE infoInfo[] =
 };
 
 
-int mount_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
+/*int mount_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 	return -4;
 }
 
@@ -471,3 +474,4 @@ const FFT_ERR_TABLE mountInfo[] =
 	NULL
 };
 
+*/
