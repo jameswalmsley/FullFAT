@@ -224,6 +224,10 @@
 					RelativePath="..\..\..\src\ff_safety.c"
 					>
 				</File>
+				<File
+					RelativePath="..\..\..\src\ff_time.c"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="FFTerm"
@@ -296,6 +300,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\src\ff_safety.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_time.h"
 					>
 				</File>
 				<File
