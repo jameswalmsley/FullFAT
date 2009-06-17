@@ -36,6 +36,10 @@
 
 #define COPY_BUFFER_SIZE 8192
 
+/*
+	This is a standardised DIRENT print for FullFAT.
+	It mixes styles used in Windows and Linux.
+*/
 static void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };
 	if(pDirent->Attrib & FF_FAT_ATTR_READONLY)
@@ -53,6 +57,9 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 #endif
 }
 
+/*
+	Makes a path absolute.
+*/
 static void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
 	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
@@ -65,6 +72,72 @@ static void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
 		sprintf(dest, "%s", src);
 	}
 }
+
+
+/*
+	This routine removes all relative ..\ from a path.
+	It's probably not the best, but it works. 
+
+	Its based on some old code I wrote a long time ago.
+*/
+void ExpandPath(char *acPath) {
+
+	char 	*pRel 		= 0;
+	char	*pRelStart 	= 0;
+	char 	*pRelEnd 	= 0;
+	int		charRef 	= 0;
+	int 	lenPath 	= 0;
+	int		lenRel		= 0;
+	int 	i 			= 0;
+	int 	remain 		= 0;
+	
+
+	lenPath = strlen(acPath);
+	pRel = strstr(acPath, "..");
+	while(pRel) {	// Loop removal of Relativity
+		charRef = pRel - acPath;
+
+		/*
+			We have found some relativity in the Path, 
+		*/
+
+		// Where it ends:
+		
+		if(pRel[2] == '\\' || pRel[2] == '/') {
+			pRelEnd = pRel + 3;
+		} else {
+			pRelEnd = pRel + 2;	
+		}
+		
+		// Where it Starts:
+		
+		if(charRef == 1) {	// Relative Path comes after the root /
+			return;	// Fixed, returns false appropriately, as in the TODO: above!
+		} else {
+			for(i = (charRef - 2); i >= 0; i--) {
+				if(acPath[i] == '\\' || acPath[i] == '/') {
+					pRelStart = (acPath + (i + 1));
+					break;
+				}
+			}
+		}
+		
+		// The length of the relativity
+		lenRel = pRelEnd - pRelStart;
+		
+		remain = lenPath - (pRelEnd - acPath);	// Remaining Chars on the end of the path
+		
+		if(lenRel) {
+			strncpy(pRelStart, pRelEnd, remain);
+			pRelStart[remain] = '\0';
+		}
+		
+		lenPath -= lenRel;
+		pRel = strstr(acPath, "..");
+	}
+}
+
+
 
 /**
  *	This command acts as the command prompt.
@@ -108,21 +181,44 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_DIRENT mydir;
 	int  i = 0;
 	char tester = 0;
+
+	printf("Type \"ls ?\" for an attribute legend.\n");
 	
 	if(argc == 1) {
 		tester = FF_FindFirst(pIoman, &mydir, pEnv->WorkingDir);
-		while(tester == 0) {
-			FF_PrintDir(&mydir);
-			i++;
-			tester = FF_FindNext(pIoman, &mydir);
-		}
+		printf("Directory Listing of: %s\n", pEnv->WorkingDir);
 	} else {
-		tester = FF_FindFirst(pIoman, &mydir, argv[1]);
-		while(tester == 0) {
-			FF_PrintDir(&mydir);
-			i++;
-			tester = FF_FindNext(pIoman, &mydir);
+
+		if(argv[1][0] == '?') {
+			printf("ATTR Info:\n");
+			printf("D:\tDirectory\n");
+			printf("H:\tHidden\n");
+			printf("S:\tSystem\n");
+			printf("R:\tRead-only\n");
+			return 0;
 		}
+
+		if(!FF_FindDir(pIoman, argv[1], (FF_T_UINT16) strlen(argv[1]))) {
+			printf("Path %s Not Found!\n\n", argv[1]);
+			return 0;
+		}
+		tester = FF_FindFirst(pIoman, &mydir, argv[1]);
+		printf("Directory Listing of: %s\n", argv[1]);
+	}
+
+	printf("\n");
+
+#ifdef FF_TIME_SUPPORT
+	printf("   DATE   | TIME | ATTR |  FILESIZE  |  FILENAME         \n");
+	printf("---------------------------------------------------------\n");
+#else
+
+#endif
+
+	while(tester == 0) {
+		FF_PrintDir(&mydir);
+		i++;
+		tester = FF_FindNext(pIoman, &mydir);
 	}
 	
 	printf("\n%d Items\n", i);
@@ -138,24 +234,17 @@ const FFT_ERR_TABLE lsInfo[] =
 
 int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
-	FF_T_INT8	buffer[2600];
+	FF_T_INT8	path[FF_MAX_PATH];
 
 	if(argc == 2) {
-		if(argv[1][0] != '\\' && argv[1][0] != '/') {
-			if(strlen(pEnv->WorkingDir) == 1) {
-				sprintf(buffer, "\\%s", argv[1]);
-			} else {
-				sprintf(buffer, "%s\\%s", pEnv->WorkingDir, argv[1]);
-			}
+		ProcessPath(path, argv[1], pEnv);
 
-		} else {
-			sprintf(buffer, "%s", argv[1]);
-		}
+		ExpandPath(path);
 		
-		if(FF_FindDir(pIoman, buffer, (FF_T_UINT16) strlen(buffer))) {
-			sprintf(pEnv->WorkingDir, buffer);
+		if(FF_FindDir(pIoman, path, (FF_T_UINT16) strlen(path))) {
+			sprintf(pEnv->WorkingDir, path);
 		} else {
-			printf("Path \"%s\" not found.\n", argv[1]);
+			printf("Path \"%s\" not found.\n", path);
 		}
 	} else {
 		printf("Usage: %s [path]\n", argv[0]);
@@ -173,10 +262,10 @@ const FFT_ERR_TABLE cdInfo[] =
 
 int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
-	FF_T_INT8 buffer[2600];
+	FF_T_INT8 path[FF_MAX_PATH];
 	FF_T_UINT8	readBuf[8192];
 	FF_FILE *fSource;
-	FF_T_SINT8 Error;
+	FF_ERROR Error;
 
 	int len;
 	md5_state_t state;
@@ -184,18 +273,10 @@ int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	int di;
 	
 	if(argc == 2) {
-		if(argv[1][0] != '\\' && argv[1][0] != '/') {
-			if(strlen(pEnv->WorkingDir) == 1) {
-				sprintf(buffer, "\\%s", argv[1]);
-			} else {
-				sprintf(buffer, "%s\\%s", pEnv->WorkingDir, argv[1]);
-			}
+		
+		ProcessPath(path, argv[1], pEnv);
 
-		} else {
-			sprintf(buffer, "%s", argv[1]);
-		}
-
-		fSource = FF_Open(pIoman, buffer, "rb", &Error);
+		fSource = FF_Open(pIoman, path, "rb", &Error);
 
 		if(fSource) {
 			md5_init(&state);
@@ -232,7 +313,7 @@ const FFT_ERR_TABLE md5Info[] =
 int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_FILE *fSource, *fDest;
-	FF_T_SINT8 Error;
+	FF_ERROR Error;
 
 	FF_T_INT8 path[2600];
 	FF_T_UINT8 copybuf[COPY_BUFFER_SIZE];
@@ -292,7 +373,7 @@ int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN	*pIoman = pEnv->pIoman;
 	FF_FILE		*fSource;
 	FILE		*fDest;
-	FF_T_SINT8	Error;
+	FF_ERROR	Error;
 
 	FF_T_INT8	path[2600];
 	FF_T_UINT8	copybuf[COPY_BUFFER_SIZE];
@@ -350,7 +431,7 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_FILE *fDest;
 	FILE	*fSource;
-	FF_T_SINT8 Error;
+	FF_ERROR Error;
 
 	FF_T_INT8 path[2600];
 	FF_T_UINT8 copybuf[COPY_BUFFER_SIZE];
@@ -412,7 +493,7 @@ const FFT_ERR_TABLE icpInfo[] =
 
 int mkdir_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 	
-	FF_T_INT8	path[2600];
+	FF_T_INT8	path[FF_MAX_PATH];
 	FF_T_SINT8	Error;
 
 	if(argc == 2) {
@@ -475,3 +556,51 @@ const FFT_ERR_TABLE mountInfo[] =
 };
 
 */
+
+/*
+	A View command to type out the contents of a file using FullFAT.
+*/
+int view_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+	
+	FF_FILE		*f;
+	FF_ERROR	Error;
+	FF_T_SINT32	c;
+	FF_T_INT8	path[FF_MAX_PATH];
+
+	if(argc == 2) {
+
+		ProcessPath(path, argv[1], pEnv);
+
+		f = FF_Open(pEnv->pIoman, path, "rb", &Error);
+		if(f) {
+			printf("//---------- START OF FILE\n");
+			while(!FF_isEOF(f)) {
+				c = FF_GetC(f);
+				if(c >= 0) {
+					printf("%c", c);
+				} else {
+					printf("Error while reading file: %s\n", FF_GetErrMessage(c));
+					FF_Close(f);
+					return -3;
+				}
+			}
+			printf("\n//---------- END OF FILE\n");
+
+			FF_Close(f);
+		} else {
+			printf("Could not open file: %s\n", FF_GetErrMessage(Error));
+			return -2;
+		}
+	} else {
+		printf("Usage: %s [filename]\n", argv[0]);
+	}
+	return 0;
+}
+const FFT_ERR_TABLE viewInfo[] =
+{											// This demonstrates how FFTerm can provide useful information about specific command failure codes.
+	"Unknown or Generic Error",				-1,	// Generic Error must always be the first in the table.
+	"Types out the specified file.",		FFT_COMMAND_DESCRIPTION,
+	"File open failed. (File not found?)",	-2,
+	"Error while reading from device!",		-3,
+	NULL
+};

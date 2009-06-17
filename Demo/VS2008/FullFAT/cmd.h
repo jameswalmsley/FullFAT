@@ -37,7 +37,7 @@
 
 typedef struct {	// Pass an environment for the FullFAT commands.
 	FF_IOMAN	*pIoman;
-	FF_T_INT8	WorkingDir[2600];
+	FF_T_INT8	WorkingDir[FF_MAX_PATH];
 } FF_ENVIRONMENT;
 
 extern const FFT_ERR_TABLE promptInfo[];
@@ -51,6 +51,7 @@ extern const FFT_ERR_TABLE xcpInfo[];
 extern const FFT_ERR_TABLE mkdirInfo[];
 extern const FFT_ERR_TABLE infoInfo[];
 extern const FFT_ERR_TABLE mountInfo[];
+extern const FFT_ERR_TABLE viewInfo[];
 
 int cmd_prompt	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int pwd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
@@ -63,5 +64,6 @@ int xcp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkdir_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int info_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mount_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int view_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 
 #endif

@@ -28,20 +28,25 @@
  *  See http://worm.me.uk/fullfat for more information.                      *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
-#include "cmd.h"	// The Demo's Header File
-#include "../../../src/fullfat.h"
-#include "../../../../FFTerm/src/FFTerm.h"
-#include "testdriver_win32.h"
+#include "cmd.h"							// The Demo's Header File for shell commands.
+#include "../../../src/fullfat.h"			// Include everything required for FullFAT.
+#include "../../../../FFTerm/src/FFTerm.h"	// Include the FFTerm project header.
+#include "testdriver_win32.h"				// Prototypes for our Windows 32-bit driver.
 
 #define PARTITION_NUMBER	0
 
 int main(void) {
 	
-	FFT_CONSOLE *pConsole;				// FFTerm Console Pointer.
-	FILE *f;							// FILE Stream pointer for Windows FullFAT driver.
-	FF_T_SINT32	Error = FF_ERR_NONE;
+	FFT_CONSOLE *pConsole;					// FFTerm Console Pointer.
+	FILE *f;								// FILE Stream pointer for Windows FullFAT driver.
+	FF_ERROR	Error = FF_ERR_NONE;		// ERROR code value.
 	FF_IOMAN *pIoman;
 	FF_ENVIRONMENT Env;
+	
+	/*
+	int i;									// Used for testing the FILE I/O Api.
+	FF_FILE *pF;
+	*/
 
 	//----------- Initialise the environment
 	Env.pIoman = NULL;
@@ -54,26 +59,31 @@ int main(void) {
 
 	if(f) {
 		//---------- Create FullFAT IO Manager
-		pIoman = FF_CreateIOMAN(NULL, 8192, 512, (FF_T_SINT8 *)&Error);
+		pIoman = FF_CreateIOMAN(NULL, 8192, 512, &Error);
 
 		if(pIoman) {
-			//---------- Register a Block Device with FullFAT
-			FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+			//---------- Register a Block Device with FullFAT.
+			Error = FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+			if(Error) {
+				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %d.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));				
+			}
 
-			//---------- Try to Mount the Partition with FullFAT
-			if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
+			//---------- Try to Mount the Partition with FullFAT.
+			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);
+			if(Error) {
 				if(f) {
 					fclose(f);
 				}
 				FF_DestroyIOMAN(pIoman);
 				printf("FullFAT Couldn't mount the specified parition!\n");
+				printf("FF_MountPartition() function returned with Error %d\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 				getchar();
 				return -1;
 			}
 
 			Env.pIoman = pIoman;
 
-			//---------- Create the Console	
+			//---------- Create the Console.
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);
 
 			if(pConsole) {
@@ -89,6 +99,21 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "md5",	md5_cmd,	md5Info,	&Env);
 				FFTerm_AddExCmd(pConsole, "mkdir",	mkdir_cmd,	mkdirInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "info",	info_cmd,	infoInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "view",	view_cmd,	viewInfo,	&Env);
+				
+				//---------- Some test code used to test the FILE I/O Api.
+				
+				/*pF = FF_Open(pIoman, "\\test2.txt", "r+", &Error);
+				for(i = 0; i < 1024; i++) {
+					FF_PutC(pF, 'J');
+					FF_Seek(pF, i, FF_SEEK_SET);
+					FF_PutC(pF, 'R');
+					FF_Seek(pF, 1, FF_SEEK_SET);
+					FF_GetC(pF);
+					FF_Seek(pF, 0, FF_SEEK_END);
+				}
+				FF_Close(pF);*/
+
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);
 				FF_DestroyIOMAN(pIoman);
@@ -101,9 +126,13 @@ int main(void) {
 			getchar();
 			return -1;
 		}
+
+		// FullFAT failed to initialise. Print some meaningful information from FullFAT itself, using the FF_GetErrMessage() function.
+		printf("Could not initialise FullFAT I/O Manager.\nError calling FF_CreateIOMAN() function.\nError Code %d\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
+	} else {
+		printf("Could not open the I/O Block device\nError calling fopen() function. (Device (file) not found?)\n");
 	}
 
-	printf("Could not open the I/O Block device\n");
 	getchar();
 	return -1;
 
