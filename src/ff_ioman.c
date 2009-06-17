@@ -61,7 +61,7 @@ extern FF_T_UINT32 FF_CountFreeClusters		(FF_IOMAN *pIoman);
  *	@return	Returns a pointer to an FF_IOMAN type object. NULL on Error, check the contents of
  *	@return pError
  **/
-FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_T_SINT8 *pError) {
+FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_ERROR *pError) {
 
 	FF_IOMAN	*pIoman = NULL;
 	FF_T_UINT32 *pLong	= NULL;	// Force malloc to malloc memory on a 32-bit boundary.
@@ -144,8 +144,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	pIoman->BlkSize		 = BlkSize;
 	pIoman->CacheSize	 = (FF_T_UINT16) (Size / BlkSize);
 	pIoman->FirstFile	 = NULL;
-	pIoman->FatLock = 0;
-	pIoman->DirLock = 0;
+	pIoman->Locks		 = 0;
 
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
 		but uses buffer objects instead. Allows us to provide thread safety.
@@ -174,7 +173,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
  *	@return	FF_ERR_NONE on sucess, or a documented error code on failure. (FF_ERR_NULL_POINTER)
  *
  **/
-FF_T_SINT8 FF_DestroyIOMAN(FF_IOMAN *pIoman) {
+FF_ERROR FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 
 	// Ensure no NULL pointer was provided.
 	if(!pIoman) {
@@ -262,7 +261,7 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-static FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+static FF_ERROR FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
 	FF_T_SINT32 retVal = 0;
 	if(pIoman->pBlkDevice->fnReadBlocks) {	// Make sure we don't execute a NULL.
 		 do{
@@ -296,7 +295,7 @@ static FF_T_SINT8 FF_IOMAN_FillBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T
  *
  *	@return	FF_TRUE when valid, else FF_FALSE.
  **/
-static FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
+static FF_ERROR FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 *pBuffer) {
 	FF_T_SINT32 retVal = 0;
 	if(pIoman->pBlkDevice->fnWriteBlocks) {	// Make sure we don't execute a NULL.
 		 do{
@@ -310,7 +309,7 @@ static FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_
 			return -1;		// FF_ERR_DRIVER_FATAL_ERROR was returned Fail!
 		} else {
 			if(retVal == 1) {
-				return 0;		// 1 Block was sucessfully written.
+				return FF_ERR_NONE;		// 1 Block was sucessfully written.
 			} else {
 				return -1;		// 0 Blocks we're written, Error!
 			}
@@ -328,7 +327,7 @@ static FF_T_SINT8 FF_IOMAN_FlushBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_
  *
  *	@return		FF_ERR_NONE on Success.
  **/
-FF_T_SINT8 FF_FlushCache(FF_IOMAN *pIoman) {
+FF_ERROR FF_FlushCache(FF_IOMAN *pIoman) {
 
 	FF_T_UINT16 i,x;
 
@@ -506,7 +505,7 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
  *
  *	@return	0 on success, FF_ERR_IOMAN_DEV_ALREADY_REGD if a device was already hooked, FF_ERR_IOMAN_NULL_POINTER if a pIoman object wasn't provided.
  **/
-FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
+FF_ERROR FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
 	if(!pIoman) {	// We can't do anything without an IOMAN object.
 		return FF_ERR_NULL_POINTER;
 	}
@@ -544,7 +543,7 @@ FF_T_SINT8 FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_
 /**
  *	@private
  **/
-static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
+static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer;
@@ -627,7 +626,7 @@ static FF_T_SINT8 FF_DetermineFatType(FF_IOMAN *pIoman) {
  *	@return FF_ERR_IOMAN_NOT_FAT_FORMATTED if the volume or partition couldn't be determined to be FAT. (@see ff_config.h)
  *
  **/
-FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
+FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer = 0;
 
@@ -718,7 +717,17 @@ FF_T_SINT8 FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	return FF_ERR_NONE;
 }
 
-FF_T_SINT8 FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
+/**
+ *	@public
+ *	@brief	Unregister a Blockdevice, so that the IOMAN can be re-used for another device.
+ *
+ *	Any active partitions must be Unmounted first.
+ *
+ *	@param	pIoman	FF_IOMAN object.
+ *
+ *	@return	FF_ERR_NONE on success.
+ **/
+FF_ERROR FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
 
 	FF_T_SINT8 RetVal = FF_ERR_NONE;
 
@@ -766,7 +775,16 @@ static FF_T_BOOL FF_ActiveHandles(FF_IOMAN *pIoman) {
 	return FF_FALSE;
 }
 
-FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
+
+/**
+ *	@public
+ *	@brief	Unmounts the active partition.
+ *
+ *	@param	pIoman	FF_IOMAN Object.
+ *
+ *	@return FF_ERR_NONE on success.
+ **/
+FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 	FF_T_SINT8 RetVal = FF_ERR_NONE;
 
 	if(!pIoman) {
@@ -792,7 +810,7 @@ FF_T_SINT8 FF_UnMountPartition(FF_IOMAN *pIoman) {
 }
 
 
-FF_T_SINT8 FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
+FF_ERROR FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 
 	//FF_PendSemaphore(pIoman->pSemaphore);
 	//{
@@ -806,7 +824,7 @@ FF_T_SINT8 FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 	return FF_ERR_NONE;
 }
 
-FF_T_SINT8 FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
+FF_ERROR FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 
 	//FF_lockFAT(pIoman);
 	//{
@@ -824,10 +842,15 @@ FF_T_SINT8 FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 /**
  *	@brief	Returns the Block-size of a mounted Partition
  *
+ *	The purpose of this function is to provide API access to information
+ *	that might be useful in special cases. Like USB sticks that require a sector
+ *	knocking sequence for security. After the sector knock, some secure USB
+ *	sticks then present a different BlockSize.
+ *
  *	@param	pIoman		FF_IOMAN Object returned from FF_CreateIOMAN()
  *
  *	@return	The blocksize of the partition. A value less than 0 when an error occurs.
- *
+ *	@return	Any negative value can be cast to the FF_ERROR type.
  **/
 FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman) {
 

@@ -38,14 +38,14 @@
 #ifndef _FF_IOMAN_H_
 #define _FF_IOMAN_H_
 
-#include <stdlib.h>		/* Use of malloc() */
+#include <stdlib.h>							// Use of malloc()
 #include "ff_error.h"
 #include "ff_config.h"
 #include "ff_types.h"
-#include "ff_safety.h"	// Provide critical regions
-#include "ff_memory.h"
+#include "ff_safety.h"						// Provide thread-safety via semaphores.
+#include "ff_memory.h"						// Memory access routines for ENDIAN independence.
 
-#define	FF_MAX_PARTITION_NAME		5	///< Partition name length.
+//#define	FF_MAX_PARTITION_NAME	5		///< Partition name length.
 
 #define FF_T_FAT12				0x0A
 #define FF_T_FAT16				0x0B
@@ -57,7 +57,7 @@
 #define	FF_MODE_UPDATE			0x08		///< FILE Mode Update.
 #define FF_MODE_DIR				0x80		///< Special Mode to open a Dir.
 
-#define FF_BUF_MAX_HANDLES		65536		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
+#define FF_BUF_MAX_HANDLES		0xFFFF		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
 
 /**
  *	I/O Driver Definitions
@@ -154,23 +154,35 @@ typedef struct {
  *
  *	FullFAT functions around an object like this.
  **/
-#define FF_FAT_LOCK			0x01
-#define FF_DIR_LOCK			0x02
-#define FF_PATHCACHE_LOCK	0x04
+#define FF_FAT_LOCK			0x01	///< Lock bit mask for FAT table locking.
+#define FF_DIR_LOCK			0x02	///< Lock bit mask for DIR modification locking.
+//#define FF_PATHCACHE_LOCK	0x04
 
+/**
+ *	@public
+ *	@brief	FF_IOMAN Object. A developer should not touch these values.
+ *	
+ *	In the commercial version these values are encapsulated. In the open-source
+ *	version they are left completely open, in case someone really "needs" :P to
+ *	do something stupid and access their members themselves. Also to help the
+ *	open-source community help me improve FullFAT, and aid understanding.
+ *
+ *	THIS WOULD BE VERY STUPID, SO DON'T DO IT. Unless your're writing a patch or
+ *	something!
+ *
+ **/
 typedef struct {
-	FF_BLK_DEVICE	*pBlkDevice;	///< Pointer to a Block device description.
-	FF_PARTITION	*pPartition;	///< Pointer to a partition description.
-	FF_BUFFER		*pBuffers;		///< Pointer to the first buffer description.
-	FF_T_UINT32		LastReplaced;	///< Marks which sector was last replaced in the cache.
-	FF_T_UINT16		BlkSize;		///< The Block size that IOMAN is configured to.
-	FF_T_UINT8		*pCacheMem;		///< Pointer to a block of memory for the cache.
-	FF_T_UINT16		CacheSize;		///< Size of the cache in number of Sectors.
-	FF_T_UINT8		MemAllocation;	///< Bit-Mask identifying allocated pointers.
-	FF_T_UINT8		FatLock;		///< Lock Flag for FAT (This must be accessed via a semaphore).
-	FF_T_UINT8		DirLock;		///< Lock Flag for Dir Modification (This must be accessed via a semaphore).
-	void			*pSemaphore;	///< Pointer to a Semaphore object. (For buffer description modifications only!).
-	void			*FirstFile;		///< Pointer to the first File object.
+	FF_BLK_DEVICE	*pBlkDevice;		///< Pointer to a Block device description.
+	FF_PARTITION	*pPartition;		///< Pointer to a partition description.
+	FF_BUFFER		*pBuffers;			///< Pointer to the first buffer description.
+	FF_T_UINT32		LastReplaced;		///< Marks which sector was last replaced in the cache.
+	FF_T_UINT16		BlkSize;			///< The Block size that IOMAN is configured to.
+	FF_T_UINT8		*pCacheMem;			///< Pointer to a block of memory for the cache.
+	FF_T_UINT16		CacheSize;			///< Size of the cache in number of Sectors.
+	FF_T_UINT8		MemAllocation;		///< Bit-Mask identifying allocated pointers.
+	FF_T_UINT8		Locks;				///< Lock Flag for FAT & DIR Locking etc (This must be accessed via a semaphore).
+	void			*pSemaphore;		///< Pointer to a Semaphore object. (For buffer description modifications only!).
+	void			*FirstFile;			///< Pointer to the first File object.
 } FF_IOMAN;
 
 // Bit-Masks for Memory Allocation testing.
@@ -184,13 +196,13 @@ typedef struct {
 //---------- PROTOTYPES (in order of appearance)
 
 // PUBLIC (Interfaces):
-FF_IOMAN	*FF_CreateIOMAN			(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_T_SINT8 *pError);
-FF_T_SINT8	FF_DestroyIOMAN			(FF_IOMAN *pIoman);
-FF_T_SINT8	FF_RegisterBlkDevice	(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
-FF_T_SINT8	FF_UnregisterBlkDevice	(FF_IOMAN *pIoman);
-FF_T_SINT8	FF_MountPartition		(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
-FF_T_SINT8	FF_UnMountPartition		(FF_IOMAN *pIoman);
-FF_T_SINT8	FF_FlushCache			(FF_IOMAN *pIoman);
+FF_IOMAN	*FF_CreateIOMAN			(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_ERROR *pError);
+FF_ERROR	FF_DestroyIOMAN			(FF_IOMAN *pIoman);
+FF_ERROR	FF_RegisterBlkDevice	(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam);
+FF_ERROR	FF_UnregisterBlkDevice	(FF_IOMAN *pIoman);
+FF_ERROR	FF_MountPartition		(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
+FF_ERROR	FF_UnmountPartition		(FF_IOMAN *pIoman);
+FF_ERROR	FF_FlushCache			(FF_IOMAN *pIoman);
 FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman);
 
 #ifdef FF_64_NUM_SUPPORT
@@ -200,8 +212,8 @@ FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman);
 #endif
 
 // PUBLIC  (To FullFAT Only):
-FF_T_SINT8	FF_IncreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
-FF_T_SINT8	FF_DecreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
+FF_ERROR	FF_IncreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
+FF_ERROR	FF_DecreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);
 void		FF_ReleaseBuffer		(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
 

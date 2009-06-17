@@ -47,12 +47,12 @@
 void FF_lockFAT(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
 	{
-		while(pIoman->FatLock) {
+		while((pIoman->Locks & FF_FAT_LOCK)) {
 			FF_ReleaseSemaphore(pIoman->pSemaphore);
 			FF_Yield();						// Keep Releasing and Yielding until we have the Fat protector.
 			FF_PendSemaphore(pIoman->pSemaphore);
 		}
-		pIoman->FatLock = 1;
+		pIoman->Locks |= FF_FAT_LOCK;
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
@@ -60,7 +60,7 @@ void FF_lockFAT(FF_IOMAN *pIoman) {
 void FF_unlockFAT(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
-		pIoman->FatLock = 0;
+		pIoman->Locks &= ~FF_FAT_LOCK;
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }

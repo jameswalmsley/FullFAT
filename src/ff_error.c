@@ -56,7 +56,7 @@ const struct _FFERRTAB
     "Not enough memory (malloc() returned NULL).",							FF_ERR_NOT_ENOUGH_MEMORY,
     "Device Driver returned a FATAL error!.",								FF_ERR_DEVICE_DRIVER_FAILED,
     "The blocksize is not 512 multiple.",									FF_ERR_IOMAN_BAD_BLKSIZE,
-    "The size not a multiple of the blocksize.",							FF_ERR_IOMAN_BAD_MEMSIZE,
+    "The provided memory size, is not a multiple of the blocksize.",		FF_ERR_IOMAN_BAD_MEMSIZE,
     "Device is already registered, use FF_UnregisterBlkDevice() first.",	FF_ERR_IOMAN_DEV_ALREADY_REGD,
     "No mountable partition was found on the specified device.",			FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION,
     "The format of the MBR was unrecognised.",								FF_ERR_IOMAN_INVALID_FORMAT,
@@ -79,6 +79,7 @@ const struct _FFERRTAB
 	"The Root Dir is full, and cannot be extended on Fat12 or 16 volumes.", FF_ERR_DIR_CANT_EXTEND_ROOT_DIR,
 	"File operation failed - the file was not opened for writing.",			FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE,
 	"File operation failed - the file was not opened for reading.",			FF_ERR_FILE_NOT_OPENED_IN_READ_MODE,
+	"File operation failed - could not extend file.",						FF_ERR_FILE_EXTEND_FAILED,
 };
 
 /**
@@ -90,7 +91,7 @@ const struct _FFERRTAB
  *	@return	Pointer to a string describing the error.
  *
  **/
-const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode) {
+const FF_T_INT8 *FF_GetErrMessage(FF_ERROR iErrorCode) {
     FF_T_UINT32 stCount = sizeof (gcpFullFATErrorTable) / sizeof ( struct _FFERRTAB);
     while (stCount--){
         if (gcpFullFATErrorTable[stCount].iErrorCode == iErrorCode) {

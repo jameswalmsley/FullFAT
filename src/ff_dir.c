@@ -46,12 +46,12 @@
 void FF_lockDIR(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
 	{
-		while(pIoman->DirLock) {
+		while((pIoman->Locks & FF_DIR_LOCK)) {
 			FF_ReleaseSemaphore(pIoman->pSemaphore);
 			FF_Yield();						// Keep Releasing and Yielding until we have the Fat protector.
 			FF_PendSemaphore(pIoman->pSemaphore);
 		}
-		pIoman->DirLock = 1;
+		pIoman->Locks |= FF_DIR_LOCK;
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
@@ -59,7 +59,7 @@ void FF_lockDIR(FF_IOMAN *pIoman) {
 void FF_unlockDIR(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
-		pIoman->DirLock = 0;
+		pIoman->Locks &= ~FF_DIR_LOCK;
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
@@ -839,16 +839,16 @@ FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nE
 /**
  *	@private
  **/
-FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
+FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	FF_T_UINT8 EntryBuffer[32];
 	FF_T_UINT8 numLFNs;
 	
 	if(FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer)) {
-			return -2;
+			return FF_ERR_DIR_END_OF_DIR;
 	}
 	if(EntryBuffer[0] != 0xE5) {
 		if(FF_isEndOfDir(EntryBuffer)){
-			return -2;
+			return FF_ERR_DIR_END_OF_DIR;
 		}
 		
 		pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
@@ -871,7 +871,7 @@ FF_T_SINT8 FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirClus
 			return 0;
 		}
 	}
-	return 0;
+	return FF_ERR_NONE;
 }
 
 FF_T_BOOL FF_isEndOfDir(FF_T_UINT8 *EntryBuffer) {

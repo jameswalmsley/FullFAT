@@ -59,12 +59,12 @@ static FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
 			case 'a':	// Append new writes to the end of the file.
 			case 'A':
 				ModeBits |= FF_MODE_APPEND;
-				ModeBits &= ~FF_MODE_UPDATE;
+				//ModeBits &= ~FF_MODE_UPDATE;
 				break;
 
 			case '+':	// Update the file, don't Append!
 				ModeBits |= FF_MODE_UPDATE;
-				ModeBits &= ~FF_MODE_APPEND;
+				//ModeBits &= ~FF_MODE_APPEND;
 				break;
 
 			case 'D':
@@ -94,7 +94,7 @@ static FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
  *	@return	NULL pointer on Error, in which case pError should be checked for more information.
  *	@return	pError can be:
  **/
-FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_T_SINT8 *pError) {
+FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_ERROR *pError) {
 	FF_FILE		*pFile;
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
@@ -307,9 +307,9 @@ FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	return FF_TRUE;
 }
 
-FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
+FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_FILE *pFile;
-	FF_T_SINT8 Error = FF_ERR_NONE;
+	FF_ERROR Error = FF_ERR_NONE;
 	FF_T_UINT8 EntryBuffer[32];
 	FF_T_SINT8 RetVal = FF_ERR_NONE;
 
@@ -363,9 +363,9 @@ FF_T_SINT8 FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	return RetVal;
 }
 
-FF_T_SINT8 FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
+FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_FILE *pFile;
-	FF_T_SINT8 Error = 0;
+	FF_ERROR Error = 0;
 	FF_T_UINT8 EntryBuffer[32];
 
 	pFile = FF_Open(pIoman, path, "r", &Error);
@@ -481,7 +481,7 @@ static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8
 }
 
 
-static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
+static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	FF_IOMAN	*pIoman = pFile->pIoman;
 	FF_T_UINT32 nBytesPerCluster = pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster;
 	FF_T_UINT32 nTotalClustersNeeded = Size / nBytesPerCluster;
@@ -497,9 +497,12 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	if(pFile->Filesize == 0 && pFile->ObjectCluster == 0) {	// No Allocated clusters.
 		// Create a Cluster chain!
 		pFile->AddrCurrentCluster = FF_CreateClusterChain(pFile->pIoman);
-		FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-		OriginalEntry.ObjectCluster = pFile->AddrCurrentCluster;
-		FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+		if(!FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry)) {
+			OriginalEntry.ObjectCluster = pFile->AddrCurrentCluster;
+			FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+		} else {
+			return FF_ERR_FILE_EXTEND_FAILED;
+		}
 		pFile->ObjectCluster = pFile->AddrCurrentCluster;
 		pFile->iChainLength = 1;
 		pFile->CurrentCluster = 0;
@@ -536,7 +539,7 @@ static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		FF_DecreaseFreeClusters(pIoman, i);	// Keep Tab of Numbers for fast FreeSize()
 	}
 
-	return 0;
+	return FF_ERR_NONE;
 }
 
 static FF_T_SINT32 FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *buffer) {
@@ -1069,7 +1072,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	FF_BUFFER	*pBuffer;
 	FF_T_UINT32 iItemLBA;
-	FF_T_UINT32 iRelPos				= FF_getMinorBlockEntry		(pFile->pIoman, pFile->FilePointer, 1);
+	FF_T_UINT32 iRelPos;
 	FF_T_UINT32 nClusterDiff;
 	
 	if(!pFile) {	// Ensure we don't have a Null file pointer on a Public interface.
@@ -1086,6 +1089,8 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 			FF_Seek(pFile, 0, FF_SEEK_END);
 		}
 	}
+
+	iRelPos = FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
 	
 	// Handle File Space Allocation.
 	FF_ExtendFile(pFile, pFile->FilePointer + 1);
@@ -1133,7 +1138,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
  *	@return -3 if an invalid origin was provided.
  *	
  **/
-FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
+FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	
 	if(!pFile) {
 		return FF_ERR_NULL_POINTER;
@@ -1189,10 +1194,11 @@ FF_T_SINT8 FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
  *	@return -1 if a null pointer was provided.
  *
  **/
-FF_T_SINT8 FF_Close(FF_FILE *pFile) {
+FF_ERROR FF_Close(FF_FILE *pFile) {
 
-	FF_FILE *pFileChain;
-	FF_DIRENT OriginalEntry;
+	FF_FILE		*pFileChain;
+	FF_DIRENT	OriginalEntry;
+	FF_ERROR	Error;
 
 	if(!pFile) {
 		return FF_ERR_NULL_POINTER;	
@@ -1200,7 +1206,10 @@ FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// UpDate Dirent if File-size has changed?
 
 	// Update the Dirent!
-	FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+	Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+	if(Error) {
+		return Error;
+	}
 	
 	if(!pFile->FileDeleted) {
 		if(pFile->Filesize != OriginalEntry.Filesize) {
@@ -1209,9 +1218,9 @@ FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 		}
 	}
 
-	if(pFile->Mode == FF_MODE_WRITE) {
-		FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
-	}
+	//if(pFile->Mode == FF_MODE_WRITE) {
+	FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
+	//}
 	
 	// Handle Linked list!
 	FF_PendSemaphore(pFile->pIoman->pSemaphore);
@@ -1231,5 +1240,5 @@ FF_T_SINT8 FF_Close(FF_FILE *pFile) {
 	// If file written, flush to disk
 	free(pFile);
 	// Simply free the pointer!
-	return 0;
+	return FF_ERR_NONE;
 }

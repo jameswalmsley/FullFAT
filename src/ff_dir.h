@@ -67,7 +67,7 @@ typedef struct {
 	FF_T_UINT32 AddrCurrentCluster;
 } FF_DIRENT;
 
-		FF_T_SINT8	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
+		FF_ERROR	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_FindEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs);
 		FF_T_SINT8	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path);

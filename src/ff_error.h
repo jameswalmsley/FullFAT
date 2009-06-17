@@ -47,14 +47,14 @@
 // IOMAN Error Codes
 #define	FF_ERR_IOMAN_BAD_BLKSIZE				-11	///< The provided blocksize was not a multiple of 512.
 #define FF_ERR_IOMAN_BAD_MEMSIZE				-12	///< The memory size was not a multiple of the blocksize.
-#define FF_ERR_IOMAN_DEV_ALREADY_REGD			-11 ///< Device was already registered. Use FF_UnRegister() to re-use this IOMAN with another device.
-#define FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION		-12	///< A mountable partition could not be found on the device.
-#define FF_ERR_IOMAN_INVALID_FORMAT				-13	///< The 
-#define FF_ERR_IOMAN_INVALID_PARTITION_NUM		-14	///< The partition number provided was out of range.
-#define FF_ERR_IOMAN_NOT_FAT_FORMATTED			-15	///< The partition did not look like a FAT partition.
-#define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE		-16 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
-#define FF_ERR_IOMAN_PARTITION_MOUNTED			-18	///< Device is in use by an actively mounted partition. Unmount the partition first.
-#define FF_ERR_IOMAN_ACTIVE_HANDLES				-19 ///< The partition cannot be unmounted until all active file handles are closed. (There may also be active handles on the cache).
+#define FF_ERR_IOMAN_DEV_ALREADY_REGD			-13 ///< Device was already registered. Use FF_UnRegister() to re-use this IOMAN with another device.
+#define FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION		-14	///< A mountable partition could not be found on the device.
+#define FF_ERR_IOMAN_INVALID_FORMAT				-15	///< The 
+#define FF_ERR_IOMAN_INVALID_PARTITION_NUM		-16	///< The partition number provided was out of range.
+#define FF_ERR_IOMAN_NOT_FAT_FORMATTED			-17	///< The partition did not look like a FAT partition.
+#define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE		-18 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
+#define FF_ERR_IOMAN_PARTITION_MOUNTED			-19	///< Device is in use by an actively mounted partition. Unmount the partition first.
+#define FF_ERR_IOMAN_ACTIVE_HANDLES				-20 ///< The partition cannot be unmounted until all active file handles are closed. (There may also be active handles on the cache).
 
 
 // File Error Codes								-30 +
@@ -65,6 +65,7 @@
 #define FF_ERR_FILE_INVALID_PATH				-34	///< The path of the file was not found.
 #define FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE	-35
 #define FF_ERR_FILE_NOT_OPENED_IN_READ_MODE		-36
+#define FF_ERR_FILE_EXTEND_FAILED				-37	///< Could not extend the file.
 
 // Directory Error Codes						-50 +
 #define FF_ERR_DIR_OBJECT_EXISTS				-50	///< A file or folder of the same name already exists in the current directory.
@@ -78,7 +79,7 @@
 #define FF_ERR_FAT_NO_FREE_CLUSTERS				-70	///< No more free space is available on the disk.
 
 #ifdef FF_DEBUG
-const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
+const FF_T_INT8 *FF_GetErrMessage(FF_ERROR iErrorCode);
 #endif
 
 #endif
