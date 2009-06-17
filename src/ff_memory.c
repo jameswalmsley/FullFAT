@@ -181,7 +181,7 @@ FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 
 			return FF_FALSE;
 		}
 	}
-
+	
 	for(i = 0; i < len; i++) {
 		char1 = str1[i];
 		char2 = str2[i];

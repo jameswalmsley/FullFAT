@@ -507,9 +507,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 	FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
 	{
 		for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-			if(FF_StrMatch(pIoman->pPartition->PathCache[i].Path, path, pathLen)) {
-				FF_ReleaseSemaphore(pIoman->pSemaphore);
-				return pIoman->pPartition->PathCache[i].DirCluster;
+			if(strlen(pIoman->pPartition->PathCache[i].Path) == pathLen) {
+				if(FF_StrMatch(pIoman->pPartition->PathCache[i].Path, path, pathLen)) {
+					FF_ReleaseSemaphore(pIoman->pSemaphore);
+					return pIoman->pPartition->PathCache[i].DirCluster;
+				}
 			}
 		}
 	}
@@ -537,7 +539,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path[pathLen] = '\0';
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster = dirCluster;
 				pIoman->pPartition->PCIndex += 1;
-				if(pIoman->pPartition->PCIndex > FF_PATH_CACHE_DEPTH) {
+				if(pIoman->pPartition->PCIndex >= FF_PATH_CACHE_DEPTH) {
 					pIoman->pPartition->PCIndex = 0;
 				}
 			}
