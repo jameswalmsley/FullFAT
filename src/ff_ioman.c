@@ -65,6 +65,9 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	FF_IOMAN	*pIoman = NULL;
 	FF_T_UINT32 *pLong	= NULL;	// Force malloc to malloc memory on a 32-bit boundary.
+#ifdef FF_PATH_CACHE
+	FF_T_UINT32	i;
+#endif
 
 	if(pError) {
 		*pError = FF_ERR_NONE;
@@ -106,8 +109,13 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		pIoman->MemAllocation |= FF_IOMAN_ALLOC_PART;
 		pIoman->pPartition->LastFreeCluster = 0;
 		pIoman->pPartition->PartitionMounted = FF_FALSE;	// This should be checked by FF_Open();
-		pIoman->pPartition->PathCache.DirCluster = 0;
-		pIoman->pPartition->PathCache.Path[0] = '\0';
+#ifdef FF_PATH_CACHE
+		pIoman->pPartition->PCIndex = 0;
+		for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
+			pIoman->pPartition->PathCache[i].DirCluster = 0;
+			pIoman->pPartition->PathCache[i].Path[0] = '\0';
+		}
+#endif
 	} else {
 		FF_DestroyIOMAN(pIoman);
 		return NULL;

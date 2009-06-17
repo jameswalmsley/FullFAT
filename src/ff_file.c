@@ -312,6 +312,9 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_ERROR Error = FF_ERR_NONE;
 	FF_T_UINT8 EntryBuffer[32];
 	FF_T_SINT8 RetVal = FF_ERR_NONE;
+#ifdef FF_PATH_CACHE
+	FF_T_UINT32 i;
+#endif
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
@@ -338,16 +341,19 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 			EntryBuffer[0] = 0xE5;
 			FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
-
+#ifdef FF_PATH_CACHE
 			FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
 			{
-				if(FF_StrMatch(pIoman->pPartition->PathCache.Path, path, (FF_T_UINT16)strlen(path))) {
-					pIoman->pPartition->PathCache.Path[0] = '\0';
-					pIoman->pPartition->PathCache.DirCluster = 0;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
+				for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
+					if(FF_StrMatch(pIoman->pPartition->PathCache[i].Path, path, (FF_T_UINT16)strlen(path))) {
+						pIoman->pPartition->PathCache[i].Path[0] = '\0';
+						pIoman->pPartition->PathCache[i].DirCluster = 0;
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+					}
 				}
 			}
 			FF_ReleaseSemaphore(pIoman->pSemaphore);
+#endif
 			
 			FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
 

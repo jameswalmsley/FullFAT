@@ -57,6 +57,76 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 #endif
 }
 
+FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString) {
+    /* Check to see if the string contains the wild card */
+    if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
+    {
+        /* if it does not then do a straight string compare */
+        if (strcmp(pszWildCard, pszString))
+        {
+            return FF_FALSE;
+        }
+    }
+    else
+    {
+        while ((*pszWildCard)
+        &&     (*pszString))
+        {
+            /* Test for the wild card */
+            if (*pszWildCard == '*')
+            {
+                /* Eat more than one */
+                while (*pszWildCard == '*')
+                {
+                    pszWildCard++;
+                }
+                /* If there are more chars in the string */
+                if (*pszWildCard)
+                {
+                    /* Search for the next char */
+                    pszString = memchr(pszString, (int)*pszWildCard,  strlen(pszString));
+                    /* if it does not exist then the strings don't match */
+                    if (!pszString)
+                    {
+                        return FF_FALSE;
+                    }
+                    
+                }
+                else
+                {
+                    if (*pszWildCard)
+                    {
+                        /* continue */
+                        break;      
+                    }
+                    else
+                    {
+                        return FF_TRUE;
+                    }
+                }
+            }
+            else 
+            {
+                /* Fail if they don't match */
+                if (*pszWildCard != *pszString)
+                {
+                    return FF_FALSE;
+                }
+            }
+            /* Bump both pointers */
+            pszWildCard++;
+            pszString++;
+        }
+        /* fail if different lengths */
+        if (*pszWildCard != *pszString)
+        {
+            return FF_FALSE;
+        }
+    }
+
+    return FF_TRUE;
+}
+
 /*
 	Makes a path absolute.
 */
@@ -309,13 +379,124 @@ const FFT_ERR_TABLE md5Info[] =
 	NULL
 };
 
+int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
+	
+	FF_IOMAN *pIoman = pEnv->pIoman;
+	FF_ERROR Error;
+
+	FF_FILE *fSource, *fDest;
+
+	FF_T_UINT8 copybuf[COPY_BUFFER_SIZE];
+
+	FF_T_SINT32	BytesRead;
+
+	LARGE_INTEGER ticksPerSecond;
+	LARGE_INTEGER start_ticks, end_ticks, cputime, ostart, oend;
+	float time, transferRate;
+	int ticks;
+
+	QueryPerformanceFrequency(&ticksPerSecond);
+	
+	QueryPerformanceCounter(&ostart); 
+	fSource = FF_Open(pIoman, src, "rb", &Error);
+	QueryPerformanceCounter(&oend);
+	ticks = (int) (oend.QuadPart - ostart.QuadPart);
+	printf("Open took %d\n", ticks);
+	if(fSource) {
+		fDest = FF_Open(pIoman, dest, "wb", &Error);
+		if(fDest) {
+			// Do the copy
+			QueryPerformanceCounter(&start_ticks);  
+			do{
+				BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)copybuf);
+				FF_Write(fDest, BytesRead, 1, (FF_T_UINT8 *) copybuf);
+				QueryPerformanceCounter(&end_ticks); 
+				cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
+				time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+				transferRate = (fSource->FilePointer / time) / 1024;
+				printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+			}while(BytesRead > 0);
+			printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
+
+			FF_Close(fSource);
+			FF_Close(fDest);
+		} else {
+			FF_Close(fSource);
+			printf("Could not open destination file - %s\n", FF_GetErrMessage(Error));
+		}
+
+	} else {
+		printf("Could not open source file - %s\n", FF_GetErrMessage(Error));
+	}
+	return 0;
+}
+
+
+/*
+	Copies with wild-cards!
+*/
+int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+	
+	FF_T_INT8	pathsrc[FF_MAX_PATH];
+	FF_T_INT8	pathdest[FF_MAX_PATH];
+	FF_T_INT8	tmpsrc[FF_MAX_PATH];
+	FF_T_INT8	tmpdest[FF_MAX_PATH];
+	FF_T_INT8	srcWild[FF_MAX_PATH];
+	FF_T_INT8	destWild[FF_MAX_PATH];
+	FF_DIRENT	mydir;
+	FF_T_SINT8	Tester;
+	FF_T_INT8	*p;
+
+	if(argc != 3) {
+		printf("Copy command is invalid\n");
+		return 0;
+	}
+
+	ProcessPath(pathsrc, argv[1], pEnv);
+	ProcessPath(pathdest, argv[2], pEnv);
+
+	p =  strstr(pathdest, "*");
+	strcpy(destWild, p);
+	*p = '\0';
+
+	p =  strstr(pathsrc, "*");
+	strcpy(srcWild, p);
+	*p = '\0';
+
+	if(!FF_StrMatch(srcWild, destWild, 0)) {
+		printf("Source and Destination Wildcards do not match!\n");
+		return 0;
+	}
+	
+	Tester = FF_FindFirst(pEnv->pIoman, &mydir, pathsrc);
+
+	while(!Tester) {
+		if(wildCompare(srcWild, mydir.FileName)) {
+			// Do Copy!
+			if(!FF_StrMatch(mydir.FileName, ".", 0) && !FF_StrMatch(mydir.FileName, "..", 0)) {
+				printf("Copying file %s\n", mydir.FileName);
+				strcpy(tmpsrc, pathsrc);
+				strcat(tmpsrc, mydir.FileName);
+				strcpy(tmpdest, pathdest);
+				strcat(tmpdest, mydir.FileName);
+				filecopy(tmpsrc, tmpdest, pEnv);
+			}
+		}
+
+		Tester = FF_FindNext(pEnv->pIoman, &mydir);
+	}
+
+
+
+	return 0;
+}
 
 int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_FILE *fSource, *fDest;
 	FF_ERROR Error;
 
-	FF_T_INT8 path[2600];
+	FF_T_INT8 path[FF_MAX_PATH];
 	FF_T_UINT8 copybuf[COPY_BUFFER_SIZE];
 
 	FF_T_SINT32	BytesRead;
@@ -327,14 +508,21 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	QueryPerformanceFrequency(&ticksPerSecond);
 	
 	if(argc == 3) {
+		if(strstr(argv[1], "*") || strstr(argv[2], "*")) {
+			return wildcopy(argc, argv, pEnv);
+		}
 		ProcessPath(path, argv[1], pEnv);
+
 		fSource = FF_Open(pIoman, path, "rb", &Error);
+
 		if(fSource) {
 			ProcessPath(path, argv[2], pEnv);
+
 			fDest = FF_Open(pIoman, path, "wb", &Error);
 			if(fDest) {
 				// Do the copy
-				QueryPerformanceCounter(&start_ticks);  
+				QueryPerformanceCounter(&start_ticks);   
+				QueryPerformanceCounter(&end_ticks);   
 				do{
 					BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)copybuf);
 					FF_Write(fDest, BytesRead, 1, (FF_T_UINT8 *) copybuf);

@@ -64,6 +64,7 @@
 #define FF_PATH_CACHE			// Enables a simply Path Caching mechanism that increases performance of repeated operations
 								// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 								// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
+#define FF_PATH_CACHE_DEPTH	2	// The Number of PATH's to Cache.
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT		// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
 								// If you don't need FAT12 support, why have it. FAT12 is more complex to process,

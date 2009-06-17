@@ -491,6 +491,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
     FF_T_UINT16     it = 0;         // Re-entrancy Variables for FF_strtok()
     FF_T_BOOL       last = FF_FALSE;
     FF_DIRENT       MyDir;
+#ifdef FF_PATH_CACHE
+	FF_T_UINT32		i;
+#endif
 
     if(pathLen == 1) {      // Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
@@ -503,9 +506,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 #ifdef FF_PATH_CACHE	// Is the requested path in the PATH CACHE?
 	FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
 	{
-		if(FF_StrMatch(pIoman->pPartition->PathCache.Path, path, pathLen)) {
-			FF_ReleaseSemaphore(pIoman->pSemaphore);
-			return pIoman->pPartition->PathCache.DirCluster;
+		for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
+			if(FF_StrMatch(pIoman->pPartition->PathCache[i].Path, path, pathLen)) {
+				FF_ReleaseSemaphore(pIoman->pSemaphore);
+				return pIoman->pPartition->PathCache[i].DirCluster;
+			}
 		}
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
@@ -528,9 +533,13 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 		FF_PendSemaphore(pIoman->pSemaphore);
 		{
 			if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
-				memcpy(pIoman->pPartition->PathCache.Path, path, pathLen);
-				pIoman->pPartition->PathCache.Path[pathLen] = '\0';
-				pIoman->pPartition->PathCache.DirCluster = dirCluster;
+				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen);
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path[pathLen] = '\0';
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster = dirCluster;
+				pIoman->pPartition->PCIndex += 1;
+				if(pIoman->pPartition->PCIndex > FF_PATH_CACHE_DEPTH) {
+					pIoman->pPartition->PCIndex = 0;
+				}
 			}
 		}
 		FF_ReleaseSemaphore(pIoman->pSemaphore);

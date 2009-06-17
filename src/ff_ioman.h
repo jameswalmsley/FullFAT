@@ -142,7 +142,8 @@ typedef struct {
 	FF_T_UINT32		FreeClusterCount;	///< Records free space on mount.
 	FF_T_BOOL		PartitionMounted;	///< FF_TRUE if the partition is mounted, otherwise FF_FALSE.
 #ifdef FF_PATH_CACHE
-	FF_PATHCACHE	PathCache;
+	FF_PATHCACHE	PathCache[FF_PATH_CACHE_DEPTH];
+	FF_T_UINT32		PCIndex;
 #endif
 } FF_PARTITION;
 

@@ -66,4 +66,6 @@ int info_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mount_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int view_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 
+FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString);
+
 #endif

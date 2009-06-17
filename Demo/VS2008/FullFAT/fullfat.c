@@ -59,7 +59,7 @@ int main(void) {
 
 	if(f) {
 		//---------- Create FullFAT IO Manager
-		pIoman = FF_CreateIOMAN(NULL, 8192, 512, &Error);
+		pIoman = FF_CreateIOMAN(NULL, 512, 512, &Error);
 
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.
