@@ -52,6 +52,7 @@ extern const FFT_ERR_TABLE mkdirInfo[];
 extern const FFT_ERR_TABLE infoInfo[];
 extern const FFT_ERR_TABLE mountInfo[];
 extern const FFT_ERR_TABLE viewInfo[];
+extern const FFT_ERR_TABLE rmInfo[];
 
 int cmd_prompt	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int pwd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
@@ -65,6 +66,7 @@ int mkdir_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int info_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mount_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int view_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int rm_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 
 FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString);
 

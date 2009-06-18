@@ -346,7 +346,7 @@ int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		
 		ProcessPath(path, argv[1], pEnv);
 
-		fSource = FF_Open(pIoman, path, "rb", &Error);
+		fSource = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 
 		if(fSource) {
 			md5_init(&state);
@@ -398,12 +398,12 @@ int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 	QueryPerformanceFrequency(&ticksPerSecond);
 	
 	QueryPerformanceCounter(&ostart); 
-	fSource = FF_Open(pIoman, src, "rb", &Error);
+	fSource = FF_Open(pIoman, src, FF_MODE_READ, &Error);
 	QueryPerformanceCounter(&oend);
 	ticks = (int) (oend.QuadPart - ostart.QuadPart);
 	printf("Open took %d\n", ticks);
 	if(fSource) {
-		fDest = FF_Open(pIoman, dest, "wb", &Error);
+		fDest = FF_Open(pIoman, dest, FF_MODE_WRITE, &Error);
 		if(fDest) {
 			// Do the copy
 			QueryPerformanceCounter(&start_ticks);  
@@ -513,12 +513,12 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		}
 		ProcessPath(path, argv[1], pEnv);
 
-		fSource = FF_Open(pIoman, path, "rb", &Error);
+		fSource = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 
 		if(fSource) {
 			ProcessPath(path, argv[2], pEnv);
 
-			fDest = FF_Open(pIoman, path, "wb", &Error);
+			fDest = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);   
@@ -576,7 +576,7 @@ int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	if(argc == 3) {
 		ProcessPath(path, argv[1], pEnv);
-		fSource = FF_Open(pIoman, path, "rb", &Error);
+		fSource = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 		if(fSource) {
 			fDest = fopen(argv[2], "rb+");
 			if(fDest) {
@@ -640,7 +640,7 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			SourceSize = ftell(fSource);
 			fseek(fSource, 0, SEEK_SET);
 			ProcessPath(path, argv[2], pEnv);
-			fDest = FF_Open(pIoman, path, "w", &Error);
+			fDest = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);  
@@ -759,7 +759,7 @@ int view_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		ProcessPath(path, argv[1], pEnv);
 
-		f = FF_Open(pEnv->pIoman, path, "rb", &Error);
+		f = FF_Open(pEnv->pIoman, path, FF_MODE_READ, &Error);
 		if(f) {
 			printf("//---------- START OF FILE\n");
 			while(!FF_isEOF(f)) {
@@ -790,5 +790,65 @@ const FFT_ERR_TABLE viewInfo[] =
 	"Types out the specified file.",		FFT_COMMAND_DESCRIPTION,
 	"File open failed. (File not found?)",	-2,
 	"Error while reading from device!",		-3,
+	NULL
+};
+
+
+/*
+	A View command to type out the contents of a file using FullFAT.
+*/
+int rm_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+	
+	FF_ERROR	Error;
+	FF_DIRENT	mydir;	// Used to detect if its a file or folder.
+	FF_T_INT8	path[FF_MAX_PATH];
+	FF_T_INT8	realpath[FF_MAX_PATH];
+	FF_T_INT8	*pName;
+	int i;
+
+	if(argc == 2) {
+
+		ProcessPath(path, argv[1], pEnv);
+
+		for(i = strlen(path); ; i--) {
+			if(path[i] == '\\' || path[i] == '/') {
+				pName = &path[i + 1];
+				break;
+			}
+		}
+
+		memcpy(realpath, path, i + 1);
+		realpath[i+1] = '\0';
+
+		Error = FF_FindFirst(pEnv->pIoman, &mydir, realpath);
+
+		while(!FF_StrMatch(mydir.FileName, pName, 0)) {
+			Error = FF_FindNext(pEnv->pIoman, &mydir);
+			if(Error) {	// File
+				printf("File or Folder not found!\n");
+				return 0;
+			}
+		}
+
+		if(mydir.Attrib & FF_FAT_ATTR_DIR) {
+			Error = FF_RmDir(pEnv->pIoman, path);
+		} else {
+			Error = FF_RmFile(pEnv->pIoman, path);
+		}
+
+		if(Error) {
+			printf("Could not remove file or folder: %s\n", FF_GetErrMessage(Error));
+		}
+
+
+	} else {
+		printf("Usage: %s [filename]\n", argv[0]);
+	}
+	return 0;
+}
+const FFT_ERR_TABLE rmInfo[] =
+{											// This demonstrates how FFTerm can provide useful information about specific command failure codes.
+	"Unknown or Generic Error",				-1,	// Generic Error must always be the first in the table.
+	"Deletes the specified file or folder.",		FFT_COMMAND_DESCRIPTION,
 	NULL
 };
