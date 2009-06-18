@@ -47,6 +47,7 @@ int main(void) {
 	int i;									// Used for testing the FILE I/O Api.
 	FF_FILE *pF;
 	*/
+	
 
 	//----------- Initialise the environment
 	Env.pIoman = NULL;
@@ -100,17 +101,13 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "mkdir",	mkdir_cmd,	mkdirInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "info",	info_cmd,	infoInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "view",	view_cmd,	viewInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "rm",		rm_cmd,		rmInfo,		&Env);
 				
 				//---------- Some test code used to test the FILE I/O Api.
 				
-				/*pF = FF_Open(pIoman, "\\test2.txt", "r+", &Error);
+				/*pF = FF_Open(pIoman, "\\test2.txt", FF_GetModeBits("a+"), &Error);
 				for(i = 0; i < 1024; i++) {
 					FF_PutC(pF, 'J');
-					FF_Seek(pF, i, FF_SEEK_SET);
-					FF_PutC(pF, 'R');
-					FF_Seek(pF, 1, FF_SEEK_SET);
-					FF_GetC(pF);
-					FF_Seek(pF, 0, FF_SEEK_END);
 				}
 				FF_Close(pF);*/
 
