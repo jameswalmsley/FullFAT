@@ -74,7 +74,7 @@ typedef struct _FF_FILE {
 //---------- PROTOTYPES
 // PUBLIC (Interfaces):
 
-FF_FILE		*FF_Open		(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_ERROR *pError);
+FF_FILE		*FF_Open		(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ERROR *pError);
 FF_ERROR	 FF_Close		(FF_FILE *pFile);
 FF_T_SINT32	 FF_GetC		(FF_FILE *pFile);
 FF_T_SINT32	 FF_Read		(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
@@ -86,6 +86,7 @@ FF_T_UINT32	 FF_Tell		(FF_FILE *pFile);
 FF_ERROR	 FF_RmFile		(FF_IOMAN *pIoman, const FF_T_INT8 *path);
 FF_ERROR	 FF_RmDir		(FF_IOMAN *pIoman, const FF_T_INT8 *path);
 FF_T_BOOL	 FF_isDirEmpty	(FF_IOMAN *pIoman, const FF_T_INT8 *Path);
+FF_T_UINT8	 FF_GetModeBits	(FF_T_INT8 *Mode);
 
 // Private :
 static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size);

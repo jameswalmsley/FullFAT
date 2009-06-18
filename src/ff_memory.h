@@ -30,7 +30,7 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_memory.c
+ *	@file		ff_memory.h
  *	@author		James Walmsley
  *	@ingroup	MEMORY
  **/

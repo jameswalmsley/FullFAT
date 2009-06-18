@@ -34,7 +34,7 @@
  *	@author		James Walmsley
  *	@ingroup	ERROR
  *
- *	@defgroup	ERR Handles Error Codes
+ *	@defgroup	ERR Error Message
  *	@brief		Used to return pretty strings for FullFAT error codes.
  *
  **/

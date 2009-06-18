@@ -30,7 +30,7 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_time.c
+ *	@file		ff_time.h
  *	@author		James Walmsley
  *	@ingroup	TIME
  *

@@ -31,6 +31,12 @@
 #ifndef _FF_ERROR_H_
 #define _FF_ERROR_H_
 
+/**
+ *	@file		ff_error.h
+ *	@author		James Walmsley
+ *	@ingroup	ERROR
+ **/
+
 #include "ff_config.h"
 #include "ff_types.h"
 

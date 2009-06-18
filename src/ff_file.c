@@ -42,7 +42,15 @@
 
 #include "ff_file.h"
 
-static FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
+/**
+ *	@public
+ *	@brief	Converts STDIO mode strings into the equivalent FullFAT mode.
+ *
+ *	@param	Mode	The mode string e.g. "rb" "rb+" "w" "a" "r" "w+" "a+" etc
+ *
+ *	@return	Returns the mode bits that should be passed to the FF_Open function.
+ **/
+FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
 	FF_T_UINT8 ModeBits = 0x00;
 	while(*Mode) {
 		switch(*Mode) {
@@ -80,6 +88,35 @@ static FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
 	return ModeBits;
 }
 
+/**
+ * FF_Open() Mode Information
+ * - FF_MODE_WRITE
+ *   - Causes any existing file to be erased.
+ *   - When combined with any other flag, (except FF_MODE_UPDATE) it will not erase an existing file.
+ *   - To modify a file, this flag is not necessary.
+ *   .
+ * - FF_MODE_READ
+ *   - Will only allow a file to be read. FF_Write() calls on this file will fail.
+ *   - The file must exist, otherwise FF_Open() will return a file not found error.
+ *   .
+ * - FF_MODE_UPDATE
+ *   - Allows READ and WRITE access. 
+ *   - File must already exist. (Combine with FF_MODE_WRITE or FF_MODE_APPEND to auto create a new file).
+ *   - (FF_MODE_READ | FF_MODE_WRITE) Produces the same effect.
+ *   .
+ * - FF_MODE_APPEND
+ *   - Causes all writes to occur at the end of the file. (Its impossible to overwrite other data in a file with this flag set).
+ *   - Creates a new file if there is no file found.
+ *   - Does NOT erase data from an existing file.
+ *   - Equivalent to (FF_MODE_READ | FF_MODE_WRITE | FF_MODE_APPEND)
+ *   .
+ * .
+ * Be careful when choosing modes. For those using FF_Open() at the application layer
+ * its best to use the provided FF_GetModeBits() function, as this complies to the same
+ * behaviour as the stdio.h fopen() function.
+ *
+ **/
+
 
 /**
  *	@public
@@ -87,14 +124,15 @@ static FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
  *
  *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
  *	@param	path		Path to the File or object.
- *	@param	Mode		Access Mode required.
+ *	@param	Mode		Access Mode required. Modes are a little complicated, the function FF_GetModeBits()
+ *	@param	Mode		will convert a stdio Mode string into the equivalent Mode bits for this parameter.
  *	@param	pError		Pointer to a signed byte for error checking. Can be NULL if not required.
  *	@param	pError		To be checked when a NULL pointer is returned.
  *
  *	@return	NULL pointer on Error, in which case pError should be checked for more information.
  *	@return	pError can be:
  **/
-FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_ERROR *pError) {
+FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ERROR *pError) {
 	FF_FILE		*pFile;
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
@@ -123,7 +161,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_ER
 	}
 
 	// Get the Mode Bits.
-	pFile->Mode = FF_GetModeBits(Mode);
+	pFile->Mode = Mode;
 
 	i = (FF_T_UINT16) strlen(path);
 
@@ -284,6 +322,8 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_INT8 *Mode, FF_ER
  *	@public
  *	@brief	Tests if a Directory contains any other files or folders.
  *
+ *	@param	pIoman	FF_IOMAN object returned from the FF_CreateIOMAN() function.
+ *
  **/
 FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	
@@ -320,7 +360,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	pFile = FF_Open(pIoman, path, "D", &Error);
+	pFile = FF_Open(pIoman, path, FF_MODE_DIR, &Error);
 
 	if(!pFile) {
 		return Error;	// File in use or File not found!
@@ -374,7 +414,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_ERROR Error = 0;
 	FF_T_UINT8 EntryBuffer[32];
 
-	pFile = FF_Open(pIoman, path, "r", &Error);
+	pFile = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 
 	if(!pFile) {
 		return Error;	// File in use or File not found!
