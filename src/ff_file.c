@@ -62,22 +62,25 @@ FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
 			case 'w':	// Allow Write
 			case 'W':
 				ModeBits |= FF_MODE_WRITE;
+				ModeBits |= FF_MODE_CREATE;	// Create if not exist.
+				ModeBits |= FF_MODE_TRUNCATE;
 				break;
 
 			case 'a':	// Append new writes to the end of the file.
 			case 'A':
+				ModeBits |= FF_MODE_WRITE;
 				ModeBits |= FF_MODE_APPEND;
-				//ModeBits &= ~FF_MODE_UPDATE;
+				ModeBits |= FF_MODE_CREATE;	// Create if not exist.
 				break;
 
 			case '+':	// Update the file, don't Append!
-				ModeBits |= FF_MODE_UPDATE;
-				//ModeBits &= ~FF_MODE_APPEND;
+				ModeBits |= FF_MODE_READ;	// RW Mode
+				ModeBits |= FF_MODE_WRITE;	// RW Mode
 				break;
 
-			case 'D':
+			/*case 'D':	// Internal use only!
 				ModeBits |= FF_MODE_DIR;
-				break;
+				break;*/
 
 			default:	// b|B flags not supported (Binary mode is native anyway).
 				break;
@@ -91,24 +94,31 @@ FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
 /**
  * FF_Open() Mode Information
  * - FF_MODE_WRITE
- *   - Causes any existing file to be erased.
- *   - When combined with any other flag, (except FF_MODE_UPDATE) it will not erase an existing file.
- *   - To modify a file, this flag is not necessary.
+ *   - Allows WRITE access to the file.
  *   .
  * - FF_MODE_READ
- *   - Will only allow a file to be read. FF_Write() calls on this file will fail.
- *   - The file must exist, otherwise FF_Open() will return a file not found error.
+ *   - Allows READ access to the file.
  *   .
- * - FF_MODE_UPDATE
- *   - Allows READ and WRITE access. 
- *   - File must already exist. (Combine with FF_MODE_WRITE or FF_MODE_APPEND to auto create a new file).
- *   - (FF_MODE_READ | FF_MODE_WRITE) Produces the same effect.
+ * - FF_MODE_CREATE
+ *   - Create file if it doesn't exist.
  *   .
+ * - FF_MODE_TRUNCATE
+ *   - Erase the file if it already exists and overwrite.
+ *   *
  * - FF_MODE_APPEND
  *   - Causes all writes to occur at the end of the file. (Its impossible to overwrite other data in a file with this flag set).
- *   - Creates a new file if there is no file found.
- *   - Does NOT erase data from an existing file.
- *   - Equivalent to (FF_MODE_READ | FF_MODE_WRITE | FF_MODE_APPEND)
+ *   . 
+ * .
+ *
+ * Some sample modes:
+ * - (FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE)
+ *   - Write access to the file. (Equivalent to "w").
+ *   .
+ * - (FF_MODE_WRITE | FF_MODE_READ)
+ *   - Read and Write access to the file. (Equivalent to "rb+").
+ *   .
+ * - (FF_MODE_WRITE | FF_MODE_READ | FF_MODE_APPEND | FF_MODE_CREATE)
+ *   - Read and Write append mode access to the file. (Equivalent to "a+").
  *   .
  * .
  * Be careful when choosing modes. For those using FF_Open() at the application layer
@@ -203,7 +213,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		}
 
 		if(!FileCluster) {
-			if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND)) {
+			if((pFile->Mode & FF_MODE_CREATE)) {
 				FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object);
 				Object.CurrentItem += 1;
 			}
@@ -222,7 +232,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 			}
 			
 			//---------- Ensure Read-Only files don't get opened for Writing.
-			if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND) || (pFile->Mode & FF_MODE_UPDATE)) {
+			if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND)) {
 				if((Object.Attrib & FF_FAT_ATTR_READONLY)) {
 					free(pFile);
 					if(pError) {
@@ -249,26 +259,10 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 			// File Permission Processing
 			// Only "w" and "w+" mode strings can erase a file's contents.
 			// Any other combinations will not cause an erase.
-			if((pFile->Mode & FF_MODE_UPDATE)) {
-				if((pFile->Mode & ~FF_MODE_UPDATE) == FF_MODE_WRITE) {
-					pFile->Filesize = 0;
-					pFile->FilePointer = 0;
-				}
-			} else {
-				if((pFile->Mode == FF_MODE_WRITE)) {
-					pFile->Filesize = 0;
-					pFile->FilePointer = 0;
-				}
+			if((pFile->Mode & FF_MODE_TRUNCATE)) {
+				pFile->Filesize = 0;
+				pFile->FilePointer = 0;
 			}
-
-			// Mark update mode files as Read and Writable.
-			if((pFile->Mode & FF_MODE_UPDATE)) {
-				pFile->Mode |= (FF_MODE_READ | FF_MODE_WRITE);
-			}
-
-			/*if((pFile->Mode & FF_MODE_APPEND)) {
-				pFile->AppendPointer = pFile->Filesize;
-			}*/
 
 			/*
 				Add pFile onto the end of our linked list of FF_FILE objects.

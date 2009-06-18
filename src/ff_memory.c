@@ -180,6 +180,7 @@ FF_T_BOOL FF_StrMatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 
 		if(strlen(str1) != strlen(str2)) {
 			return FF_FALSE;
 		}
+		len = (FF_T_UINT16) strlen(str1);
 	}
 	
 	for(i = 0; i < len; i++) {

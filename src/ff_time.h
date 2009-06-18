@@ -45,9 +45,10 @@
 
 /**
  *	@public
- *	@brief	A TIME and DATE structure for FullFAT. A FullFAT time driver must populate these values.
+ *	@brief	A TIME and DATE object for FullFAT. A FullFAT time driver must populate these values.
+ *
  **/
-typedef struct _FF_SYSTEMTIME{
+typedef struct {
 	FF_T_UINT16	Year;		///< Year	(e.g. 2009).
 	FF_T_UINT16 Month;		///< Month	(e.g. 1 = Jan, 12 = Dec).
 	FF_T_UINT16	Day;		///< Day	(1 - 31).

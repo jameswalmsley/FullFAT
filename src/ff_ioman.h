@@ -54,8 +54,9 @@
 #define FF_MODE_READ			0x01		///< Buffer / FILE Mode for Read Access.
 #define	FF_MODE_WRITE			0x02		///< Buffer / FILE Mode for Write Access.
 #define FF_MODE_APPEND			0x04		///< FILE Mode Append Access.
-#define	FF_MODE_UPDATE			0x08		///< FILE Mode Update.
-#define FF_MODE_DIR				0x80		///< Special Mode to open a Dir.
+#define	FF_MODE_CREATE			0x08		///< FILE Mode Create file if not existing.
+#define FF_MODE_TRUNCATE		0x10		///< FILE Mode Truncate an Existing file.
+#define FF_MODE_DIR				0x80		///< Special Mode to open a Dir. (Internal use ONLY!)
 
 #define FF_BUF_MAX_HANDLES		0xFFFF		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
 
