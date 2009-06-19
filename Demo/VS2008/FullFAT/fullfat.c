@@ -54,13 +54,13 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 	 
-	//f = fopen("c:\\Write.img", "rb+");
+	f = fopen("c:\\write.img", "rb+");
 
 	if(f) {
 		//---------- Create FullFAT IO Manager
-		pIoman = FF_CreateIOMAN(NULL, 512, 512, &Error);
+		pIoman = FF_CreateIOMAN(NULL, 8192, 512, &Error);
 
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.

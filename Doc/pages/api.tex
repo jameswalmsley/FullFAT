@@ -9,6 +9,32 @@ If FullFAT doesn't provide a service or function natively, then it should be ver
 \subsection{FF\textunderscore CreateIOMAN()}
 
 FF\textunderscore CreateIOMAN() creates the FF\textunderscore IOMAN type object, that is required for all FullFAT API functions except the FILE I/O functions. This allows FullFAT to be completely re-entrant throughout any execution context, and also provides the possibility to have multiple concurrent instances of FullFAT running in a single or multi-threaded environment. Inn other words, FullFAT can use multiple devices and partitions, while keeping each device completely isolated.
+\subsubsection{Function Prototype}
+\begin{lstlisting}
+FF_IOMAN *FF_CreateIOMAN(
+				FF_T_UINT8 *pCacheMem, 	// Pointer to memory for Cache.
+				FF_T_UINT32 Size, 		// Size of memory.
+				FF_T_UINT16 BlkSize, 	// Blocksize to use.
+				FF_ERROR *pError		// Error Code.
+);
+\end{lstlisting}
+
+\begin{table}[t]
+\centering
+\begin{tabular}{}
+
+\end{tabular}
+\caption{}
+\label{tab:}
+\end{table}
+
+pCacheMem - A byte-wise pointer to some memory that FullFAT may use for its working caches. This can be NULL if FullFAT is able to malloc() its own memory. The size of this memory must be a multiple of the provided blocksize.
+
+Size - The size in bytes that the memory for FullFAT's working cache's can be.
+
+BlkSize - The blocksize of the device you want FullFAT to work with.
+
+pError - A pointer to a FullFAT error code. This should be checked in case the function returns NULL.
 
 \begin{lstlisting}
 #include "fullfat.h" 				// Include FullFAT's type definitions.

@@ -403,7 +403,7 @@ int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 	ticks = (int) (oend.QuadPart - ostart.QuadPart);
 	printf("Open took %d\n", ticks);
 	if(fSource) {
-		fDest = FF_Open(pIoman, dest, FF_MODE_WRITE, &Error);
+		fDest = FF_Open(pIoman, dest, FF_GetModeBits("w"), &Error);
 		if(fDest) {
 			// Do the copy
 			QueryPerformanceCounter(&start_ticks);  
@@ -426,6 +426,9 @@ int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 		}
 
 	} else {
+		if(Error == FF_ERR_FILE_OBJECT_IS_A_DIR) {
+			return FF_ERR_FILE_OBJECT_IS_A_DIR;
+		}
 		printf("Could not open source file - %s\n", FF_GetErrMessage(Error));
 	}
 	return 0;
@@ -456,10 +459,18 @@ int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	ProcessPath(pathdest, argv[2], pEnv);
 
 	p =  strstr(pathdest, "*");
+	if(!p) {
+		printf("Missing Wildcard!\n");
+		return 0;
+	}
 	strcpy(destWild, p);
 	*p = '\0';
 
 	p =  strstr(pathsrc, "*");
+	if(!p) {
+		printf("Missing Wildcard!\n");
+		return 0;
+	}
 	strcpy(srcWild, p);
 	*p = '\0';
 
@@ -479,7 +490,11 @@ int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 				strcat(tmpsrc, mydir.FileName);
 				strcpy(tmpdest, pathdest);
 				strcat(tmpdest, mydir.FileName);
-				filecopy(tmpsrc, tmpdest, pEnv);
+				if(filecopy(tmpsrc, tmpdest, pEnv) == FF_ERR_FILE_OBJECT_IS_A_DIR) {
+					// Recurse through a dir copy with the same wildcards.
+					// Make the DIR etc.
+					FF_MkDir(pEnv->pIoman, tmpdest);
+				}
 			}
 		}
 
@@ -518,7 +533,7 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		if(fSource) {
 			ProcessPath(path, argv[2], pEnv);
 
-			fDest = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+			fDest = FF_Open(pIoman, path, FF_GetModeBits("w"), &Error);
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);   
@@ -578,7 +593,7 @@ int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		ProcessPath(path, argv[1], pEnv);
 		fSource = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 		if(fSource) {
-			fDest = fopen(argv[2], "rb+");
+			fDest = fopen(argv[2], "wb");
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);  
@@ -640,7 +655,7 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			SourceSize = ftell(fSource);
 			fseek(fSource, 0, SEEK_SET);
 			ProcessPath(path, argv[2], pEnv);
-			fDest = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
+			fDest = FF_Open(pIoman, path, FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE, &Error);
 			if(fDest) {
 				// Do the copy
 				QueryPerformanceCounter(&start_ticks);  

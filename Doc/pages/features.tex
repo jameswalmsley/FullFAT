@@ -1,0 +1,26 @@
+FullFAT is full of many unique and useful features that make it stand out above the other open-source FAT drivers. Here is a summary of the features that FullFAT provides, to provide an overview of what FullFAT can do.
+
+\subsection{PathCACHE}
+One of the main problems with embedded FAT file-system implementations is that they can be very slow when opening and closing many files in large directories repeatedly. The reason for this, is that the driver must physically look for files and directories within a directory tree.
+
+FullFAT employs a unique PathCACHE system, whereby the last (configurable number of) paths accessed are cached for their location. This greatly reduces the time required to open a file when the path is already cached by atleast 10x.
+
+Because PathCACHE requires memory, its an optional build option. It can be enabled or disabled easily in the FullFAT configuration header file.
+
+\subsection{Thread-Safe}
+Making a FAT driver thread-safe is not an easy task. Most other implementations leave this out assuming that a programmer will take care of the thread-safety themselves. This is not a good idea, and to provide a consistent robust environment FullFAT defines abstractions to OS provided semaphores. This allows FullFAT to be truly thread-safe, while allowing concurrent operations on multiple files.
+
+\subsection{True Platform Independence}
+FullFAT has been written from the ground up to be completely platform independent. To date FullFAT has been compiled on many of the major platforms, and not one has had any problems compiling FullFAT. While working with many people to get FullFAT integrated into many different platforms, the general consensus is that its very easy, and just works.
+
+Despite its platform independence, FullFAT also focusses on maximising file I/O throughput. Previous tests show a significant increase in performance over the outdated EFSL fat library.
+
+\subsection{Long File Name Support (LFNs)}
+There are many disputes in the open-source community regarding LFNs. FullFAT is developed in such a way that all code pertaining to LFN support can be simply disabled. A device containing FullFAT that is built in such a way therefore contains no code or algorithms that use or create LFNs, and thus the device is legally compatible with Microsoft's patents.
+
+The patents that Microsoft hold on LFNs, are however hotly debated and contested. The current ongoing courtcase with TomTom should resolve licensing issues once and for all. The rule of thumb is that its ok to use LFNs in open-source and free projects, but if you're going commercial then its your responsibility to make sure that your project legally complies with Microsoft's terms.
+
+\subsection{Simple Programming Interface}
+FullFAT is written in a clear ANSI compliant C style. FullFAT tries to make use of object-oriented design techniques where possible, and thus has a clean object-oriented style API.
+
+This allows FullFAT to run simultaneously on different devices and partitions, while keeping each device or partition completely isolated. This provides security and robustness to systems with lots of power and memory. Smaller devices are unlikely to use more than a single storage device or partition, and therefore the use of FullFAT in such systems is not ruled out.
