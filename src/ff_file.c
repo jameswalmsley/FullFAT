@@ -191,8 +191,6 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 
 	DirCluster = FF_FindDir(pIoman, path, i);
 
-	
-
 	if(DirCluster) {
 		//RetVal = //FF_FindEntry(pIoman, DirCluster, filename, &Object, FF_TRUE);
 		//if(RetVal >= 0) {

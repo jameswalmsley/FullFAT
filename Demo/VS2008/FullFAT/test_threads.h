@@ -29,47 +29,20 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
-#ifndef _CMD_H_
-#define _CMD_H_
+/**
+ *	This file provides some commands allowing one to test multi-threaded I/O on FullFAT.
+ **/
 
 #include "../../../src/fullfat.h"
 #include "../../../../FFTerm/src/FFTerm.h"
+#include "cmd.h"
+#include <windows.h>
+#define FFTEST_MAX_THREADS	10
+extern const FFT_ERR_TABLE mkthreadInfo[];
+extern const FFT_ERR_TABLE killthreadInfo[];
+extern const FFT_ERR_TABLE listthreadsInfo[];
 
-typedef struct {	// Pass an environment for the FullFAT commands.
-	FF_IOMAN	*pIoman;
-	FF_T_INT8	WorkingDir[FF_MAX_PATH];
-} FF_ENVIRONMENT;
+int createthread_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int killthread_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int listthreads_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 
-void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv);
-
-extern const FFT_ERR_TABLE promptInfo[];
-extern const FFT_ERR_TABLE pwdInfo[];
-extern const FFT_ERR_TABLE lsInfo[];
-extern const FFT_ERR_TABLE cdInfo[];
-extern const FFT_ERR_TABLE md5Info[];
-extern const FFT_ERR_TABLE cpInfo[];
-extern const FFT_ERR_TABLE icpInfo[];
-extern const FFT_ERR_TABLE xcpInfo[];
-extern const FFT_ERR_TABLE mkdirInfo[];
-extern const FFT_ERR_TABLE infoInfo[];
-extern const FFT_ERR_TABLE mountInfo[];
-extern const FFT_ERR_TABLE viewInfo[];
-extern const FFT_ERR_TABLE rmInfo[];
-
-int cmd_prompt	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int pwd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int ls_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int cd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int md5_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int cp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int icp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int xcp_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int mkdir_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int info_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int mount_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int view_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-int rm_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
-
-FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString);
-
-#endif

@@ -19,15 +19,21 @@ FF_IOMAN *FF_CreateIOMAN(
 );
 \end{lstlisting}
 
-\begin{table}[t]
-\centering
-\begin{tabular}{}
-
-\end{tabular}
-\caption{}
-\label{tab:}
-\end{table}
-
+\begin{center}
+    \begin{tabular}{ | l | l | p{5cm} |}
+    \hline
+    TYPE & Parameter & Description \\ \hline
+    Monday & 11C & A clear day with lots of sunshine.
+    However, the strong breeze will bring down the temperatures. \\ \hline
+    Tuesday & 9C & Cloudy with rain, across many northern regions. Clear spells 
+    across most of Scotland and Northern Ireland, 
+    but rain reaching the far northwest. \\ \hline
+    Wednesday & 10C & Rain will still linger for the morning. 
+    Conditions will improve by early afternoon and continue 
+    throughout the evening. \\
+    \hline
+    \end{tabular}
+\end{center}
 pCacheMem - A byte-wise pointer to some memory that FullFAT may use for its working caches. This can be NULL if FullFAT is able to malloc() its own memory. The size of this memory must be a multiple of the provided blocksize.
 
 Size - The size in bytes that the memory for FullFAT's working cache's can be.

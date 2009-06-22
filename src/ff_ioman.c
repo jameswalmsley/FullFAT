@@ -473,7 +473,6 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 			}
 		}
 		FF_ReleaseSemaphore(pIoman->pSemaphore);
-
 		FF_Yield();
 	}
 

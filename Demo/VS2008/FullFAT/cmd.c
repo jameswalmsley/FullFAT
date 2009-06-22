@@ -130,7 +130,7 @@ FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString) {
 /*
 	Makes a path absolute.
 */
-static void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
+void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
 	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
 			sprintf(dest, "\\%s", src);

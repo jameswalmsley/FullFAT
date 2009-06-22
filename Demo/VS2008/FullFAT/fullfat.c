@@ -29,6 +29,7 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 #include "cmd.h"							// The Demo's Header File for shell commands.
+#include "test_threads.h"
 #include "../../../src/fullfat.h"			// Include everything required for FullFAT.
 #include "../../../../FFTerm/src/FFTerm.h"	// Include the FFTerm project header.
 #include "testdriver_win32.h"				// Prototypes for our Windows 32-bit driver.
@@ -47,7 +48,6 @@ int main(void) {
 	int i;									// Used for testing the FILE I/O Api.
 	FF_FILE *pF;
 	*/
-	
 
 	//----------- Initialise the environment
 	Env.pIoman = NULL;
@@ -102,6 +102,15 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "info",	info_cmd,	infoInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "view",	view_cmd,	viewInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "rm",		rm_cmd,		rmInfo,		&Env);
+				
+				// Special Thread IO commands
+				FFTerm_AddExCmd(pConsole, "mkthread",createthread_cmd,	mkthreadInfo,&Env);
+				FFTerm_AddExCmd(pConsole, "tlist",listthreads_cmd,	listthreadsInfo,&Env);
+				FFTerm_AddExCmd(pConsole, "tkill",killthread_cmd,	killthreadInfo,&Env);
+				
+
+				
+				
 				
 				//---------- Some test code used to test the FILE I/O Api.
 				

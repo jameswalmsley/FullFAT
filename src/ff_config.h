@@ -35,6 +35,10 @@
 	platform.
 */
 
+//---------- DEMO Enable		// Enables Platform drivers for the Demos.
+#define FF_DEMO_WIN32			// Only define one.
+//#define FF_DEMO_LINUX			// Comment both out when not in use.
+
 //---------- ENDIANESS
 #define FF_LITTLE_ENDIAN		// Choosing the Byte-order of your system is important.	
 //#define FF_BIG_ENDIAN			// You may be able to provide better Byte-order swapping routines to FullFAT.

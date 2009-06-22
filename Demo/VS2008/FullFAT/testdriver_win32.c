@@ -40,11 +40,19 @@
 #include <winbase.h>
 #include <winioctl.h>
 #include <conio.h>
+#include "testdriver_win32.h"
 
 /*
 	This driver can inteface with Hard drives up to 2TB in size.
 */
 
+/*
+	FullFAT assumes that every read and write call is completed in a multiple transaction safe manor.
+
+	That is that multiple concurrent calls to the low-level I/O layer should be threadsafe.
+	These file I/O drivers require a MUTEX or Semaphore to achieve this.
+*/
+static HANDLE g_Sem = NULL;	// I/O Access Semaphore!
 
 signed int fnVistaRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDev) {
 	LARGE_INTEGER li;
@@ -84,9 +92,19 @@ signed int fnVistaWrite_512(unsigned char *buffer, unsigned long sector, unsigne
 
 signed int fnRead_512(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 	unsigned long long address;
+	
+	if(!g_Sem) {
+		g_Sem = FF_CreateSemaphore();
+	}
+	
 	address = (unsigned long long) sector * 512;
-	_fseeki64(pParam, address, SEEK_SET);
-	fread(buffer, 512, sectors, pParam);
+
+	FF_PendSemaphore(g_Sem);
+	{
+		_fseeki64(pParam, address, SEEK_SET);
+		fread(buffer, 512, sectors, pParam);
+	}
+	FF_ReleaseSemaphore(g_Sem);
 	return sectors;
 }
 /*
@@ -113,10 +131,33 @@ signed int fnWrite_512(unsigned char *buffer, unsigned long sector, unsigned sho
 	unsigned long long address;
 	unsigned long retVal;
 	//printf("W %d %d\n", sector, sectors);
+
+	if(sector == 0) {
+		printf("Write to MBR!\n");
+	}
 	address = (unsigned long long) sector * 512;
-	_fseeki64(pParam, address, SEEK_SET);
-	retVal = fwrite(buffer, 512, sectors, pParam);
-	return sectors;
+
+	if(!g_Sem) {
+		g_Sem = FF_CreateSemaphore();
+	}
+	
+	FF_PendSemaphore(g_Sem);
+	{
+
+		if(_fseeki64(pParam, address, SEEK_SET)) {
+			printf("Seek error\n");
+		}
+		
+		retVal = fwrite(buffer, 512, sectors, pParam);
+
+	}
+	FF_ReleaseSemaphore(g_Sem);
+
+	if(retVal != sectors) {
+		printf("Write Error!\n");
+	}
+
+	return retVal;
 }
 
 /*

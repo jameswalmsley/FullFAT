@@ -186,6 +186,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\test_threads.c"
+				>
+			</File>
+			<File
 				RelativePath=".\testdriver_win32.c"
 				>
 			</File>
@@ -253,6 +257,10 @@
 			>
 			<File
 				RelativePath=".\cmd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\test_threads.h"
 				>
 			</File>
 			<File
