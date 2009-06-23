@@ -35,10 +35,6 @@
 	platform.
 */
 
-//---------- DEMO Enable		// Enables Platform drivers for the Demos.
-#define FF_DEMO_WIN32			// Only define one.
-//#define FF_DEMO_LINUX			// Comment both out when not in use.
-
 //---------- ENDIANESS
 #define FF_LITTLE_ENDIAN		// Choosing the Byte-order of your system is important.	
 //#define FF_BIG_ENDIAN			// You may be able to provide better Byte-order swapping routines to FullFAT.
@@ -78,6 +74,9 @@
 #define FF_64_NUM_SUPPORT		// This helps to give information about the FreeSpace and VolumeSize of a partition or volume.
 								// If you cannot support 64-bit integers, then FullFAT still works, its just that the functions:
 								// FF_GetFreeSize() and FF_GetVolumeSize() don't make sense when reporting sizes > 4GB.
+
+//---------- Driver Sleep Time	// How long FullFAT should sleep the thread for in ms, if FF_ERR_DRIVER_BUSY is recieved.
+#define FF_DRIVER_BUSY_SLEEP	20	
 
 //---------- Debugging Features
 #define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
