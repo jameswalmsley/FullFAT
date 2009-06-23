@@ -189,10 +189,6 @@
 				RelativePath=".\test_threads.c"
 				>
 			</File>
-			<File
-				RelativePath=".\testdriver_win32.c"
-				>
-			</File>
 			<Filter
 				Name="FullFAT"
 				>
@@ -224,14 +220,6 @@
 					RelativePath="..\..\..\src\ff_memory.c"
 					>
 				</File>
-				<File
-					RelativePath="..\..\..\src\ff_safety.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\src\ff_time.c"
-					>
-				</File>
 			</Filter>
 			<Filter
 				Name="FFTerm"
@@ -246,6 +234,22 @@
 				</File>
 				<File
 					RelativePath="..\..\..\..\FFTerm\src\FFTerm.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Driver"
+				>
+				<File
+					RelativePath="..\..\..\Drivers\Windows\blkdev_win32.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\Drivers\Windows\ff_safety_win32.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\Drivers\Windows\ff_time_win32.c"
 					>
 				</File>
 			</Filter>
@@ -340,6 +344,14 @@
 				</File>
 				<File
 					RelativePath="..\..\..\..\FFTerm\src\FFTerm.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Driver"
+				>
+				<File
+					RelativePath="..\..\..\Drivers\Windows\blkdev_win32.h"
 					>
 				</File>
 			</Filter>

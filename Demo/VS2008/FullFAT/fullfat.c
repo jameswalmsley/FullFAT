@@ -32,7 +32,7 @@
 #include "test_threads.h"
 #include "../../../src/fullfat.h"			// Include everything required for FullFAT.
 #include "../../../../FFTerm/src/FFTerm.h"	// Include the FFTerm project header.
-#include "testdriver_win32.h"				// Prototypes for our Windows 32-bit driver.
+#include "../../../Drivers/Windows/blkdev_win32.h"				// Prototypes for our Windows 32-bit driver.
 
 #define PARTITION_NUMBER	0
 
@@ -64,7 +64,7 @@ int main(void) {
 
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.
-			Error = FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite_512, (FF_READ_BLOCKS) fnRead_512, f);
+			Error = FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) fnWrite, (FF_READ_BLOCKS) fnRead, f);
 			if(Error) {
 				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %d.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));				
 			}

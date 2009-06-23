@@ -40,7 +40,7 @@ struct _IO_THREAD {
 	HANDLE		hThread;			///< Thread Handle.
 	DWORD		dwThreadID;			///< Thread ID.
 	int			nThreadNum;	
-	int			nThreadSeconds;
+	unsigned long long	nThreadBytes;
 	FF_FILE		*pFile;				///< Thread's File Handle.
 	FF_T_BOOL	tKill;
 	FF_T_BOOL	isDead;
@@ -64,7 +64,7 @@ DWORD WINAPI IOTestThread( LPVOID lpParam ) {
 	while(!hThread->tKill) {
 		i = (FF_T_UINT16) FF_Write(hThread->pFile, 2, 1024, (FF_T_UINT8 *) buf);
 		FF_Seek(hThread->pFile, 0, FF_SEEK_SET);		
-		hThread->nThreadSeconds += i;
+		hThread->nThreadBytes += i;
 		//Sleep(1000);
 	}
 
@@ -115,7 +115,7 @@ int createthread_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		if(hThread) {	
 			hThread->isDead = FF_FALSE;
 			hThread->pNext = NULL;
-			hThread->nThreadSeconds = 0;
+			hThread->nThreadBytes = 0;
 			hThread->nThreadNum = 0;
 			hThread->tKill = FF_FALSE;
 
@@ -176,7 +176,7 @@ int listthreads_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	}
 
 	while(hThread) {
-		printf("Thread %d, alive for %d seconds!\n", hThread->nThreadNum, hThread->nThreadSeconds);
+		printf("Thread %d, %f MB processed.\n", hThread->nThreadNum, ((float) hThread->nThreadBytes / (1024 * 1024)));
 		hThread = hThread->pNext;
 	}
 
