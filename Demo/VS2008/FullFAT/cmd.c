@@ -306,12 +306,21 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_T_INT8	path[FF_MAX_PATH];
 
+	int i;
+
 	if(argc == 2) {
 		ProcessPath(path, argv[1], pEnv);
 
 		ExpandPath(path);
 		
 		if(FF_FindDir(pIoman, path, (FF_T_UINT16) strlen(path))) {
+			i = strlen(path) - 1;
+
+			if(i) {
+				if(path[i] == '\\' || path[i] == '/') {
+					path[i] = '\0';
+				}
+			}
 			sprintf(pEnv->WorkingDir, path);
 		} else {
 			printf("Path \"%s\" not found.\n", path);
@@ -865,5 +874,69 @@ const FFT_ERR_TABLE rmInfo[] =
 {											// This demonstrates how FFTerm can provide useful information about specific command failure codes.
 	"Unknown or Generic Error",				-1,	// Generic Error must always be the first in the table.
 	"Deletes the specified file or folder.",		FFT_COMMAND_DESCRIPTION,
+	NULL
+};
+
+
+int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+	
+	FILE		*fDest;
+	FF_BUFFER	*pBuffer;
+	FF_T_INT8	*buf;
+	FF_T_UINT32	BS = 100;
+
+	FF_T_UINT32	read,i = 0;
+
+	if(argc == 2) {
+		fDest = fopen(argv[1], "wb");
+		if(fDest) {
+
+			buf = (FF_T_INT8 *) malloc(pEnv->pIoman->pPartition->BlkSize * BS);
+
+			if(!buf) {
+				return 0;
+			}
+
+			while(i < pEnv->pIoman->pPartition->TotalSectors) {
+				if(pEnv->pIoman->pPartition->TotalSectors - i < BS) {
+					BS = pEnv->pIoman->pPartition->TotalSectors - i;
+				}
+				read = pEnv->pIoman->pBlkDevice->fnReadBlocks(buf, i, BS, pEnv->pIoman->pBlkDevice->pParam);
+				fwrite(buf, pEnv->pIoman->pPartition->BlkSize, read, fDest);
+
+				i += read;
+
+				if(!read) {	// not reading anymore!
+					break;
+				}
+
+				/*pBuffer = FF_GetBuffer(pEnv->pIoman, i, FF_MODE_READ);
+				{
+					if(!pBuffer) {
+						printf("Error, driver I/O failed.\n");
+						break;
+					}
+					fwrite(pBuffer->pBuffer, pEnv->pIoman->pPartition->BlkSize, 1, fDest);
+				}
+				FF_ReleaseBuffer(pEnv->pIoman, pBuffer);*/
+				printf("%d%% Complete. (%d of %d Sectors read)\r", (int)(((float)i / (float)pEnv->pIoman->pPartition->TotalSectors) * (float)100.0), i,  pEnv->pIoman->pPartition->TotalSectors);
+			}
+
+			fclose(fDest);
+			free(buf);
+
+		} else {
+			printf("Couldn't open the destination file!\n");
+		}
+	} else {
+		printf("Usage: %s [filename.img]\n", argv[0]);
+	}
+	
+	return 0;
+}
+const FFT_ERR_TABLE mkimgInfo[] =
+{
+	"Unknown or Generic Error",					-1,	// Generic Error must always be the first in the table.
+	"Takes an image of the mounted volume.",	FFT_COMMAND_DESCRIPTION,
 	NULL
 };

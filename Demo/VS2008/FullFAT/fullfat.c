@@ -54,9 +54,9 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
-	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	f = fopen("c:\\test.img", "rb+");
 	 
-	f = fopen("c:\\write.img", "rb+");
+	//f = fopen("c:\\write.img", "rb+");
 
 	if(f) {
 		//---------- Create FullFAT IO Manager
@@ -102,6 +102,7 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "info",	info_cmd,	infoInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "view",	view_cmd,	viewInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "rm",		rm_cmd,		rmInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "mkimg",	mkimg_cmd,	mkimgInfo,	&Env);
 				
 				// Special Thread IO commands
 				FFTerm_AddExCmd(pConsole, "mkthread",createthread_cmd,	mkthreadInfo,&Env);
