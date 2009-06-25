@@ -28,7 +28,7 @@ unsigned long FF_blackfin_blk_write(unsigned char *buffer, unsigned long sector,
 
 
 bool fs_fullfat_formatDevice( void *hMsd ) {
-	return 0;
+	return (fat_format( (unsigned long)hMsd ) >= 0);
 }
 
 void* fs_fullfat_mountPartition(void *hMsd) {
@@ -95,17 +95,33 @@ void *fs_fullfat_fopen( void *pPartition, const char *fname, unsigned short mode
 	char Filename[260];
 	char Path[260];
 	
-	unsigned char Mode = 0;
-	
-	if(modebits == 0x0011) {
-		Mode = FF_MODE_READ;	
+	unsigned char nOpenMode = 0;
+	// evaluate the mode bits	
+	if (modebits & FS_O_BIT_RD) {
+		if (modebits & FS_O_BIT_WR) {
+			nOpenMode |= FF_MODE_READ;
+			nOpenMode |= FF_MODE_WRITE;
+		} else {
+			nOpenMode |= FF_MODE_READ;
+		}
 	} else {
-		Mode = FF_MODE_WRITE;	
+		if (modebits & FS_O_BIT_WR) {
+			nOpenMode |= FF_MODE_WRITE;
+		}
+	}
+	if (modebits & FS_O_BIT_APP) {
+		nOpenMode |= FF_MODE_APPEND;
+		if (nOpenMode & FS_O_BIT_RD) {
+			nOpenMode |= FF_MODE_WRITE;
+			nOpenMode |= FF_MODE_READ;			
+		} else {
+			nOpenMode |= FF_MODE_WRITE;
+		}
 	}
 	
 	sprintf(Filename, "%s", fname);
 	
-	file = FF_Open((FF_IOMAN*)pPartition, Filename, "rb", NULL);
+	file = FF_Open((FF_IOMAN*)pPartition, Filename, nOpenMode, NULL);
 	
 	return file;
 }
@@ -299,30 +315,30 @@ int fs_fullfat_findClose(T_FF_INFO *ffblk) {
 
 // ----------------------------------------------------------------------------
 
-T_FS_FUNCTIONS g_fullfatFatFunctions = {
-		fs_fullfat_formatDevice,
-		fs_fullfat_mountPartition,
-		fs_fullfat_unmountPartition,
-		fs_fullfat_partitionSize,
-		fs_fullfat_partitionFree,
-		fs_fullfat_fdelete,
-		fs_fullfat_fdirExists,
-		fs_fullfat_fdirEmpty,
-		fs_fullfat_frmdir,
-		fs_fullfat_fmkdir,
-		fs_fullfat_fopen,
-		fs_fullfat_fclose,
-		fs_fullfat_feof,
-		fs_fullfat_fread,
-		fs_fullfat_fwrite,
-		fs_fullfat_fputc,
-		fs_fullfat_fgetc,
-		fs_fullfat_fseek,
-		(FS_FN_TELL)fs_fullfat_ftell,		
-		fs_fullfat_findFirst,
-		fs_fullfat_findNext,		
-		fs_fullfat_findClose
-	};
+static T_FS_FUNCTIONS g_fullfatFatFunctions = {
+	fs_fullfat_formatDevice,
+	fs_fullfat_mountPartition,
+	fs_fullfat_unmountPartition,
+	fs_fullfat_partitionSize,
+	fs_fullfat_partitionFree,
+	fs_fullfat_fdelete,
+	fs_fullfat_fdirExists,
+	fs_fullfat_fdirEmpty,
+	fs_fullfat_frmdir,
+	fs_fullfat_fmkdir,
+	fs_fullfat_fopen,
+	fs_fullfat_fclose,
+	fs_fullfat_feof,
+	fs_fullfat_fread,
+	fs_fullfat_fwrite,
+	fs_fullfat_fputc,
+	fs_fullfat_fgetc,
+	fs_fullfat_fseek,
+	(FS_FN_TELL)fs_fullfat_ftell,		
+	fs_fullfat_findFirst,
+	fs_fullfat_findNext,		
+	fs_fullfat_findClose
+};
 
 T_FS_FUNCTIONS *fs_fullfat_getFileFunctions(void) {
 	return &g_fullfatFatFunctions;

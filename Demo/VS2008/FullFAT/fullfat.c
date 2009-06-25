@@ -34,7 +34,7 @@
 #include "../../../../FFTerm/src/FFTerm.h"	// Include the FFTerm project header.
 #include "../../../Drivers/Windows/blkdev_win32.h"				// Prototypes for our Windows 32-bit driver.
 
-#define PARTITION_NUMBER	0
+#define PARTITION_NUMBER	0				// FullFAT can mount primary partitions only.
 
 int main(void) {
 	
@@ -54,9 +54,9 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
-	f = fopen("c:\\test.img", "rb+");
+	//f = fopen("c:\\test.img", "rb+");
 	 
-	//f = fopen("c:\\write.img", "rb+");
+	f = fopen("c:\\write.img", "rb+");
 
 	if(f) {
 		//---------- Create FullFAT IO Manager

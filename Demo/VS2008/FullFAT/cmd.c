@@ -881,8 +881,8 @@ const FFT_ERR_TABLE rmInfo[] =
 int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	FILE		*fDest;
-	FF_BUFFER	*pBuffer;
-	FF_T_INT8	*buf;
+	//FF_BUFFER	*pBuffer;
+	FF_T_UINT8	*buf;
 	FF_T_UINT32	BS = 100;
 
 	FF_T_UINT32	read,i = 0;
@@ -891,7 +891,7 @@ int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		fDest = fopen(argv[1], "wb");
 		if(fDest) {
 
-			buf = (FF_T_INT8 *) malloc(pEnv->pIoman->pPartition->BlkSize * BS);
+			buf = (FF_T_UINT8 *) malloc(pEnv->pIoman->pPartition->BlkSize * BS);
 
 			if(!buf) {
 				return 0;

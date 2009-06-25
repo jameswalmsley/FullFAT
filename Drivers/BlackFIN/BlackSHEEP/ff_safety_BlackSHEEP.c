@@ -53,18 +53,24 @@
  *	FF_DestroySemaphore() should do nothing.
  *	
  **/
-#include <cdefbf537.h>
+
 #include "ff_safety.h"	// Íncludes ff_types.h
-#include "S:\blackfin\VDK\prj_VDSP5.0\cm_bf537e\standalone\VDK.h"
+
+#ifdef _USE_VDK_
+#include <VDK.h>
+#endif
+
+
 void *FF_CreateSemaphore(void) {
 	// Call your OS's CreateSemaphore function
 	//
-	
+#ifdef _USE_VDK_	
 	VDK_SemaphoreID *mysem = malloc(sizeof(VDK_SemaphoreID));
 	
 	*mysem = VDK_CreateSemaphore(1, 1, 1, 0);
 	
 	return (void *) mysem;
+#endif
 	
 	// return pointer to semaphore
 	//return NULL;	// Comment this out for your implementation.
@@ -78,41 +84,48 @@ void FF_PendSemaphore(void *pSemaphore) {
 	// If your OS doesn't do it for you, you should sleep
 	// this thread until the Semaphore is available.
 	
-	*pPORTGIO |= 0x0800;
+#ifdef _USE_VDK_	
 	VDK_SemaphoreID *mysem = (VDK_SemaphoreID *) pSemaphore;
 	
 	VDK_PendSemaphore(*mysem, 0);
+#endif
 }
 
 void FF_ReleaseSemaphore(void *pSemaphore) {
 	// Call your OS's ReleaseSemaphore with the provided pSemaphore pointer.
 	//
-	
+#ifdef _USE_VDK_		
 	VDK_SemaphoreID *mysem = (VDK_SemaphoreID *) pSemaphore;
 	
 	VDK_PostSemaphore(*mysem);
-	*pPORTGIO &= ~0x0800;
+#endif
 	//
-	pSemaphore;
 }
 
 void FF_DestroySemaphore(void *pSemaphore) {
 	// Call your OS's DestroySemaphore with the provided pSemaphore pointer.
 	//
-
+#ifdef _USE_VDK_	
+	VDK_SemaphoreID *mysem = (VDK_SemaphoreID *) pSemaphore;
+	
+	VDK_DestroySemaphore(*mysem);
+#endif
+	
 	//
-	pSemaphore;
 }
 
 void FF_Yield(void) {
 	// Call your OS's thread Yield function. 
 	// If this doesn't work, then a deadlock will occur	
+#ifdef _USE_VDK_
+	VDK_Yield();
+#endif
 }
 
 void FF_Sleep(FF_T_UINT32 TimeMs) {
 	// Call your OS's thread sleep function,
 	// Sleep for TimeMs milliseconds
-	TimeMs;
+	bs_sleep(TimeMs);
 }
 
 /**
