@@ -940,3 +940,19 @@ const FFT_ERR_TABLE mkimgInfo[] =
 	"Takes an image of the mounted volume.",	FFT_COMMAND_DESCRIPTION,
 	NULL
 };
+
+
+int exit_cmd(int argc, char **argv) {
+	if(argc) {
+		KillAllThreads();
+		return FFT_KILL_CONSOLE;
+	}
+	printf("Error in the %s command\n", argv[0]);
+	return -1;
+}
+const FFT_ERR_TABLE exitInfo[] =
+{
+	"Unknown or Generic Error",					-1,	// Generic Error must always be the first in the table.
+	"Terminates the FullFAT console and demo.",	FFT_COMMAND_DESCRIPTION,
+	NULL
+};

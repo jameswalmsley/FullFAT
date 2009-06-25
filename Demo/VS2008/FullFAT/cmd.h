@@ -56,6 +56,7 @@ extern const FFT_ERR_TABLE mountInfo[];
 extern const FFT_ERR_TABLE viewInfo[];
 extern const FFT_ERR_TABLE rmInfo[];
 extern const FFT_ERR_TABLE mkimgInfo[];
+extern const FFT_ERR_TABLE exitInfo[];
 
 int cmd_prompt	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int pwd_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
@@ -71,6 +72,9 @@ int mount_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int view_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int rm_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkimg_cmd	(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int exit_cmd	(int argc, char **argv);
+
+extern void KillAllThreads(void);
 
 FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString);
 

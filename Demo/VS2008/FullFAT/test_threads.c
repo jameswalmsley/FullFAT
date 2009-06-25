@@ -68,10 +68,13 @@ DWORD WINAPI IOTestThread( LPVOID lpParam ) {
 		//Sleep(1000);
 	}
 
+	printf("Thread %d: Received Kill Signal\n", hThread->nThreadNum);
 	hThread->isDead = FF_TRUE;
 
 	return 0;
 }
+
+
 
 static void RemoveThread(THREAD hThread) {
 	THREAD hThreads = g_ThreadList;
@@ -87,6 +90,20 @@ static void RemoveThread(THREAD hThread) {
 			}
 			hThreads = hThreads->pNext;
 		}
+	}
+}
+
+void KillAllThreads(void) {
+	while(g_ThreadList) {
+		g_ThreadList->tKill = FF_TRUE;	// Signal Thread to Die.
+		
+		while(!g_ThreadList->isDead);	// Wait on Thread to Signal its death.
+		
+		FF_Close(g_ThreadList->pFile);	// Close the file.
+
+		CloseHandle(g_ThreadList->hThread);	// Close thread handle.
+		
+		RemoveThread(g_ThreadList);	// Remove thread from list.
 	}
 }
 
