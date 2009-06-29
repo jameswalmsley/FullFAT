@@ -337,6 +337,10 @@ FF_ERROR FF_FlushCache(FF_IOMAN *pIoman) {
 
 	FF_T_UINT16 i,x;
 
+	if(!pIoman) {
+		FF_ERR_NULL_POINTER;
+	}
+
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
 		for(i = 0; i < pIoman->CacheSize; i++) {
