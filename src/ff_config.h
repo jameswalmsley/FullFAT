@@ -64,6 +64,15 @@
 #define FF_PATH_CACHE			// Enables a simply Path Caching mechanism that increases performance of repeated operations
 								// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 								// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
+
+//---------- Hash Table Support
+#define FF_HASH_TABLE_SUPPORT			// Enable HASH to speed up file creation.
+#ifdef	FF_HASH_TABLE_SUPPORT
+#define FF_HASH_FUNCTION	CRC16
+//#define FF_HASH_FUNCTION	CRC8
+#endif
+
+
 #define FF_PATH_CACHE_DEPTH	2	// The Number of PATH's to Cache.
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT		// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
@@ -126,6 +135,18 @@
 #ifdef FF_BIG_ENDIAN
 #error FullFAT Invalid ff_config.h file: Cannot be BIG and LITTLE ENDIAN, choose either or BIG or LITTLE. See ff_config.h file.
 #endif
+#endif
+
+#ifdef FF_HASH_TABLE_SUPPORT
+
+#if FF_HASH_FUNCTION == CRC16
+#define FF_HASH_TABLE_SIZE 8192
+#elif FF_HASH_FUNCTION == CRC8
+#define FF_HASH_TABLE_SIZE 32
+#else
+#error Invalid Hashing function selected. CRC16 or CRC8! 
+#endif
+
 #endif
 
 #endif

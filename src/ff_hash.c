@@ -29,17 +29,88 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
-#ifndef _FULLFAT_H_
-#define _FULLFAT_H_
+/**
+ *	@file		ff_hash.c
+ *	@author		James Walmsley
+ *	@ingroup	HASH
+ *
+ *	@defgroup	HASH HASH Table
+ *	@brief		Provides a simple HASH lookup table.
+ *
+ **/
 
-#include "ff_config.h"
-#include "ff_ioman.h"
-#include "ff_fat.h"
-#include "ff_file.h"
-#include "ff_dir.h"
-#include "ff_time.h"
-#include "ff_crc.h"
 #include "ff_hash.h"
+#include <stdlib.h>
+#include <string.h>
 
+struct _FF_HASH_TABLE {
+	FF_T_UINT8 bitTable[FF_HASH_TABLE_SIZE];	
+};
 
-#endif
+/**
+ *
+ *
+ **/
+FF_HASH_TABLE FF_CreateHashTable() {
+	FF_HASH_TABLE pHash = (FF_HASH_TABLE) malloc(sizeof(struct _FF_HASH_TABLE));
+
+	if(pHash) {
+		FF_ClearHashTable(pHash);
+		return pHash;
+	}
+
+	return NULL;
+}
+
+FF_ERROR FF_ClearHashTable(FF_HASH_TABLE pHash) {
+	if(pHash) {
+		memset(pHash->bitTable, 0, FF_HASH_TABLE_SIZE);
+		return FF_ERR_NONE;
+	}
+
+	return FF_ERR_NULL_POINTER;
+}
+
+FF_ERROR FF_SetHash(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
+	FF_T_UINT32 tblIndex	= ((nHash / 8) % FF_HASH_TABLE_SIZE);
+	FF_T_UINT32 tblBit		= nHash % 8;
+
+	if(pHash) {
+		pHash->bitTable[tblIndex] |= (0x80 >> tblBit);
+		return FF_ERR_NONE;
+	}
+
+	return FF_ERR_NULL_POINTER;	
+}
+
+FF_ERROR FF_ClearHash(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
+	FF_T_UINT32 tblIndex	= ((nHash / 8) % FF_HASH_TABLE_SIZE);
+	FF_T_UINT32 tblBit		= nHash % 8;
+
+	if(pHash) {
+		pHash->bitTable[tblIndex] &= ~(0x80 >> tblBit);
+		return FF_ERR_NONE;
+	}
+
+	return FF_ERR_NULL_POINTER;
+}
+
+FF_T_BOOL FF_isHashSet(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
+	FF_T_UINT32 tblIndex	= ((nHash / 8) % FF_HASH_TABLE_SIZE);
+	FF_T_UINT32 tblBit		= nHash % 8;
+
+	if(pHash) {
+		if(pHash->bitTable[tblIndex] & (0x80 >> tblBit)) {
+			return FF_TRUE;
+		}
+	}
+	return FF_FALSE;
+}
+
+FF_ERROR FF_DestroyHashTable(FF_HASH_TABLE pHash) {
+	if(pHash) {
+		free(pHash);
+		return FF_ERR_NONE;
+	}
+	return FF_ERR_NULL_POINTER;
+}

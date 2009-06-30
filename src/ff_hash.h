@@ -29,17 +29,28 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
-#ifndef _FULLFAT_H_
-#define _FULLFAT_H_
+/**
+ *	@file		ff_hash.h
+ *	@author		James Walmsley
+ *	@ingroup	HASH
+ *
+ **/
+
+#ifndef _FF_HASH_H_
+#define _FF_HASH_H_
 
 #include "ff_config.h"
-#include "ff_ioman.h"
-#include "ff_fat.h"
-#include "ff_file.h"
-#include "ff_dir.h"
-#include "ff_time.h"
-#include "ff_crc.h"
-#include "ff_hash.h"
+#include "ff_types.h"
+#include "ff_error.h"
 
+struct			_FF_HASH_TABLE;
+typedef struct	_FF_HASH_TABLE *FF_HASH_TABLE;
+
+FF_HASH_TABLE	FF_CreateHashTable	();
+FF_ERROR		FF_DestroyHashTable	(FF_HASH_TABLE pHash);
+FF_ERROR		FF_ClearHashTable	(FF_HASH_TABLE pHash);
+FF_ERROR		FF_ClearHash		(FF_HASH_TABLE pHash, FF_T_UINT32 nHash);
+FF_ERROR		FF_SetHash			(FF_HASH_TABLE pHash, FF_T_UINT32 nHash);
+FF_T_BOOL		FF_isHashSet		(FF_HASH_TABLE pHash, FF_T_UINT32 nHash);
 
 #endif

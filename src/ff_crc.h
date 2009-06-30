@@ -29,17 +29,21 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
-#ifndef _FULLFAT_H_
-#define _FULLFAT_H_
+/**
+ *	@file		ff_crc.h
+ *	@author		James Walmsley
+ *	@ingroup	CRC
+ *
+ **/
 
+#ifndef _FF_CRC_H_
+#define _FF_CRC_H_
+
+#include "ff_types.h"
 #include "ff_config.h"
-#include "ff_ioman.h"
-#include "ff_fat.h"
-#include "ff_file.h"
-#include "ff_dir.h"
-#include "ff_time.h"
-#include "ff_crc.h"
-#include "ff_hash.h"
 
+FF_T_UINT8	FF_GetCRC8	(FF_T_UINT8 *pbyData, FF_T_UINT32 stLength);
+FF_T_UINT16 FF_GetCRC16	(FF_T_UINT8 *pbyData, FF_T_UINT32 stLength);
 
 #endif
+
