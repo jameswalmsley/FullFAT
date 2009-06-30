@@ -55,7 +55,7 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
-	f = fopen("c:\\Write.img", "rb+");
+	f = fopen("c:\\test.img", "rb+");
 	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 
 	if(f) {

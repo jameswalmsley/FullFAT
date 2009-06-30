@@ -519,15 +519,19 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
 
 FF_T_UINT32 FF_GetChainLength(FF_IOMAN *pIoman, FF_T_UINT32 pa_nStartCluster, FF_T_UINT32 *piEndOfChain) {
 	FF_T_UINT32 iLength = 0;
+	FF_T_UINT32 NextCluster = pa_nStartCluster;
 	
 	FF_lockFAT(pIoman);
 	{
-		while(!FF_isEndOfChain(pIoman, pa_nStartCluster)) {
-			pa_nStartCluster = FF_getFatEntry(pIoman, pa_nStartCluster);
+		while(!FF_isEndOfChain(pIoman, NextCluster)) {
+			pa_nStartCluster = FF_getFatEntry(pIoman, NextCluster);
 			iLength++;
-		}
-		if(piEndOfChain) {
-			*piEndOfChain = pa_nStartCluster;
+			if(FF_isEndOfChain(pIoman, pa_nStartCluster)) {
+				if(piEndOfChain) {
+					*piEndOfChain = NextCluster;
+				}				
+			}
+			NextCluster = pa_nStartCluster;
 		}
 	}
 	FF_unlockFAT(pIoman);

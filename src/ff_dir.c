@@ -580,7 +580,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 			if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
 				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen);
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path[pathLen] = '\0';
-				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster = dirCluster;
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster	= dirCluster;
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].chainLength	= FF_GetChainLength(pIoman, dirCluster, NULL);
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].clusterAddress = dirCluster;
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].clusterNumber = 0;
+				//pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].	= FF_GetChainLength
 #ifdef FF_HASH_TABLE_SUPPORT				
 				FF_ClearHashTable(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].pHashTable);
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].bHashed = FF_FALSE;
@@ -878,14 +882,48 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
     return FF_ERR_NONE;
 }
 
+FF_PATHCACHE *FF_GetPCDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
+	FF_T_UINT32 i;
+	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
+		if(pIoman->pPartition->PathCache[i].DirCluster == DirCluster) {
+			return &pIoman->pPartition->PathCache[i];
+		}
+	}
+
+	return NULL;
+}
 
 FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster, NULL);	// BottleNeck
+	FF_T_UINT32 chainLength;//
 	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, nEntry, (FF_T_UINT16)32);
-	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
+	FF_T_UINT32 clusterAddress;//
+
+	FF_PATHCACHE *pPC = FF_GetPCDir(pIoman, DirCluster);
+
+	if(pPC) {
+		if(pPC->clusterNumber == clusterNum) {
+			clusterAddress = pPC->clusterAddress;
+		} else {
+			clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);
+			pPC->clusterAddress = clusterAddress;
+			pPC->clusterNumber	= clusterNum;
+
+		}
+
+		if(pPC->chainLength) {
+			chainLength	= pPC->chainLength;	
+		} else {
+			chainLength	= FF_GetChainLength(pIoman, DirCluster, NULL);
+			pPC->chainLength = chainLength;
+		}
+
+	} else {
+		chainLength		= FF_GetChainLength(pIoman, DirCluster, NULL);
+		clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
+	}
 	
 	if((clusterNum + 1) > chainLength) {
 		return FF_ERR_DIR_END_OF_DIR;	// End of Dir was reached!

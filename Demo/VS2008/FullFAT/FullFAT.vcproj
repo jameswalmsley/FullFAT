@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="FullFAT"
 	ProjectGUID="{28DA3267-EC8B-4FC1-983A-204349E3E477}"
 	RootNamespace="FullFAT"
