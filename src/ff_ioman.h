@@ -44,6 +44,7 @@
 #include "ff_types.h"
 #include "ff_safety.h"						// Provide thread-safety via semaphores.
 #include "ff_memory.h"						// Memory access routines for ENDIAN independence.
+#include "ff_hash.h"
 
 //#define	FF_MAX_PARTITION_NAME	5		///< Partition name length.
 
@@ -111,6 +112,10 @@ typedef struct {
 typedef struct {
 	FF_T_INT8	Path[FF_MAX_PATH];
 	FF_T_UINT32	DirCluster;
+#ifdef FF_HASH_TABLE_SUPPORT
+	FF_HASH_TABLE pHashTable;
+	FF_T_BOOL	bHashed;
+#endif
 } FF_PATHCACHE;
 
 /**

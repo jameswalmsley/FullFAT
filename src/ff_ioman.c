@@ -114,6 +114,10 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
 			pIoman->pPartition->PathCache[i].DirCluster = 0;
 			pIoman->pPartition->PathCache[i].Path[0] = '\0';
+#ifdef FF_HASH_TABLE_SUPPORT
+			pIoman->pPartition->PathCache[i].pHashTable = FF_CreateHashTable();
+			pIoman->pPartition->PathCache[i].bHashed = FF_FALSE;
+#endif
 		}
 #endif
 	} else {
