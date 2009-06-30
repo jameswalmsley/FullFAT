@@ -197,6 +197,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\src\ff_crc.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_dir.c"
 					>
 				</File>
@@ -210,6 +214,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\src\ff_file.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_hash.c"
 					>
 				</File>
 				<File
@@ -287,6 +295,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\src\ff_crc.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_dir.h"
 					>
 				</File>
@@ -300,6 +312,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\src\ff_file.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_hash.h"
 					>
 				</File>
 				<File

@@ -116,6 +116,10 @@ typedef struct {
 	FF_HASH_TABLE pHashTable;
 	FF_T_BOOL	bHashed;
 #endif
+	FF_T_UINT32 chainLength;
+	FF_T_UINT32 eodCluster;
+	FF_T_UINT32	eodITem;
+
 } FF_PATHCACHE;
 
 /**

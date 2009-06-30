@@ -43,23 +43,24 @@ int main(void) {
 	FF_ERROR	Error = FF_ERR_NONE;		// ERROR code value.
 	FF_IOMAN *pIoman;
 	FF_ENVIRONMENT Env;
+	FF_HASH_TABLE hHash;
 	
-	/*
+	
 	int i;									// Used for testing the FILE I/O Api.
 	FF_FILE *pF;
-	*/
+	
 
 	//----------- Initialise the environment
 	Env.pIoman = NULL;
 	strcpy(Env.WorkingDir, "\\");
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
-	//f = fopen("c:\\test.img", "rb+");
-	f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
+	f = fopen("c:\\Write.img", "rb+");
+	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 
 	if(f) {
 		//---------- Create FullFAT IO Manager
-		pIoman = FF_CreateIOMAN(NULL, 8192, 512, &Error);
+		pIoman = FF_CreateIOMAN(NULL, 8192*10, 512, &Error);
 
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.
@@ -109,10 +110,6 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "tlist",listthreads_cmd,	listthreadsInfo,&Env);
 				FFTerm_AddExCmd(pConsole, "tkill",killthread_cmd,	killthreadInfo,&Env);
 				
-
-				
-				
-				
 				//---------- Some test code used to test the FILE I/O Api.
 				
 				/*pF = FF_Open(pIoman, "\\test2.txt", FF_GetModeBits("a+"), &Error);
@@ -121,6 +118,7 @@ int main(void) {
 				}
 				FF_Close(pF);*/
 
+				
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);
 				FF_DestroyIOMAN(pIoman);

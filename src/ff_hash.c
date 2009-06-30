@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef FF_HASH_TABLE_SUPPORT
 struct _FF_HASH_TABLE {
 	FF_T_UINT8 bitTable[FF_HASH_TABLE_SIZE];	
 };
@@ -114,3 +115,5 @@ FF_ERROR FF_DestroyHashTable(FF_HASH_TABLE pHash) {
 	}
 	return FF_ERR_NULL_POINTER;
 }
+
+#endif

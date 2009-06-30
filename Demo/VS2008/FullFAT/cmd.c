@@ -410,9 +410,13 @@ int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 	fSource = FF_Open(pIoman, src, FF_MODE_READ, &Error);
 	QueryPerformanceCounter(&oend);
 	ticks = (int) (oend.QuadPart - ostart.QuadPart);
-	printf("Open took %d\n", ticks);
+	//printf("Source: Open took %d\n", ticks);
 	if(fSource) {
+		QueryPerformanceCounter(&ostart);
 		fDest = FF_Open(pIoman, dest, FF_GetModeBits("w"), &Error);
+		QueryPerformanceCounter(&oend);
+		ticks = (int) (oend.QuadPart - ostart.QuadPart);
+		printf("Dest: Open took %d\n", ticks);
 		if(fDest) {
 			// Do the copy
 			QueryPerformanceCounter(&start_ticks);  
