@@ -66,7 +66,7 @@
 								// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
 //---------- Hash Table Support
-#define FF_HASH_TABLE_SUPPORT			// Enable HASH to speed up file creation.
+//#define FF_HASH_TABLE_SUPPORT			// Enable HASH to speed up file creation.
 #ifdef	FF_HASH_TABLE_SUPPORT
 #define FF_HASH_FUNCTION	CRC16
 //#define FF_HASH_FUNCTION	CRC8

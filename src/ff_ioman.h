@@ -110,15 +110,12 @@ typedef struct {
 } FF_BUFFER;
 
 typedef struct {
-	FF_T_INT8		Path[FF_MAX_PATH];
-	FF_T_UINT32		DirCluster;		// Starting Cluster of a directory.
+	FF_T_INT8	Path[FF_MAX_PATH];
+	FF_T_UINT32	DirCluster;
 #ifdef FF_HASH_TABLE_SUPPORT
-	FF_HASH_TABLE	pHashTable;		
-	FF_T_BOOL		bHashed;		
+	FF_HASH_TABLE pHashTable;
+	FF_T_BOOL	bHashed;
 #endif
-	FF_T_UINT32		chainLength;	// Length of the Dir Chain.
-	FF_T_UINT32		clusterNumber;	// clusterNumber of the last used Dirent.
-	FF_T_UINT32		clusterAddress;	// Address of clusterNumber.
 } FF_PATHCACHE;
 
 /**

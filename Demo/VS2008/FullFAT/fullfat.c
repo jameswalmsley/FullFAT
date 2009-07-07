@@ -43,11 +43,11 @@ int main(void) {
 	FF_ERROR	Error = FF_ERR_NONE;		// ERROR code value.
 	FF_IOMAN *pIoman;
 	FF_ENVIRONMENT Env;
-	FF_HASH_TABLE hHash;
+//	FF_HASH_TABLE hHash;
 	
 	
-	int i;									// Used for testing the FILE I/O Api.
-	FF_FILE *pF;
+//	int i;									// Used for testing the FILE I/O Api.
+//	FF_FILE *pF;
 	
 
 	//----------- Initialise the environment
@@ -55,12 +55,12 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
-	f = fopen("c:\\test.img", "rb+");
+	f = fopen("s:\\ramdisk.bin", "rb+");
 	//f = fopen("\\\\.\\PHYSICALDRIVE1", "rb+");
 
 	if(f) {
 		//---------- Create FullFAT IO Manager
-		pIoman = FF_CreateIOMAN(NULL, 8192*10, 512, &Error);
+		pIoman = FF_CreateIOMAN(NULL, 4096, 512, &Error);
 
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.

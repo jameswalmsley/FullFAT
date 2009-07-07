@@ -240,7 +240,7 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 		pBuffer->Persistance 	= 0;
 		pBuffer->LRU			= 0;
 		pBuffer->Sector 		= 0;
-		pBuffer->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + pIoman->BlkSize * i);
+		pBuffer->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + (pIoman->BlkSize * i));
 		pBuffer->Modified		= FF_FALSE;
 		pBuffer->Valid			= FF_FALSE;
 		pBuffer++;
@@ -563,10 +563,12 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 	FF_T_UINT32		testLong;
 	if(pIoman) {
 		pPart = pIoman->pPartition;
+
 		if(pPart->NumClusters < 4085) {
 			// FAT12
 			pPart->Type = FF_T_FAT12;
 #ifdef FF_FAT_CHECK
+#ifdef FF_FAT12_SUPPORT
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
@@ -578,8 +580,13 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			if((testLong & 0x3FF) != 0x3F8) {
 				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 			}
+#else
+			return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 #endif
+#endif
+#ifdef FF_FAT12_SUPPORT
 			return FF_ERR_NONE;
+#endif
 
 		} else if(pPart->NumClusters < 65525) {
 			// FAT 16

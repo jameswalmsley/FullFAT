@@ -148,7 +148,6 @@ FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8
 							break;
 						}
 						FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
-						FF_tolower(EntryBuffer, strlen(EntryBuffer));
 						FF_AddDirentHash(pIoman, DirCluster, FF_GetCRC16((FF_T_UINT8 *) EntryBuffer, strlen(EntryBuffer)));
 					}
 				}
@@ -197,14 +196,6 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	
 	pDirent->CurrentItem = 0;
 	nameLen = (FF_T_UINT16) strlen(name);
-
-#ifdef FF_HASH_TABLE_SUPPORT
-	if(FF_DirHashed(pIoman, DirCluster)) {
-		if(!FF_CheckDirentHash(pIoman, DirCluster, FF_GetCRC16(name, strlen(name)))) {
-			return 0;
-		}
-	}
-#endif
 
 	while(!bBreak) {	
 		if(FF_FindNextInDir(pIoman, DirCluster, pDirent)) {
@@ -580,14 +571,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 			if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
 				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen);
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path[pathLen] = '\0';
-				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster	= dirCluster;
-				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].chainLength	= FF_GetChainLength(pIoman, dirCluster, NULL);
-				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].clusterAddress = dirCluster;
-				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].clusterNumber = 0;
-				//pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].	= FF_GetChainLength
+				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster = dirCluster;
 #ifdef FF_HASH_TABLE_SUPPORT				
 				FF_ClearHashTable(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].pHashTable);
-				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].bHashed = FF_FALSE;
 #endif			
 				pIoman->pPartition->PCIndex += 1;
 				if(pIoman->pPartition->PCIndex >= FF_PATH_CACHE_DEPTH) {
@@ -815,6 +801,8 @@ void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *En
 #elif FF_HASH_FUNCTION == CRC8
 	FF_AddDirentHash(pIoman, pDirent->DirCluster, (FF_T_UINT32)FF_GetCRC8((FF_T_UINT8 *) pDirent->FileName, strlen(pDirent->FileName)));
 #endif
+#else
+	pIoman = NULL;
 #endif
 
 	FF_tolower(pDirent->FileName, (FF_T_UINT32)strlen(pDirent->FileName));
@@ -882,48 +870,14 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
     return FF_ERR_NONE;
 }
 
-FF_PATHCACHE *FF_GetPCDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
-	FF_T_UINT32 i;
-	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-		if(pIoman->pPartition->PathCache[i].DirCluster == DirCluster) {
-			return &pIoman->pPartition->PathCache[i];
-		}
-	}
-
-	return NULL;
-}
 
 FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 chainLength;//
+	FF_T_UINT32 chainLength		= FF_GetChainLength(pIoman, DirCluster, NULL);	// BottleNeck
 	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, nEntry, (FF_T_UINT16)32);
 	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, nEntry, (FF_T_UINT16)32);
-	FF_T_UINT32 clusterAddress;//
-
-	FF_PATHCACHE *pPC = FF_GetPCDir(pIoman, DirCluster);
-
-	if(pPC) {
-		if(pPC->clusterNumber == clusterNum) {
-			clusterAddress = pPC->clusterAddress;
-		} else {
-			clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);
-			pPC->clusterAddress = clusterAddress;
-			pPC->clusterNumber	= clusterNum;
-
-		}
-
-		if(pPC->chainLength) {
-			chainLength	= pPC->chainLength;	
-		} else {
-			chainLength	= FF_GetChainLength(pIoman, DirCluster, NULL);
-			pPC->chainLength = chainLength;
-		}
-
-	} else {
-		chainLength		= FF_GetChainLength(pIoman, DirCluster, NULL);
-		clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
-	}
+	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum);	// BottleNeck
 	
 	if((clusterNum + 1) > chainLength) {
 		return FF_ERR_DIR_END_OF_DIR;	// End of Dir was reached!
@@ -1387,7 +1341,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	}
 
 	if(x <= 11) {
-		FitsShort = FF_TRUE;
+		//FitsShort = FF_TRUE;
 	}
 
 	// Main part of the name
@@ -1426,7 +1380,6 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	// Tail :
 	memcpy(MyShortName, ShortName, 11);
 	FF_ProcessShortName(MyShortName);
-	FF_tolower(MyShortName, strlen(MyShortName));
 	
 	if(!FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir) && FitsShort) {
 		return 0;
