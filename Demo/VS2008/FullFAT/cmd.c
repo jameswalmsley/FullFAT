@@ -37,9 +37,14 @@
 
 /**
  *	The functions and commands provided in this file, serve as a reference to creating
- *	some common and standard functions with FullFAT.
+ *	some common and standard functions with FullFAT. They may be reproduced or copied in your
+ *	own software. Although no warranty is claimed for the code below, they do follow
+ *	the recommended usage of FullFAT to create such functionality.
  *
- *	Look at the MinOS version to see the equivalent using a stdio and POSIX interface.
+ *	FFTerm (FullFAT Terminal) as used in this DEMO is also completely free under the terms of 
+ *	the GNU GPL License. For alternative licensing regarding FFTerm, please contact the author.
+ *
+ *	Look at the MinOS version (FullFAT DEMO) to see the equivalent using a stdio and POSIX interface.
  *	Note: MinOS integrates FullFAT and exposes standard and POSIX interfaces to the developer.
  **/
 
