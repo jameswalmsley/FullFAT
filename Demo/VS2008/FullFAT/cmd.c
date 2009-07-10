@@ -950,11 +950,20 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	FF_FILE *f;
 	FF_T_UINT32	Bytes;
+	FF_T_UINT32	BytesWritten = 0;
 	FF_T_UINT32 ElementSize = 0, Elements = 0, Multiplier = 0;
 	FF_T_UINT32 IntBuffer[4096];	// 16Kb of Integers!
 	FF_T_UINT32	i = 0, x;
 	FF_T_INT8	path[FF_MAX_PATH];
 	FF_ERROR	Error;
+
+	LARGE_INTEGER ticksPerSecond;
+	LARGE_INTEGER start_ticks, end_ticks, cputime;
+	float time, transferRate;
+
+	cputime.QuadPart = 0;
+
+	QueryPerformanceFrequency(&ticksPerSecond); 
 
 	if(argc == 5) {
 		sscanf(argv[1], "%lu", &ElementSize);
@@ -985,16 +994,29 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		if(f) {
 			while(Bytes) {
+				
 				for(x = 0; x < 4096; x++) {
 					IntBuffer[x] = i++;
 				}
-
+				
+				QueryPerformanceCounter(&start_ticks); 
 				if(Bytes >= (4096 * 4)) {
+					BytesWritten += 4096 * 4;
 					Bytes -= FF_Write(f, 1, 4096 * 4, (FF_T_UINT8 *) IntBuffer);
 				} else {
+					BytesWritten += Bytes;
 					Bytes -= FF_Write(f, 1, Bytes, (FF_T_UINT8 *) IntBuffer);
 				}
+				QueryPerformanceCounter(&end_ticks);
+				
+				cputime.QuadPart += (end_ticks.QuadPart - start_ticks.QuadPart);
+				time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+				transferRate = (BytesWritten / time) / 1024;
+
+				printf("Written %0.2f MB (%7.2f KB/s)\r", (float) ((float)BytesWritten / 1048576.0), transferRate);
 			}
+
+			printf("Written %0.2f MB (%7.2f KB/s)\n", (float) ((float)BytesWritten / 1048576.0), transferRate);
 
 			FF_Close(f);
 		} else {
@@ -1024,9 +1046,18 @@ int mkwinfile_cmd(int argc, char **argv) {
 	
 	FILE *f;
 	FF_T_UINT32	Bytes;
+	FF_T_UINT32 BytesWritten = 0;
 	FF_T_UINT32 ElementSize = 0, Elements = 0, Multiplier = 0;
 	FF_T_UINT32 IntBuffer[4096];	// 16Kb of Integers!
 	FF_T_UINT32	i = 0, x;
+
+	LARGE_INTEGER ticksPerSecond;
+	LARGE_INTEGER start_ticks, end_ticks, cputime;
+	float time, transferRate;
+
+	cputime.QuadPart = 0;
+
+	QueryPerformanceFrequency(&ticksPerSecond); 
 
 	if(argc == 5) {
 		sscanf(argv[1], "%lu", &ElementSize);
@@ -1059,12 +1090,24 @@ int mkwinfile_cmd(int argc, char **argv) {
 					IntBuffer[x] = i++;
 				}
 
+				QueryPerformanceCounter(&start_ticks); 
 				if(Bytes >= (4096 * 4)) {
 					Bytes -= fwrite(IntBuffer, 1, 4096 * 4, f);
+					BytesWritten += 4096 * 4;
 				} else {
+					BytesWritten += Bytes;
 					Bytes -= fwrite(IntBuffer, 1, Bytes, f);
 				}
+				QueryPerformanceCounter(&end_ticks);
+
+				cputime.QuadPart += (end_ticks.QuadPart - start_ticks.QuadPart);
+				time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
+				transferRate = (BytesWritten / time) / 1024;
+
+				printf("Written %0.2f MB (%7.2f KB/s)\r", (float) ((float)BytesWritten / 1048576.0), transferRate);
 			}
+
+			printf("Written %0.2f MB (%7.2f KB/s)\n", (float) ((float)BytesWritten / 1048576.0), transferRate);
 
 			fclose(f);
 		} else {
