@@ -34,14 +34,31 @@
 #include <stdio.h>
 #include <windows.h>
 
+
+/**
+ *	The functions and commands provided in this file, serve as a reference to creating
+ *	some common and standard functions with FullFAT.
+ *
+ *	Look at the MinOS version to see the equivalent using a stdio and POSIX interface.
+ *	Note: MinOS integrates FullFAT and exposes standard and POSIX interfaces to the developer.
+ **/
+
 #define COPY_BUFFER_SIZE 8192
 
-/*
-	This is a standardised DIRENT print for FullFAT.
-	It mixes styles used in Windows and Linux.
-*/
+static FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString);
+static void ExpandPath(char *acPath);
+
+
+/**
+ *	@public
+ *	@brief	A Standardised Dirent Print for FullFAT
+ *
+ *	Prints a Directory Entry, using a mix of styles found in Windows and Linux.
+ *
+ *	@param	pDirent		A pointer to an FF_DIRENT object as populated by the FF_FindFirst() or FF_FindNext() functions.
+ **/
 static void FF_PrintDir(FF_DIRENT *pDirent) {
-	unsigned char attr[5] = { '-','-','-','-', '\0' };
+	unsigned char attr[5] = { '-','-','-','-', '\0' };	// String of Attribute Flags.
 	if(pDirent->Attrib & FF_FAT_ATTR_READONLY)
 			attr[0] = 'R';
 	if(pDirent->Attrib & FF_FAT_ATTR_HIDDEN)
@@ -50,86 +67,30 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 			attr[2] = 'S';
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
-#ifdef FF_TIME_SUPPORT
+#ifdef FF_TIME_SUPPORT	// Different Print formats dependent on if Time support is built-in.
 	printf("%0.2d.%0.2d.%0.2d  %0.2d:%0.2d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
 #else
 	printf("%s %12lu %s\n", attr, pDirent->Filesize, pDirent->FileName);
 #endif
 }
 
-FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString) {
-    /* Check to see if the string contains the wild card */
-    if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
-    {
-        /* if it does not then do a straight string compare */
-        if (strcmp(pszWildCard, pszString))
-        {
-            return FF_FALSE;
-        }
-    }
-    else
-    {
-        while ((*pszWildCard)
-        &&     (*pszString))
-        {
-            /* Test for the wild card */
-            if (*pszWildCard == '*')
-            {
-                /* Eat more than one */
-                while (*pszWildCard == '*')
-                {
-                    pszWildCard++;
-                }
-                /* If there are more chars in the string */
-                if (*pszWildCard)
-                {
-                    /* Search for the next char */
-                    pszString = memchr(pszString, (int)*pszWildCard,  strlen(pszString));
-                    /* if it does not exist then the strings don't match */
-                    if (!pszString)
-                    {
-                        return FF_FALSE;
-                    }
-                    
-                }
-                else
-                {
-                    if (*pszWildCard)
-                    {
-                        /* continue */
-                        break;      
-                    }
-                    else
-                    {
-                        return FF_TRUE;
-                    }
-                }
-            }
-            else 
-            {
-                /* Fail if they don't match */
-                if (*pszWildCard != *pszString)
-                {
-                    return FF_FALSE;
-                }
-            }
-            /* Bump both pointers */
-            pszWildCard++;
-            pszString++;
-        }
-        /* fail if different lengths */
-        if (*pszWildCard != *pszString)
-        {
-            return FF_FALSE;
-        }
-    }
 
-    return FF_TRUE;
-}
 
-/*
-	Makes a path absolute.
-*/
+
+/**
+ *	@public
+ *	@brief	FullFAT Path Processor
+ *
+ *			Processes a path, and determines if it is relative or absolute.
+ *			An absolute path is copied to dest as-is.
+ *			A relative path is converted into an absolute path based on the working directory
+ *			that is provided via the pEnv (FF_ENVIRONMENT object) pointer.
+ *
+ *	@param	dest	Where to write the processed string.
+ *	@param	src		Path to be processed.
+ *	@param	pEnv	Pointer to an FF_ENVIRONMENT object.
+ *
+ **/
 void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
 	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
@@ -144,73 +105,18 @@ void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
 }
 
 
-/*
-	This routine removes all relative ..\ from a path.
-	It's probably not the best, but it works. 
-
-	Its based on some old code I wrote a long time ago.
-*/
-void ExpandPath(char *acPath) {
-
-	char 	*pRel 		= 0;
-	char	*pRelStart 	= 0;
-	char 	*pRelEnd 	= 0;
-	int		charRef 	= 0;
-	int 	lenPath 	= 0;
-	int		lenRel		= 0;
-	int 	i 			= 0;
-	int 	remain 		= 0;
-	
-
-	lenPath = strlen(acPath);
-	pRel = strstr(acPath, "..");
-	while(pRel) {	// Loop removal of Relativity
-		charRef = pRel - acPath;
-
-		/*
-			We have found some relativity in the Path, 
-		*/
-
-		// Where it ends:
-		
-		if(pRel[2] == '\\' || pRel[2] == '/') {
-			pRelEnd = pRel + 3;
-		} else {
-			pRelEnd = pRel + 2;	
-		}
-		
-		// Where it Starts:
-		
-		if(charRef == 1) {	// Relative Path comes after the root /
-			return;	// Fixed, returns false appropriately, as in the TODO: above!
-		} else {
-			for(i = (charRef - 2); i >= 0; i--) {
-				if(acPath[i] == '\\' || acPath[i] == '/') {
-					pRelStart = (acPath + (i + 1));
-					break;
-				}
-			}
-		}
-		
-		// The length of the relativity
-		lenRel = pRelEnd - pRelStart;
-		
-		remain = lenPath - (pRelEnd - acPath);	// Remaining Chars on the end of the path
-		
-		if(lenRel) {
-			strncpy(pRelStart, pRelEnd, remain);
-			pRelStart[remain] = '\0';
-		}
-		
-		lenPath -= lenRel;
-		pRel = strstr(acPath, "..");
-	}
-}
-
-
-
 /**
- *	This command acts as the command prompt.
+ *	@public
+ *	@brief	A Special Command Prompt command for FFTerm
+ *
+ *	FFTerm allows dynamically generated command prompts when a command named
+ *	"prompt" is hooked. This is that command, allowing the prompt to include the
+ *	the current working directory.
+ *
+ *	@param	argc	The number of argument strings provided on the command line.
+ *	@param	argc	An array of pointers, pointing to strings representing the command line arguments.
+ *	@param	pEnv	Pointer to an FF_ENVIRONMENT object.
+ *
  **/
 int cmd_prompt(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	if(argc) {
@@ -224,28 +130,58 @@ int cmd_prompt(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	}
 	return 0;
 }
+/**
+ *	You will see many of these tables after each command. They are optional.
+ *	These tables simply provide descriptions of the commands to FFTerm.
+ *	The first entry is always a generic error code (-1). The table is always NULL terminated.
+ *
+ *	The strings are used to provide meaningful messages to the user for various error codes.
+ *	FFT_COMMAND_DESCRIPTION defines a command description, and is displayed via the help command.
+ **/
 const FFT_ERR_TABLE promptInfo[] =
 {
-	"The command prompt!",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
+	"This message is displayed when -2 is returned", -2,			// Error Message for a -2 return code.
+	"The command prompt!",			FFT_COMMAND_DESCRIPTION,	// Command Description.
+	NULL														// Always terminated with NULL.
 };
 
+
+/**
+ *	@brief	Prints the current working directory.
+ *
+ *	@param	argc	The number of argument strings provided on the command line.
+ *	@param	argc	An array of pointers, pointing to strings representing the command line arguments.
+ *	@param	pEnv	Pointer to an FF_ENVIRONMENT object.
+ *
+ **/
 int pwd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	if(argc == 1) {
-		printf("Current directory:\n");
+		printf("Current directory:\n");							// Simply print WorkingDir from pEnv object.
 		printf("%s\n", pEnv->WorkingDir);
 	} else {
-		printf("Usage: %s\n", argv[0]);
+		printf("Usage: %s\n", argv[0]);							// argv[0] is always the name of the command.
 	}
 	return 0;	
 }
-
 const FFT_ERR_TABLE pwdInfo[] =
 {
-	"Types the current working directory to the screen.",			FFT_COMMAND_DESCRIPTION,
+	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
+	"Types the current working directory to the screen.",		FFT_COMMAND_DESCRIPTION,
 	NULL
 };
 
+
+
+
+/**
+ *	@public
+ *	@brief	List Directory Command
+ *
+ *	Lists the working directory or a specified directory.
+ *
+ *	PARAMS are explained above.
+ **/
 int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_DIRENT mydir;
@@ -254,12 +190,12 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	printf("Type \"ls ?\" for an attribute legend.\n");
 	
-	if(argc == 1) {
+	if(argc == 1) {	// Default, open the working directory.
 		tester = FF_FindFirst(pIoman, &mydir, pEnv->WorkingDir);
 		printf("Directory Listing of: %s\n", pEnv->WorkingDir);
-	} else {
+	} else if(argc == 2){
 
-		if(argv[1][0] == '?') {
+		if(argv[1][0] == '?') {			// If ? is first argument, print a legend.
 			printf("ATTR Info:\n");
 			printf("D:\tDirectory\n");
 			printf("H:\tHidden\n");
@@ -268,12 +204,18 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			return 0;
 		}
 
+										// Otherwise try to open a provided path.
 		if(!FF_FindDir(pIoman, argv[1], (FF_T_UINT16) strlen(argv[1]))) {
-			printf("Path %s Not Found!\n\n", argv[1]);
+			printf("Path %s Not Found!\n\n", argv[1]);	// Dir not found!
 			return 0;
 		}
-		tester = FF_FindFirst(pIoman, &mydir, argv[1]);
+		tester = FF_FindFirst(pIoman, &mydir, argv[1]);	// Find first Object.
 		printf("Directory Listing of: %s\n", argv[1]);
+	} else {
+		printf("Usage: %s\n", argv[0]);
+		printf("Or: %s ? \t// Displays a legend!\n", argv[0]);
+		printf("Or: %s [path]\t// Lists a specified path.\n", argv[0]);
+		return 0;
 	}
 
 	printf("\n");
@@ -282,11 +224,11 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	printf("   DATE   | TIME | ATTR |  FILESIZE  |  FILENAME         \n");
 	printf("---------------------------------------------------------\n");
 #else
-
+	printf("---------------------------------------------------------\n");
 #endif
 
-	while(tester == 0) {
-		FF_PrintDir(&mydir);
+	while(tester == 0) {		// Loop printing each Dirent until no more are available.
+		FF_PrintDir(&mydir);	// FF_FindNext() returns 0 on success.
 		i++;
 		tester = FF_FindNext(pIoman, &mydir);
 	}
@@ -302,6 +244,12 @@ const FFT_ERR_TABLE lsInfo[] =
 	NULL
 };
 
+
+/**
+ *
+ *
+ *
+ **/
 int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_T_INT8	path[FF_MAX_PATH];
@@ -1149,4 +1097,146 @@ const FFT_ERR_TABLE exitInfo[] =
 };
 
 
+//---------- THE FOLLOWING FUNCTIONS FORM A SMALL LIBRARY TO HELP THE COMMANDS FOUND ABOVE
+
+
+
+/*
+	This routine removes all relative ..\ from a path.
+	It's probably not the best, but it works. 
+
+	Its based on some old code I wrote a long time ago.
+*/
+static void ExpandPath(char *acPath) {
+
+	char 	*pRel 		= 0;
+	char	*pRelStart 	= 0;
+	char 	*pRelEnd 	= 0;
+	int		charRef 	= 0;
+	int 	lenPath 	= 0;
+	int		lenRel		= 0;
+	int 	i 			= 0;
+	int 	remain 		= 0;
+	
+
+	lenPath = strlen(acPath);
+	pRel = strstr(acPath, "..");
+	while(pRel) {	// Loop removal of Relativity
+		charRef = pRel - acPath;
+
+		/*
+			We have found some relativity in the Path, 
+		*/
+
+		// Where it ends:
+		
+		if(pRel[2] == '\\' || pRel[2] == '/') {
+			pRelEnd = pRel + 3;
+		} else {
+			pRelEnd = pRel + 2;	
+		}
+		
+		// Where it Starts:
+		
+		if(charRef == 1) {	// Relative Path comes after the root /
+			return;	// Fixed, returns false appropriately, as in the TODO: above!
+		} else {
+			for(i = (charRef - 2); i >= 0; i--) {
+				if(acPath[i] == '\\' || acPath[i] == '/') {
+					pRelStart = (acPath + (i + 1));
+					break;
+				}
+			}
+		}
+		
+		// The length of the relativity
+		lenRel = pRelEnd - pRelStart;
+		
+		remain = lenPath - (pRelEnd - acPath);	// Remaining Chars on the end of the path
+		
+		if(lenRel) {
+			strncpy(pRelStart, pRelEnd, remain);
+			pRelStart[remain] = '\0';
+		}
+		
+		lenPath -= lenRel;
+		pRel = strstr(acPath, "..");
+	}
+}
+
+
+
+
+/**
+ *	@private
+ **/
+static FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString) {
+    /* Check to see if the string contains the wild card */
+    if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
+    {
+        /* if it does not then do a straight string compare */
+        if (strcmp(pszWildCard, pszString))
+        {
+            return FF_FALSE;
+        }
+    }
+    else
+    {
+        while ((*pszWildCard)
+        &&     (*pszString))
+        {
+            /* Test for the wild card */
+            if (*pszWildCard == '*')
+            {
+                /* Eat more than one */
+                while (*pszWildCard == '*')
+                {
+                    pszWildCard++;
+                }
+                /* If there are more chars in the string */
+                if (*pszWildCard)
+                {
+                    /* Search for the next char */
+                    pszString = memchr(pszString, (int)*pszWildCard,  strlen(pszString));
+                    /* if it does not exist then the strings don't match */
+                    if (!pszString)
+                    {
+                        return FF_FALSE;
+                    }
+                    
+                }
+                else
+                {
+                    if (*pszWildCard)
+                    {
+                        /* continue */
+                        break;      
+                    }
+                    else
+                    {
+                        return FF_TRUE;
+                    }
+                }
+            }
+            else 
+            {
+                /* Fail if they don't match */
+                if (*pszWildCard != *pszString)
+                {
+                    return FF_FALSE;
+                }
+            }
+            /* Bump both pointers */
+            pszWildCard++;
+            pszString++;
+        }
+        /* fail if different lengths */
+        if (*pszWildCard != *pszString)
+        {
+            return FF_FALSE;
+        }
+    }
+
+    return FF_TRUE;
+}
 

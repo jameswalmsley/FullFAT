@@ -84,7 +84,7 @@ int main(void) {
 
 			Env.pIoman = pIoman;
 
-			//---------- Create the Console.
+			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);
 
 			if(pConsole) {

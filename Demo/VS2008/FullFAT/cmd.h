@@ -80,6 +80,4 @@ int exit_cmd		(int argc, char **argv);
 
 extern void KillAllThreads(void);
 
-FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString);
-
 #endif
