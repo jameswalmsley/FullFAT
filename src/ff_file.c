@@ -565,6 +565,10 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 			for(i = 0; i <= nClusterToExtend; i++) {
 				CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster);
 				NextCluster = FF_FindFreeCluster(pIoman);
+				if(!NextCluster) {
+					FF_unlockFAT(pIoman);
+					return FF_ERR_FAT_NO_FREE_CLUSTERS;
+				}
 				FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
 				FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
 			}
@@ -909,6 +913,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_T_UINT16	sSectors;
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster, nClusterDiff, nClusters;
+	FF_ERROR	Error;
 
 	if(!pFile) {
 		return FF_ERR_NULL_POINTER;
@@ -931,7 +936,11 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	// Extend File for atleast nBytes!
 	// Handle file-space allocation
-	FF_ExtendFile(pFile, pFile->FilePointer + nBytes);
+	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes);
+
+	if(Error) {
+		return Error;	
+	}
 
 	nRelBlockPos = FF_getMinorBlockEntry(pIoman, pFile->FilePointer, 1); // Get the position within a block.
 	

@@ -43,41 +43,123 @@
 */
 static HANDLE g_Sem = NULL;	// I/O Access Semaphore!
 
-signed int fnRead(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
-	unsigned long long address;
-	unsigned long retVal;
-	
-	if(!g_Sem) {
-		g_Sem = FF_CreateSemaphore();
-	}
-	
-	address = (unsigned long long) sector * 512;
+struct _DEV_INFO {
+	HANDLE		hDev;
+	HANDLE		AccessSem;
+	FF_T_UINT64	DiskSize;
+	FF_T_UINT32	BlockSize;
+};
 
-	FF_PendSemaphore(g_Sem);
-	{
-		_fseeki64(pParam, address, SEEK_SET);
-		retVal = fread(buffer, 512, sectors, pParam);
-	}
-	FF_ReleaseSemaphore(g_Sem);
-	return retVal;
+static BOOL GetDriveGeometry(DISK_GEOMETRY_EX *pdg, HANDLE hDevice) {
+  BOOL bResult;                 // results flag
+  DWORD junk;                   // discard results
+
+  if (hDevice == INVALID_HANDLE_VALUE) // cannot open the drive
+  {
+    return (FALSE);
+  }
+
+  bResult = DeviceIoControl(hDevice,  // device to be queried
+      IOCTL_DISK_GET_DRIVE_GEOMETRY_EX,  // operation to perform
+                             NULL, 0, // no input buffer
+                            pdg, sizeof(*pdg),     // output buffer
+                            &junk,                 // # bytes returned
+                            (LPOVERLAPPED) NULL);  // synchronous I/O
+
+  return (bResult);
 }
 
-signed int fnWrite(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
-	unsigned long long address;
-	unsigned long retVal;
+FF_T_UINT16 GetBlockSize(HANDLE hDevice) {
+	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
 
-	if(!g_Sem) {
-		g_Sem = FF_CreateSemaphore();
+	if(hDevice) {
+		return (FF_T_UINT16) ptDevInfo->BlockSize;
 	}
 
-	address = (unsigned long long) sector * BLOCK_SIZE;
+	return 0;
+}
+
+
+HANDLE fnOpen(char *strDevName) {
 	
-	FF_PendSemaphore(g_Sem);
-	{
-		_fseeki64(pParam, address, SEEK_SET);
-		retVal = fwrite(buffer, BLOCK_SIZE, sectors, pParam);
+	struct _DEV_INFO *ptDevInfo;
+	DISK_GEOMETRY_EX DiskGeo;
+	LARGE_INTEGER	li, address;
+
+	HANDLE hDisk;
+	WCHAR pWide[MAX_PATH];
+	MultiByteToWideChar(CP_ACP, 0, strDevName, -1, pWide, MAX_PATH);
+	hDisk = CreateFile(pWide, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+
+	if(hDisk) {
+		ptDevInfo				= (struct _DEV_INFO *) malloc(sizeof(struct _DEV_INFO));		
+		if(GetDriveGeometry(&DiskGeo, hDisk)) {
+			ptDevInfo->BlockSize	= DiskGeo.Geometry.BytesPerSector;
+			ptDevInfo->DiskSize		= DiskGeo.DiskSize.QuadPart;
+			ptDevInfo->hDev			= hDisk;
+			ptDevInfo->AccessSem	= FF_CreateSemaphore();
+
+			return (HANDLE) ptDevInfo;
+		} else {
+			GetFileSizeEx(hDisk, &li);
+			address.QuadPart = 0;
+			ptDevInfo->BlockSize	= 512;
+			ptDevInfo->DiskSize		= li.QuadPart;
+			ptDevInfo->hDev			= hDisk;
+			ptDevInfo->AccessSem	= FF_CreateSemaphore();
+			return (HANDLE) ptDevInfo;
+		}
 	}
-	FF_ReleaseSemaphore(g_Sem);
-	return retVal;
+
+	return (HANDLE) NULL;
+}
+
+void fnClose(HANDLE hDevice) {
+	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
+
+	if(hDevice) {
+		FF_DestroySemaphore(ptDevInfo->AccessSem);
+		CloseHandle(ptDevInfo->hDev);
+		free(ptDevInfo);
+	}
+}
+
+signed int fnRead(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDevice) {
+	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
+	LARGE_INTEGER address;
+	DWORD	Read;
+	//unsigned long long address;
+	//unsigned long retVal;
+	
+	address.QuadPart = (unsigned long long) sector * ptDevInfo->BlockSize;
+
+	FF_PendSemaphore(ptDevInfo->AccessSem);
+	{
+		//_fseeki64(pParam, address, SEEK_SET);
+		SetFilePointerEx(ptDevInfo->hDev, address, NULL, FILE_BEGIN);
+		//retVal = fread(buffer, 512, sectors, pParam);
+		ReadFile(ptDevInfo->hDev, buffer, ptDevInfo->BlockSize * sectors, &Read, NULL);
+	}
+	FF_ReleaseSemaphore(ptDevInfo->AccessSem);
+	return Read;
+}
+
+signed int fnWrite(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDevice) {
+	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
+	LARGE_INTEGER address;
+	DWORD	Written;
+	//unsigned long retVal;
+
+	address.QuadPart = (unsigned long long) sector * ptDevInfo->BlockSize;
+	
+	FF_PendSemaphore(ptDevInfo->AccessSem);
+	{
+		//_fseeki64(pParam, address, SEEK_SET);
+		SetFilePointerEx(ptDevInfo->hDev, address, NULL, FILE_BEGIN);
+		//retVal = fwrite(buffer, BLOCK_SIZE, sectors, pParam);
+		WriteFile(ptDevInfo->hDev, buffer, ptDevInfo->BlockSize * sectors, &Written, NULL);
+	}
+	FF_ReleaseSemaphore(ptDevInfo->AccessSem);
+	return Written;
 }
 

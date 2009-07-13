@@ -89,7 +89,7 @@ FF_T_BOOL	 FF_isDirEmpty	(FF_IOMAN *pIoman, const FF_T_INT8 *Path);
 FF_T_UINT8	 FF_GetModeBits	(FF_T_INT8 *Mode);
 
 // Private :
-static FF_T_SINT32 FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size);
-static FF_T_SINT32 FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
+static FF_ERROR		FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size);
+static FF_T_SINT32	FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 
 #endif

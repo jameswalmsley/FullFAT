@@ -75,7 +75,7 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 #ifdef FF_TIME_SUPPORT	// Different Print formats dependent on if Time support is built-in.
 	printf("%0.2d.%0.2d.%0.2d  %0.2d:%0.2d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
 #else
-	printf("%s %12lu %s\n", attr, pDirent->Filesize, pDirent->FileName);
+	printf(" %s %12lu    %s\n", attr, pDirent->Filesize, pDirent->FileName);
 #endif
 }
 
@@ -188,8 +188,8 @@ const FFT_ERR_TABLE pwdInfo[] =
  *	PARAMS are explained above.
  **/
 int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	FF_IOMAN *pIoman = pEnv->pIoman;
-	FF_DIRENT mydir;
+	FF_IOMAN *pIoman = pEnv->pIoman;	// FF_IOMAN object from the Environment
+	FF_DIRENT mydir;					// DIRENT object.
 	int  i = 0;
 	char tester = 0;
 
@@ -229,6 +229,7 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	printf("   DATE   | TIME | ATTR |  FILESIZE  |  FILENAME         \n");
 	printf("---------------------------------------------------------\n");
 #else
+	printf(" ATTR |  FILESIZE  |  FILENAME         \n");
 	printf("---------------------------------------------------------\n");
 #endif
 
@@ -239,20 +240,24 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	}
 	
 	printf("\n%d Items\n", i);
-	putchar('\n');
+	printf("\n");
 
 	return 0;
 }
 const FFT_ERR_TABLE lsInfo[] =
 {
+	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
 	"Lists the contents of the current working directory.",			FFT_COMMAND_DESCRIPTION,
 	NULL
 };
 
 
 /**
+ *	@public
+ *	@brief	Changes the Current Working Directory
  *
- *
+ *	To change the directory, we simply check the provided path, if it exists,
+ *	then we change the environment's working directory to that path.
  *
  **/
 int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
@@ -262,12 +267,12 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	int i;
 
 	if(argc == 2) {
-		ProcessPath(path, argv[1], pEnv);
+		ProcessPath(path, argv[1], pEnv);	// Make path absolute if relative.
 
-		ExpandPath(path);
+		ExpandPath(path);	// Remove any relativity from the path (../ or ..\).
 		
-		if(FF_FindDir(pIoman, path, (FF_T_UINT16) strlen(path))) {
-			i = strlen(path) - 1;
+		if(FF_FindDir(pIoman, path, (FF_T_UINT16) strlen(path))) {	// Check if path is valid.
+			i = strlen(path) - 1;	// Path found, change the directory.
 
 			if(i) {
 				if(path[i] == '\\' || path[i] == '/') {
@@ -286,12 +291,21 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 const FFT_ERR_TABLE cdInfo[] =
 {
+	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
 	"Changes the current working directory to the specified path.",			FFT_COMMAND_DESCRIPTION,
 	NULL
 };
 
 
-
+/**
+ *	@public
+ *	@brief	MD5 Data Hashing function.
+ *
+ *	Generates and displays an MD5 hash of a file. This is really useful when
+ *	verify files for their integrity. We used MD5 extensively while stabilising
+ *	the read and write functionality of FullFAT.
+ *
+ **/
 int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_T_INT8 path[FF_MAX_PATH];
@@ -336,8 +350,65 @@ int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 
 const FFT_ERR_TABLE md5Info[] =
-{
+{	
+	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
 	"Calculates an MD5 checksum for the specified file.",			FFT_COMMAND_DESCRIPTION,
+	NULL
+};
+
+
+/**
+ *	@public
+ *	@brief	MD5 Data Hashing function. (For Windows Files).
+ *
+ *	Generates and displays an MD5 hash of a file. This is really useful when
+ *	verify files for their integrity. We used MD5 extensively while stabilising
+ *	the read and write functionality of FullFAT.
+ *
+ **/
+int md5win_cmd(int argc, char **argv) {
+
+	FF_T_UINT8	readBuf[8192];
+	FILE *fSource;
+
+	int len;
+	md5_state_t state;
+	md5_byte_t digest[16];
+	int di;
+	
+	if(argc == 2) {
+		
+		fSource = fopen(argv[1], "rb");
+
+		if(fSource) {
+			md5_init(&state);
+			do {
+				len = fread(readBuf, 1, 8192, fSource);
+				md5_append(&state, (const md5_byte_t *)readBuf, len);
+			} while(len);
+			
+			md5_finish(&state, digest);
+
+			for (di = 0; di < 16; ++di)
+				printf("%02x", digest[di]);
+
+			printf ("\n");
+
+			fclose(fSource);
+		} else {
+			printf("Could not open file.\n");
+		}
+	} else {
+		printf("Usage: %s [filename]\n", argv[0]);
+	}
+
+	return 0;
+}
+
+const FFT_ERR_TABLE md5winInfo[] =
+{	
+	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
+	"Calculates an MD5 checksum for the specified Windows file.",			FFT_COMMAND_DESCRIPTION,
 	NULL
 };
 

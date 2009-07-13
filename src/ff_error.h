@@ -86,7 +86,9 @@
 
 #ifdef FF_DEBUG
 const FF_T_INT8 *FF_GetErrMessage(FF_ERROR iErrorCode);
-#endif
+#else
+#define FF_GetErrMessage(X) ""					// A special MACRO incase FF_GetErrMessage() isn't gated with FF_DEBUG
+#endif											// Function call is safely replaced with a NULL string.
 
 #endif
 

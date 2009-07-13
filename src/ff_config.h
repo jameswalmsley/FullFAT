@@ -44,11 +44,20 @@
 #define FF_LFN_SUPPORT			// Comment this out if you don't want to worry about Patent Issues.
 								// FullFAT works great with LFNs and without. You choose, its your project!
 
+//---------- LEGAL LFNS
+//#define FF_LEGAL_LFNS			// Enabling this define causes FullFAT to not infringe on any of Microsoft's patents when making LFN names.
+								// To do this, it will only create LFNs and no shortnames. Microsofts patents are only relevent when mapping
+								// a shortname to a long name. This is the same way that Linux gets around the FAT legal issues:
+								// see http://lkml.org/lkml/2009/6/26/314
+								//
+								// Enabling this may break compatibility with devices that cannot read LFN filenames.
+								// Enabling this option causes no compatibility issues when reading any media.
+
 //---------- TIME SUPPORT
 #define FF_TIME_SUPPORT			// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
 								// Note, by default ff_time.c is set-up for the Windows Demonstration. Please see ff_time.c to disable.
 
-//---------- File Allocation Method
+//---------- FILE SPACE ALLOCATION PERFORMANCE
 								// Uncomment the prefered method. (Can only choose a single method).
 #define FF_ALLOC_DEFAULT		// Only allocate as much as is needed. (Provides good performance, without wasting space).
 //#define FF_ALLOC_DOUBLE		// Doubles the size of a file each time allocation is required. (When high-performance writing is required).
@@ -56,24 +65,28 @@
 //---------- Use Native STDIO.h
 //#define FF_USE_NATIVE_STDIO	// Makes FullFAT conform to values provided by your native STDIO.h file.
 
-//---------- Get Free Space on Mount
+//---------- FREE SPACE CALCULATION
 //#define FF_MOUNT_FIND_FREE	// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
 								// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
 
-//---------- Path Cache
+//---------- PATH CACHE
 #define FF_PATH_CACHE			// Enables a simply Path Caching mechanism that increases performance of repeated operations
 								// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 								// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
+
+#define FF_PATH_CACHE_DEPTH	2	// The Number of PATH's to Cache.
+
+
 //---------- Hash Table Support
-//#define FF_HASH_TABLE_SUPPORT			// Enable HASH to speed up file creation.
+//#define FF_HASH_TABLE_SUPPORT	// Enable HASH to speed up file creation.
 #ifdef	FF_HASH_TABLE_SUPPORT
 #define FF_HASH_FUNCTION	CRC16
 //#define FF_HASH_FUNCTION	CRC8
 #endif
 
 
-#define FF_PATH_CACHE_DEPTH	2	// The Number of PATH's to Cache.
+
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT		// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
 								// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
@@ -88,7 +101,8 @@
 #define FF_DRIVER_BUSY_SLEEP	20	
 
 //---------- Debugging Features
-#define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
+//#define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
+								// Uncommenting this just stops FullFAT error strings being compiled.
 
 //---------- Actively Determine if partition is FAT
 #define FF_FAT_CHECK			// This is experimental, so if FullFAT won't mount your volume, comment this out
