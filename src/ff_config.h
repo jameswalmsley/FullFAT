@@ -101,7 +101,7 @@
 #define FF_DRIVER_BUSY_SLEEP	20	
 
 //---------- Debugging Features
-//#define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
+#define FF_DEBUG				// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
 								// Uncommenting this just stops FullFAT error strings being compiled.
 
 //---------- Actively Determine if partition is FAT

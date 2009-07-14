@@ -774,8 +774,13 @@ int info_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 		printf("FullFAT Driver Blocksize: \t%d\n", pIoman->BlkSize);
 		printf("Partition Blocksize: \t\t%d\n", pPart->BlkSize);
 		printf("Cluster Size: \t\t\t%dKb\n", (pPart->BlkSize * pPart->SectorsPerCluster) / 1024);
+#ifdef FF_64_NUM_SUPPORT
 		printf("Volume Size: \t\t\t%llu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
 		printf("Volume Free: \t\t\t%llu (%d MB)\n", FF_GetFreeSize(pIoman), (unsigned int) (FF_GetFreeSize(pIoman) / 1048576));
+#else
+		printf("Volume Size: \t\t\t%lu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));
+		printf("Volume Free: \t\t\t%lu (%d MB)\n", FF_GetFreeSize(pIoman), (unsigned int) (FF_GetFreeSize(pIoman) / 1048576));
+#endif
 	} else {
 		printf("Usage: %s\n", argv[0]);
 	}

@@ -56,7 +56,7 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("s:\\ramdisk.bin", 512);
+	hDisk = fnOpen("c:\\write.img", 512);
 	
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE3", 0);

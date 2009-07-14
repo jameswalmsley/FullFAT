@@ -742,7 +742,7 @@ FF_T_UINT32 FF_GetFreeSize(FF_IOMAN *pIoman) {
 			FreeClusters = pIoman->pPartition->FreeClusterCount;
 		}
 		FF_unlockFAT(pIoman);
-		FreeSize = (FF_T_UINT32) ((FF_T_UINT32)FreeClusters * (FF_T_UINT32)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT32)pIoman->pPartition->BlkSize));
+		FreeSize = (FF_T_UINT32) ((FF_T_UINT32)FreeClusters * (FF_T_UINT32)((FF_T_UINT32)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT32)pIoman->pPartition->BlkSize));
 		return FreeSize;
 	}
 	return 0;

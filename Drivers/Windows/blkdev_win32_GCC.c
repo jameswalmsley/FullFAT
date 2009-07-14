@@ -46,7 +46,7 @@
 struct _DEV_INFO {
 	HANDLE		hDev;
 	HANDLE		AccessSem;
-	FF_T_UINT64	DiskSize;
+	long long	DiskSize;
 	FF_T_UINT32	BlockSize;
 };
 
