@@ -54,8 +54,12 @@ int main(void) {
 
 	// Open a File Stream for FullFAT's I/O driver to work on.
 
-	hDisk = fnOpen("s:\\ramdisk.bin");
-	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE3");
+	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
+	// and is only used in conjunction with DriveImage files.
+	hDisk = fnOpen("s:\\ramdisk.bin", 512);
+	
+	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
+	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE3", 0);
 
 	if(hDisk) {
 		//---------- Create FullFAT IO Manager
@@ -65,7 +69,7 @@ int main(void) {
 			//---------- Register a Block Device with FullFAT.
 			Error = FF_RegisterBlkDevice(pIoman, GetBlockSize(hDisk), (FF_WRITE_BLOCKS) fnWrite, (FF_READ_BLOCKS) fnRead, hDisk);
 			if(Error) {
-				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %d.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));				
+				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %ld.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));				
 			}
 
 			//---------- Try to Mount the Partition with FullFAT.
@@ -77,7 +81,7 @@ int main(void) {
 				FF_DestroyIOMAN(pIoman);
 				printf("FullFAT Couldn't mount the specified parition!\n");
 
-				printf("FF_MountPartition() function returned with Error %d\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
+				printf("FF_MountPartition() function returned with Error %ld\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 				getchar();
 				return -1;
 			}
@@ -90,28 +94,28 @@ int main(void) {
 			if(pConsole) {
 				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
-				FFTerm_AddExCmd	(pConsole, "prompt",	cmd_prompt,		promptInfo,		&Env);	// Dynamic command prompt (prompt is a reserved command name).
-				FFTerm_AddExCmd	(pConsole, "pwd",		pwd_cmd,		pwdInfo,		&Env);	// See cmd.c for their implementations.
-				FFTerm_AddExCmd	(pConsole, "ls",		ls_cmd,			lsInfo,			&Env);	// Directory Listing Command
-				FFTerm_AddExCmd	(pConsole, "cd",		cd_cmd,			cdInfo,			&Env);	// Change Directory Command
-				FFTerm_AddExCmd	(pConsole, "cp",		cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file)
-				FFTerm_AddExCmd	(pConsole, "icp",		icp_cmd,		icpInfo,		&Env);	// Copy command (Windows file to FullFAT file)
-				FFTerm_AddExCmd	(pConsole, "xcp",		xcp_cmd,		xcpInfo,		&Env);	// Copy command (FullFAT file to Windows file)
-				FFTerm_AddExCmd	(pConsole, "md5",		md5_cmd,		md5Info,		&Env);	// MD5 Data Hashing command.
-				FFTerm_AddExCmd	(pConsole, "mkdir",		mkdir_cmd,		mkdirInfo,		&Env);	// Make directory command.
-				FFTerm_AddExCmd	(pConsole, "info",		info_cmd,		infoInfo,		&Env);	// Information command.
-				FFTerm_AddExCmd	(pConsole, "view",		view_cmd,		viewInfo,		&Env);	// View command, (types a file).
-				FFTerm_AddExCmd	(pConsole, "rm",		rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
-				FFTerm_AddExCmd	(pConsole, "mkimg",		mkimg_cmd,		mkimgInfo,		&Env);	// Make image command, (makes a windows file image of the media).
-				FFTerm_AddExCmd	(pConsole, "mkfile",	mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
-				FFTerm_AddCmd	(pConsole, "mkwinfile",	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
-				FFTerm_AddCmd	(pConsole, "md5win",	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
-				FFTerm_AddCmd	(pConsole, "exit",		exit_cmd,		exitInfo);				// Special Exit Command.
+				FFTerm_AddExCmd	(pConsole, "prompt",	(FFT_FN_COMMAND_EX) cmd_prompt,		promptInfo,		&Env);	// Dynamic command prompt (prompt is a reserved command name).
+				FFTerm_AddExCmd	(pConsole, "pwd",		(FFT_FN_COMMAND_EX) pwd_cmd,		pwdInfo,		&Env);	// See cmd.c for their implementations.
+				FFTerm_AddExCmd	(pConsole, "ls",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command
+				FFTerm_AddExCmd	(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd,			cdInfo,			&Env);	// Change Directory Command
+				FFTerm_AddExCmd	(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file)
+				FFTerm_AddExCmd	(pConsole, "icp",		(FFT_FN_COMMAND_EX) icp_cmd,		icpInfo,		&Env);	// Copy command (Windows file to FullFAT file)
+				FFTerm_AddExCmd	(pConsole, "xcp",		(FFT_FN_COMMAND_EX) xcp_cmd,		xcpInfo,		&Env);	// Copy command (FullFAT file to Windows file)
+				FFTerm_AddExCmd	(pConsole, "md5",		(FFT_FN_COMMAND_EX) md5_cmd,		md5Info,		&Env);	// MD5 Data Hashing command.
+				FFTerm_AddExCmd	(pConsole, "mkdir",		(FFT_FN_COMMAND_EX) mkdir_cmd,		mkdirInfo,		&Env);	// Make directory command.
+				FFTerm_AddExCmd	(pConsole, "info",		(FFT_FN_COMMAND_EX) info_cmd,		infoInfo,		&Env);	// Information command.
+				FFTerm_AddExCmd	(pConsole, "view",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
+				FFTerm_AddExCmd	(pConsole, "rm",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
+				FFTerm_AddExCmd	(pConsole, "mkimg",		(FFT_FN_COMMAND_EX) mkimg_cmd,		mkimgInfo,		&Env);	// Make image command, (makes a windows file image of the media).
+				FFTerm_AddExCmd	(pConsole, "mkfile",	(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
+				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
+				FFTerm_AddCmd	(pConsole, "md5win",	(FFT_FN_COMMAND)	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
+				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
 				
 				// Special Thread IO commands
-				FFTerm_AddExCmd(pConsole, "mkthread",	createthread_cmd,	mkthreadInfo,	&Env);
-				FFTerm_AddExCmd(pConsole, "tlist",		listthreads_cmd,	listthreadsInfo,&Env);
-				FFTerm_AddExCmd(pConsole, "tkill",		killthread_cmd,		killthreadInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "mkthread",	(FFT_FN_COMMAND_EX) createthread_cmd,	mkthreadInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "tlist",		(FFT_FN_COMMAND_EX) listthreads_cmd,	listthreadsInfo,&Env);
+				FFTerm_AddExCmd(pConsole, "tkill",		(FFT_FN_COMMAND_EX) killthread_cmd,		killthreadInfo,	&Env);
 				
 				//---------- Some test code used to test the FILE I/O Api.
 				
@@ -143,7 +147,7 @@ int main(void) {
 		}
 
 		// FullFAT failed to initialise. Print some meaningful information from FullFAT itself, using the FF_GetErrMessage() function.
-		printf("Could not initialise FullFAT I/O Manager.\nError calling FF_CreateIOMAN() function.\nError Code %d\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
+		printf("Could not initialise FullFAT I/O Manager.\nError calling FF_CreateIOMAN() function.\nError Code %ld\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 	} else {
 		printf("Could not open the I/O Block device\nError calling fopen() function. (Device (file) not found?)\n");
 	}

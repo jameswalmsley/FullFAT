@@ -179,9 +179,9 @@ int createthread_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE mkthreadInfo[] =
 {
-	"Generic or Unknown Error!",	-1,
-	"Creates a thread for testing multi-threaded I/O.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error!",	-1},
+	{"Creates a thread for testing multi-threaded I/O.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -201,9 +201,9 @@ int listthreads_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE listthreadsInfo[] =
 {
-	"Generic or Unknown Error!",	-1,
-	"Lists all the running I/O threads.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error!",	-1},
+	{"Lists all the running I/O threads.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 int killthread_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
@@ -234,9 +234,9 @@ int killthread_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE killthreadInfo[] =
 {
-	"Generic or Unknown Error!",	-1,
-	"Kills the specified thread.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error!",	-1},
+	{"Kills the specified thread.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 

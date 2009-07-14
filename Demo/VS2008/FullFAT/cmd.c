@@ -73,7 +73,7 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 			attr[3] = 'D';
 #ifdef FF_TIME_SUPPORT	// Different Print formats dependent on if Time support is built-in.
-	printf("%0.2d.%0.2d.%0.2d  %0.2d:%0.2d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
+	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
 #else
 	printf(" %s %12lu    %s\n", attr, pDirent->Filesize, pDirent->FileName);
 #endif
@@ -145,10 +145,10 @@ int cmd_prompt(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
  **/
 const FFT_ERR_TABLE promptInfo[] =
 {
-	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
-	"This message is displayed when -2 is returned", -2,			// Error Message for a -2 return code.
-	"The command prompt!",			FFT_COMMAND_DESCRIPTION,	// Command Description.
-	NULL														// Always terminated with NULL.
+	{"Unknown or Generic Error",						-1},						// Generic Error (always the first entry).
+	{"This message is displayed when -2 is returned",	-2},						// Error Message for a -2 return code.
+	{"The command prompt!",								FFT_COMMAND_DESCRIPTION},	// Command Description.
+	{ NULL }				// Always terminated with NULL. 
 };
 
 
@@ -171,9 +171,9 @@ int pwd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE pwdInfo[] =
 {
-	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
-	"Types the current working directory to the screen.",		FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",		-1},					// Generic Error (always the first entry).
+	{"Types the current working directory to the screen.",		FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -246,9 +246,9 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE lsInfo[] =
 {
-	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
-	"Lists the contents of the current working directory.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
+	{"Lists the contents of the current working directory.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -291,9 +291,9 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 const FFT_ERR_TABLE cdInfo[] =
 {
-	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
-	"Changes the current working directory to the specified path.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
+	{"Changes the current working directory to the specified path.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -351,9 +351,9 @@ int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 const FFT_ERR_TABLE md5Info[] =
 {	
-	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
-	"Calculates an MD5 checksum for the specified file.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
+	{"Calculates an MD5 checksum for the specified file.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -407,9 +407,9 @@ int md5win_cmd(int argc, char **argv) {
 
 const FFT_ERR_TABLE md5winInfo[] =
 {	
-	"Unknown or Generic Error",		-1,							// Generic Error (always the first entry).
-	"Calculates an MD5 checksum for the specified Windows file.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
+	{"Calculates an MD5 checksum for the specified Windows file.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
@@ -451,9 +451,9 @@ int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 				cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 				time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
 				transferRate = (fSource->FilePointer / time) / 1024;
-				printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+				printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 			}while(BytesRead > 0);
-			printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
+			printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
 
 			FF_Close(fSource);
 			FF_Close(fDest);
@@ -582,9 +582,9 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 					time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
 					transferRate = (fSource->FilePointer / time) / 1024;
-					printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+					printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 				}while(BytesRead > 0);
-				printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
+				printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
 
 				FF_Close(fSource);
 				FF_Close(fDest);
@@ -605,8 +605,9 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 const FFT_ERR_TABLE cpInfo[] =
 {
-	"Copies the specified file to the specified location.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error",										-1},
+	{"Copies the specified file to the specified location.",			FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
@@ -641,9 +642,9 @@ int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 					time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
 					transferRate = (fSource->FilePointer / time) / 1024;
-					printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
+					printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
 				}while(BytesRead > 0);
-				printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
+				printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);		
 
 				FF_Close(fSource);
 				fclose(fDest);
@@ -663,8 +664,9 @@ int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE xcpInfo[] =
 {
-	"Copies a FullFAT file to the Hard-disk drive.",			FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error",							-1},
+	{"Copies a FullFAT file to the Hard-disk drive.",		FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
@@ -703,9 +705,9 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 					time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
 					transferRate = (ftell(fSource) / time) / 1024;
-					printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)ftell(fSource)/(float)SourceSize) * 100), ftell(fSource), transferRate);
+					printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)ftell(fSource)/(float)SourceSize) * 100), ftell(fSource), transferRate);
 				}while(BytesRead > 0);
-				printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)ftell(fSource)/(float)SourceSize) * 100), ftell(fSource), transferRate);	
+				printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\n", ((float)((float)ftell(fSource)/(float)SourceSize) * 100), ftell(fSource), transferRate);	
 
 				fclose(fSource);
 				FF_Close(fDest);
@@ -726,8 +728,9 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 const FFT_ERR_TABLE icpInfo[] =
 {
-	"Copies a file from the Hard-disk to the FullFAT partition.",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error",							-1},
+	{"Copies a file from the Hard-disk to the FullFAT partition.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -750,8 +753,9 @@ int mkdir_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 
 const FFT_ERR_TABLE mkdirInfo[] =
 {
-	"Creates directories.",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error",							-1},
+	{"Creates directories.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 int info_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
@@ -779,8 +783,9 @@ int info_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 }
 const FFT_ERR_TABLE infoInfo[] =
 {
-	"Displays information about the currently mounted partition.",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Generic or Unknown Error",							-1},
+	{"Displays information about the currently mounted partition.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -817,7 +822,7 @@ int view_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			while(!FF_isEOF(f)) {
 				c = FF_GetC(f);
 				if(c >= 0) {
-					printf("%c", c);
+					printf("%c", (FF_T_INT8) c);
 				} else {
 					printf("Error while reading file: %s\n", FF_GetErrMessage(c));
 					FF_Close(f);
@@ -838,11 +843,11 @@ int view_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE viewInfo[] =
 {											// This demonstrates how FFTerm can provide useful information about specific command failure codes.
-	"Unknown or Generic Error",				-1,	// Generic Error must always be the first in the table.
-	"Types out the specified file.",		FFT_COMMAND_DESCRIPTION,
-	"File open failed. (File not found?)",	-2,
-	"Error while reading from device!",		-3,
-	NULL
+	{"Unknown or Generic Error",				-1},	// Generic Error must always be the first in the table.
+	{"Types out the specified file.",			FFT_COMMAND_DESCRIPTION},
+	{"File open failed. (File not found?)",		-2},
+	{"Error while reading from device!",		-3},
+	{ NULL }
 };
 
 
@@ -900,9 +905,9 @@ int rm_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE rmInfo[] =
 {											// This demonstrates how FFTerm can provide useful information about specific command failure codes.
-	"Unknown or Generic Error",				-1,	// Generic Error must always be the first in the table.
-	"Deletes the specified file or folder.",		FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",				-1},	// Generic Error must always be the first in the table.
+	{"Deletes the specified file or folder.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -947,7 +952,7 @@ int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					fwrite(pBuffer->pBuffer, pEnv->pIoman->pPartition->BlkSize, 1, fDest);
 				}
 				FF_ReleaseBuffer(pEnv->pIoman, pBuffer);*/
-				printf("%d%% Complete. (%d of %d Sectors read)\r", (int)(((float)i / (float)pEnv->pIoman->pPartition->TotalSectors) * (float)100.0), i,  pEnv->pIoman->pPartition->TotalSectors);
+				printf("%d%% Complete. (%ld of %ld Sectors read)\r", (int)(((float)i / (float)pEnv->pIoman->pPartition->TotalSectors) * (float)100.0), i,  pEnv->pIoman->pPartition->TotalSectors);
 			}
 
 			fclose(fDest);
@@ -964,9 +969,9 @@ int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE mkimgInfo[] =
 {
-	"Unknown or Generic Error",					-1,	// Generic Error must always be the first in the table.
-	"Takes an image of the mounted volume.",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",				-1},	// Generic Error must always be the first in the table.
+	{"Takes an image of the mounted volume.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -983,7 +988,7 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime;
-	float time, transferRate;
+	float time, transferRate = 0.0;
 
 	cputime.QuadPart = 0;
 
@@ -1060,9 +1065,9 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 }
 const FFT_ERR_TABLE mkfileInfo[] =
 {
-	"Unknown or Generic Error",					-1,	// Generic Error must always be the first in the table.
-	"Generates a File of the specified size.",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",				-1},	// Generic Error must always be the first in the table.
+	{"Generates a File of the specified size.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -1077,7 +1082,7 @@ int mkwinfile_cmd(int argc, char **argv) {
 
 	LARGE_INTEGER ticksPerSecond;
 	LARGE_INTEGER start_ticks, end_ticks, cputime;
-	float time, transferRate;
+	float time, transferRate = 0;
 
 	cputime.QuadPart = 0;
 
@@ -1151,9 +1156,9 @@ int mkwinfile_cmd(int argc, char **argv) {
 }
 const FFT_ERR_TABLE mkwinfileInfo[] =
 {
-	"Unknown or Generic Error",					-1,	// Generic Error must always be the first in the table.
-	"Generates a File of the specified size. (On Windows).",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",								-1},	// Generic Error must always be the first in the table.
+	{"Generates a File of the specified size. (On Windows).",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
@@ -1167,9 +1172,9 @@ int exit_cmd(int argc, char **argv) {
 }
 const FFT_ERR_TABLE exitInfo[] =
 {
-	"Unknown or Generic Error",					-1,	// Generic Error must always be the first in the table.
-	"Terminates the FullFAT console and demo.",	FFT_COMMAND_DESCRIPTION,
-	NULL
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Terminates the FullFAT console and demo.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
 };
 
 
