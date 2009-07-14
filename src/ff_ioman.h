@@ -225,7 +225,7 @@ FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode
 void		FF_ReleaseBuffer		(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
 
 // PRIVATE (For this module only!):
-static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
+
 
 #endif
 

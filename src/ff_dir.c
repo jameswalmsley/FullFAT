@@ -43,6 +43,8 @@
 #include "ff_dir.h"
 #include <stdio.h>
 
+static void FF_ProcessShortName(FF_T_INT8 *name);
+
 void FF_lockDIR(FF_IOMAN *pIoman) {
 	FF_PendSemaphore(pIoman->pSemaphore);	// Use Semaphore to protect FAT modifications.
 	{
@@ -83,7 +85,7 @@ FF_T_SINT8 FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT 
 		return FF_ERR_NULL_POINTER;
 	}
 	
-	for(pDirent->CurrentItem; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
+	for(; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
 		if(FF_FetchEntry(pIoman, DirCluster, pDirent->CurrentItem, EntryBuffer)) {
 			return -2;
 		}
@@ -1178,7 +1180,7 @@ FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 		return FF_ERR_NULL_POINTER;
 	}
 	
-	for(pDirent->CurrentItem; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
+	for(; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
 		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
 			return FF_ERR_DIR_END_OF_DIR;
 		}
@@ -1299,7 +1301,7 @@ FF_T_SINT8 FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirClust
 }
 
 
-static FF_T_BOOL FF_isShortName(const FF_T_UINT8 *Name, FF_T_UINT16 StrLen) {
+/*static FF_T_BOOL FF_isShortName(const FF_T_UINT8 *Name, FF_T_UINT16 StrLen) {
 	FF_T_UINT16 i;
 	for(i = 0; i < StrLen; i++) {
 		if(Name[i] == '.') {
@@ -1310,7 +1312,7 @@ static FF_T_BOOL FF_isShortName(const FF_T_UINT8 *Name, FF_T_UINT16 StrLen) {
 		return FF_TRUE;
 	}
 	return FF_FALSE;
-}
+}*/
 
 FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName) {
 	FF_T_UINT16 i,x,y;
@@ -1517,7 +1519,7 @@ FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 
 static void FF_MakeNameCompliant(FF_T_INT8 *Name) {
 	
-	if(Name[0] == 0xE5) {	// Support Japanese KANJI symbol.
+	if((FF_T_UINT8) Name[0] == 0xE5) {	// Support Japanese KANJI symbol.
 		Name[0] = 0x05;
 	}
 	

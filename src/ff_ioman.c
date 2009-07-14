@@ -48,6 +48,8 @@
 extern FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
 extern FF_T_UINT32 FF_CountFreeClusters		(FF_IOMAN *pIoman);
 
+static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
+
 /**
  *	@public
  *	@brief	Creates an FF_IOMAN object, to initialise FullFAT
@@ -342,7 +344,7 @@ FF_ERROR FF_FlushCache(FF_IOMAN *pIoman) {
 	FF_T_UINT16 i,x;
 
 	if(!pIoman) {
-		FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER;
 	}
 
 	FF_PendSemaphore(pIoman->pSemaphore);
