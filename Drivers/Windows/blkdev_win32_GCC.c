@@ -29,7 +29,7 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
-#include "blkdev_win32.h"
+#include "blkdev_win32_GCC.h"
 
 /*
 	This driver can inteface with Hard drives up to 2TB in size.
@@ -41,6 +41,7 @@
 	That is that multiple concurrent calls to the low-level I/O layer should be threadsafe.
 	These file I/O drivers require a MUTEX or Semaphore to achieve this.
 */
+
 
 struct _DEV_INFO {
 	HANDLE		hDev;
@@ -87,9 +88,8 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 	LARGE_INTEGER	li, address;
 
 	HANDLE hDisk;
-	WCHAR pWide[MAX_PATH];
-	MultiByteToWideChar(CP_ACP, 0, strDevName, -1, pWide, MAX_PATH);
-	hDisk = CreateFile(pWide, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+
+	hDisk = CreateFile(strDevName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
 
 	if(hDisk) {
 		ptDevInfo				= (struct _DEV_INFO *) malloc(sizeof(struct _DEV_INFO));		
@@ -101,7 +101,7 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 
 			return (HANDLE) ptDevInfo;
 		} else {
-			GetFileSizeEx(hDisk, &li);
+			//GetFileSizeEx(hDisk, &li);
 			address.QuadPart = 0;
 			if(!nBlockSize) {
 				ptDevInfo->BlockSize	= 512;
