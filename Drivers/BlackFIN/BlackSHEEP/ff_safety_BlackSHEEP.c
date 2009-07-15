@@ -54,7 +54,7 @@
  *	
  **/
 
-#include "ff_safety.h"	// Íncludes ff_types.h
+#include "../../../src/ff_safety.h"	// Íncludes ff_types.h
 
 #ifdef _USE_VDK_
 #include <VDK.h>
