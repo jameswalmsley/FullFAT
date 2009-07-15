@@ -1,99 +1,140 @@
+/********************************************************************
+ 			FullFAT File-System Integration for BlackSHEEP
+						by James Walmsley
+
+	This file handles the seamless integration of FullFAT in to the
+	file-system manager provided by BlackSHEEP. This file serves as
+	a good example of a complete and seamless FullFAT integration.
+
+ ********************************************************************/
+
+
 #include "fsfullfat.h"
-#include "../../../src/fullfat.h"
-
-
-// local includes
-//#include "fat/fat.h"
-
-#ifdef _USE_VDK_
-#include <services/services.h>
-#endif
-#pragma align 32
-#pragma section("L1_data")
-unsigned char g_Cache[4096];
+#include "../../../src/fullfat.h"			// FullFAT types, objects and prototypes.
 
 
 
-unsigned long FF_blackfin_blk_read(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
+/**
+ *	FullFAT Integration starts with Block-device driver integration.
+ *
+ *	This is simple with BlackSHEEP simply wrap the msd manager interfaces.
+ **/
+static unsigned long FF_blackfin_blk_read(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 
 	return	msd_blockRead((T_MSD_HANDLE) pParam, sector, sectors, buffer) ;
 }
 
 
-unsigned long FF_blackfin_blk_write(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
+static unsigned long FF_blackfin_blk_write(unsigned char *buffer, unsigned long sector, unsigned short sectors, void *pParam) {
 
 	return	msd_blockWrite((T_MSD_HANDLE) pParam, sector, sectors, buffer) ;
 }
 
 
+/**
+ *	Everything in this file is defined as a static. None of these functions
+ *	should ever expose an interface.
+ *
+ **/
 
-bool fs_fullfat_formatDevice( void *hMsd ) {
+ 
+/**
+ *	This simply wraps the BlackSHEEP Fat formatting tool.
+ *
+ *	FullFAT also includes a device format interface, but it isn't complete
+ *	as of 0.99.
+ *
+ **/
+static bool fs_fullfat_formatDevice( void *hMsd ) {
 	return (fat_format( (unsigned long)hMsd ) >= 0);
 }
 
-void* fs_fullfat_mountPartition(void *hMsd) {
-	FF_IOMAN *pIoman;
-	int result;	
+
+
+/**
+ *	This is a good example of an integrated Mounting function.
+ *
+ *
+ *	Here FullFAT malloc()'s its own working memory.
+ *
+ **/
+static void* fs_fullfat_mountPartition(void *hMsd) {
+	FF_IOMAN 		*pIoman;				// FF_IOMAN Object to be created.
+	FF_ERROR		Error = FF_ERR_NONE;	// FullFAT Error Code
+	T_DEVICE_INFO	DevInfo;				// We need to know the Blocksize of the underlying device.
 	
-	//unsigned char *cache = /*(unsigned char *) &g_Cache;*/malloc(4096);
+	msd_info((T_MSD_HANDLE) hMsd, &DevInfo);
 	
-	pIoman = FF_CreateIOMAN(NULL, 4096, 512, NULL);
+	pIoman = FF_CreateIOMAN(NULL, 4096, DevInfo.nBlockSize, &Error);	// Create an IOMAN with 4KB of working buffers.
 	if(pIoman) {
+		// Register BlackSHEEP's Block Device read and write functions.
+		Error = FF_RegisterBlkDevice(pIoman, DevInfo.nBlockSize, (FF_WRITE_BLOCKS) FF_blackfin_blk_write, (FF_READ_BLOCKS) &FF_blackfin_blk_read, hMsd);
 		
-		FF_RegisterBlkDevice(pIoman, 512, (FF_WRITE_BLOCKS) FF_blackfin_blk_write, (FF_READ_BLOCKS) &FF_blackfin_blk_read, hMsd);
+		if(Error) {
+			FF_DestroyIOMAN(pIoman);
+			pIoman = NULL;	
+		}
+		
 		if(FF_MountPartition(pIoman, 0)) {
 			FF_DestroyIOMAN(pIoman);
 			pIoman = NULL;
 		}
 	}
 		
-	return pIoman;
+	return pIoman;	// No error reporting, just return pIoman. Will be Null if there was an error!
 }
 
-bool fs_fullfat_unmountPartition(void *partition) {
-	return 0;
+static bool fs_fullfat_unmountPartition(void *pPartition) {
+	if(FF_UnmountPartition((FF_IOMAN*) pPartition)) {	// Try to Unmount
+		return 0;										// Mount failed.
+	}
+	
+	// Success, destroy the IOMAN object.
+	FF_DestroyIOMAN((FF_IOMAN*) pPartition);
+	
+	return 1;
 }
 
-unsigned long fs_fullfat_partitionSize(void *pPartition) {
+static unsigned long fs_fullfat_partitionSize(void *pPartition) {
 	return (FF_T_UINT32) FF_GetVolumeSize((FF_IOMAN*) pPartition);
 } 
 
-unsigned long fs_fullfat_partitionFree(void *pPartition) {
+static unsigned long fs_fullfat_partitionFree(void *pPartition) {
 	return (FF_T_UINT32) FF_GetFreeSize((FF_IOMAN*) pPartition);
 }
 
-bool fs_fullfat_fdirExists( void *partition, const char *dir ) {
+static bool fs_fullfat_fdirExists( void *pPartition, const char *dir ) {
 	
-	if(FF_FindDir((FF_IOMAN *) partition, (FF_T_INT8 *) dir, strlen(dir))  > 0) {
+	if(FF_FindDir((FF_IOMAN *) pPartition, (FF_T_INT8 *) dir, strlen(dir))  > 0) {
 		return true; 
 	}
 	
 	return false;
 }
 
-bool fs_fullfat_fdirEmpty( void* partition, const char *dir ) {
-	return true;
+static bool fs_fullfat_fdirEmpty( void* partition, const char *dir ) {
+	if(FF_isDirEmpty((FF_IOMAN *) partition, dir)) {
+		return true;
+	}
+	
+	return false;
 }
 
-int fs_fullfat_fmkdir( void* partition, const char *dir ) {
+static int fs_fullfat_fmkdir( void* partition, const char *dir ) {
 	return FF_MkDir((FF_IOMAN *) partition, (char *) dir);
 }
 
-int fs_fullfat_frmdir( void* partition, const char *dir ) {
+static int fs_fullfat_frmdir( void* partition, const char *dir ) {
 	return FF_RmDir((FF_IOMAN *) partition, (char *) dir);
 }
 
-int fs_fullfat_fdelete( void *pPartition, const char *filename ) {
-	return 0;
+static int fs_fullfat_fdelete( void *pPartition, const char *filename ) {
+	return FF_RmFile((FF_IOMAN *) pPartition, (char *) filename);
 }
 
-void *fs_fullfat_fopen( void *pPartition, const char *fname, unsigned short modebits ) {
+static void *fs_fullfat_fopen( void *pPartition, const char *fname, unsigned short modebits ) {
 	
 	FF_FILE *file;
-	int i,x;
-	
-	char Filename[260];
-	char Path[260];
 	
 	unsigned char nOpenMode = 0;
 	// evaluate the mode bits	
@@ -119,56 +160,38 @@ void *fs_fullfat_fopen( void *pPartition, const char *fname, unsigned short mode
 		}
 	}
 	
-	sprintf(Filename, "%s", fname);
+	if(modebits & FS_O_BIT_CR) {
+		nOpenMode |= FF_MODE_CREATE;	
+	}
 	
-	file = FF_Open((FF_IOMAN*)pPartition, Filename, nOpenMode, NULL);
+	file = FF_Open((FF_IOMAN*)pPartition, fname, nOpenMode, NULL);
 	
 	return file;
 }
 
-int fs_fullfat_fclose( void *stream ) {
+static int fs_fullfat_fclose( void *stream ) {
 
 	return FF_Close((FF_FILE *) stream);
 	
 }
 
-int fs_fullfat_feof( void *stream ) {
+static int fs_fullfat_feof( void *stream ) {
 	return FF_isEOF((FF_FILE*)stream);
 }
 
-int fs_fullfat_fread( void *buffer, size_t size, size_t count, void *stream ) {	 
+static int fs_fullfat_fread( void *buffer, size_t size, size_t count, void *stream ) {	 
 	return FF_Read((FF_FILE *) stream, size, count, buffer);
-	/*int i;
-	unsigned char *value = (unsigned char *) buffer;
-	
-	for(i = 0; i < (size * count); i++) {
-		if(FF_isEOF((FF_FILE *) stream)) {
-			break;	
-		}
-		*(value++) = (unsigned char) FF_GetC((FF_FILE *) stream);	
-	}
-	
-	return i;*/
 }
 
-int fs_fullfat_fwrite( const void *buffer, size_t size, size_t count, void *stream ) {
+static int fs_fullfat_fwrite( const void *buffer, size_t size, size_t count, void *stream ) {
 	return FF_Write((FF_FILE *) stream, size, count, (FF_T_UINT8 *) buffer);
-	/*int i;
-	unsigned char *value = (unsigned char *) buffer;
-	
-	for(i = 0; i < (size * count); i++) {
-		FF_PutC((FF_FILE *) stream, *(value++));	
-	}
-	
-	return i;*/
 }
 
-int fs_fullfat_fputc( int ch, void *stream ) {
-		FF_PutC((FF_FILE *) stream, (FF_T_UINT8) ch);
-		return ch;
+static int fs_fullfat_fputc( int ch, void *stream ) {
+	return FF_PutC((FF_FILE *) stream, (FF_T_UINT8) ch);
 }
 
-int fs_fullfat_fgetc( void *stream ) {	
+static int fs_fullfat_fgetc( void *stream ) {	
 	int mychar = FF_GetC((FF_FILE*) stream);
 		
 	if(mychar < 0) {
@@ -177,7 +200,7 @@ int fs_fullfat_fgetc( void *stream ) {
 	return mychar;	
 }
 
-int fs_fullfat_fseek( void *stream, long offset, int origin ) {
+static int fs_fullfat_fseek( void *stream, long offset, int origin ) {
 	int nFatOrigin;
 	switch(origin) {
 		case SEEK_SET:
@@ -196,9 +219,9 @@ int fs_fullfat_fseek( void *stream, long offset, int origin ) {
 }
 
 
-int fs_fullfat_findFirst(void *partition, const char *pathname, T_FF_INFO *ffblk, int attrib) {
-		FF_DIRENT *mydir = malloc(sizeof(FF_DIRENT));
-		FF_IOMAN *pIoman = (FF_IOMAN *)partition;
+static int fs_fullfat_findFirst(void *pPartition, const char *pathname, T_FF_INFO *ffblk, int attrib) {
+		FF_DIRENT *mydir = malloc(sizeof(FF_DIRENT));	// Free'd in findclose
+		FF_IOMAN *pIoman = (FF_IOMAN *)pPartition;
 		int Result = 0;
 		char mypath[1024];
 		char *nPos;
@@ -252,17 +275,15 @@ int fs_fullfat_findFirst(void *partition, const char *pathname, T_FF_INFO *ffblk
 			else 
 				ffblk->nAttr = 0;
 			return 0;
-		} else {
-			//free(mydir);	
 		}
 		
 		return -1;
 }
 
-int	fs_fullfat_findNext(void *partition, T_FF_INFO *ffblk) {
+static int fs_fullfat_findNext(void *pPartition, T_FF_INFO *ffblk) {
 		
 		FF_DIRENT *mydir = (FF_DIRENT *) ffblk->pParam;
-		FF_IOMAN *pIoman = (FF_IOMAN *)partition;
+		FF_IOMAN *pIoman = (FF_IOMAN *)pPartition;
 		int result;
 		
 		result = FF_FindNext(pIoman, mydir);
@@ -292,7 +313,7 @@ int	fs_fullfat_findNext(void *partition, T_FF_INFO *ffblk) {
 			ffblk->stAcDate.nMonth 	= mydir->AccessedTime.Month;
 			ffblk->stAcDate.nYear 	= mydir->AccessedTime.Year;
 			
-			if(mydir->Attrib == 0x10) {
+			if(mydir->Attrib == FF_FAT_ATTR_DIR) {
 				ffblk->nAttr = FS_A_DIR;
 			}
 			else 
@@ -304,12 +325,12 @@ int	fs_fullfat_findNext(void *partition, T_FF_INFO *ffblk) {
 	
 }
 
-long fs_fullfat_ftell(FF_FILE *pFile) {
+static long fs_fullfat_ftell(FF_FILE *pFile) {
 	return (long) FF_Tell(pFile);	
 }
 
-int fs_fullfat_findClose(T_FF_INFO *ffblk) {
-//	free(ffblk->pParam);
+static int fs_fullfat_findClose(T_FF_INFO *ffblk) {
+	free(ffblk->pParam);
 	return 0;
 }
 
