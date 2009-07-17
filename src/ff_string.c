@@ -162,7 +162,7 @@ FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tok
 }
 
 
-FF_T_BOOL FF_wildcompare(const char * pszWildCard, const char * pszString) {
+FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
     /* Check to see if the string contains the wild card */
     if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
     {
