@@ -41,6 +41,7 @@
  **/
 
 #include "ff_file.h"
+#include "ff_string.h"
 
 /**
  *	@public
@@ -203,7 +204,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 			if(strlen(filename) == strlen(Object.FileName)) {
-				if(Object.Filesize == 0 && FF_StrMatch(filename, Object.FileName, (FF_T_UINT16) strlen(filename)) == FF_TRUE) {
+				if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) strlen(filename)) == FF_TRUE) {
 					// The file really was found!
 					FileCluster = 1;
 				} 
@@ -377,7 +378,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
 			{
 				for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-					if(FF_StrMatch(pIoman->pPartition->PathCache[i].Path, path, (FF_T_UINT16)strlen(path))) {
+					if(FF_strmatch(pIoman->pPartition->PathCache[i].Path, path, (FF_T_UINT16)strlen(path))) {
 						pIoman->pPartition->PathCache[i].Path[0] = '\0';
 						pIoman->pPartition->PathCache[i].DirCluster = 0;
 						FF_ReleaseSemaphore(pIoman->pSemaphore);

@@ -30,27 +30,25 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_memory.h
+ *	@file		ff_string.c
  *	@author		James Walmsley
- *	@ingroup	MEMORY
+ *	@ingroup	STRING
+ *
+ *	@defgroup	STRING	FullFAT String Library
+ *	@brief		Portable String Library for FullFAT
+ *
+ *
  **/
 
-#ifndef _FF_MEMORY_H_
-#define _FF_MEMORY_H_
+#ifndef _FF_STRING_H_
+#define _FF_STRING_H_
 
-#include "ff_config.h"
 #include "ff_types.h"
 
-
-//---------- PROTOTYPES
-
-FF_T_UINT8		FF_getChar	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
-FF_T_UINT16		FF_getShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
-FF_T_UINT32		FF_getLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset);
-
-void			FF_putChar	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT8 Value);
-void			FF_putShort	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT16 Value);
-void			FF_putLong	(FF_T_UINT8 *pBuffer, FF_T_UINT16 offset, FF_T_UINT32 Value);
+void			FF_tolower	(FF_T_INT8 *string, FF_T_UINT32 strLen);
+void			FF_toupper	(FF_T_INT8 *string, FF_T_UINT32 strLen);
+FF_T_BOOL		FF_strmatch	(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 len);
+FF_T_INT8		*FF_strtok	(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length);
+FF_T_BOOL		FF_wildcompare(const char * pszWildCard, const char * pszString);
 
 #endif
-

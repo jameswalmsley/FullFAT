@@ -40,6 +40,7 @@
 #include "ff_time.h"
 #include "ff_crc.h"
 #include "ff_hash.h"
+#include "ff_string.h"
 
 
 #endif

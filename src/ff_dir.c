@@ -41,6 +41,7 @@
  **/
 
 #include "ff_dir.h"
+#include "ff_string.h"
 #include <stdio.h>
 
 static void FF_ProcessShortName(FF_T_INT8 *name);
@@ -544,7 +545,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 	{
 		for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
 			if(strlen(pIoman->pPartition->PathCache[i].Path) == pathLen) {
-				if(FF_StrMatch(pIoman->pPartition->PathCache[i].Path, path, pathLen)) {
+				if(FF_strmatch(pIoman->pPartition->PathCache[i].Path, path, pathLen)) {
 					FF_ReleaseSemaphore(pIoman->pSemaphore);
 					return pIoman->pPartition->PathCache[i].DirCluster;
 				}

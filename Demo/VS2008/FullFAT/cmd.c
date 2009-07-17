@@ -511,7 +511,7 @@ int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	strcpy(srcWild, p);
 	*p = '\0';
 
-	if(!FF_StrMatch(srcWild, destWild, 0)) {
+	if(!FF_strmatch(srcWild, destWild, 0)) {
 		printf("Source and Destination Wildcards do not match!\n");
 		return 0;
 	}
@@ -521,7 +521,7 @@ int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	while(!Tester) {
 		if(wildCompare(srcWild, mydir.FileName)) {
 			// Do Copy!
-			if(!FF_StrMatch(mydir.FileName, ".", 0) && !FF_StrMatch(mydir.FileName, "..", 0)) {
+			if(!FF_strmatch(mydir.FileName, ".", 0) && !FF_strmatch(mydir.FileName, "..", 0)) {
 				printf("Copying file %s\n", mydir.FileName);
 				strcpy(tmpsrc, pathsrc);
 				strcat(tmpsrc, mydir.FileName);
@@ -884,7 +884,7 @@ int rm_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		Error = FF_FindFirst(pEnv->pIoman, &mydir, realpath);
 
-		while(!FF_StrMatch(mydir.FileName, pName, 0)) {
+		while(!FF_strmatch(mydir.FileName, pName, 0)) {
 			Error = FF_FindNext(pEnv->pIoman, &mydir);
 			if(Error) {	// File
 				printf("File or Folder not found!\n");
