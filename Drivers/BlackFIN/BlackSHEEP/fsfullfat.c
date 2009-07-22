@@ -223,8 +223,11 @@ static int fs_fullfat_findFirst(void *pPartition, const char *pathname, T_FF_INF
 		FF_DIRENT *mydir = malloc(sizeof(FF_DIRENT));	// Free'd in findclose
 		FF_IOMAN *pIoman = (FF_IOMAN *)pPartition;
 		int Result = 0;
-		char mypath[1024];
+		int i;
+		int pathLen;
+		char mypath[2600];
 		char *nPos;
+		unsigned long DirCluster;
 	
 		strcpy(mypath, pathname);
 	
@@ -239,6 +242,60 @@ static int fs_fullfat_findFirst(void *pPartition, const char *pathname, T_FF_INF
 				mypath[strlen(mypath) - 1] = '\0';	
 			}
 		}
+		
+		pathLen = strlen(pathname);
+		
+		if(!nPos) {
+			for(i = pathLen; i > 0; i--) {
+				if(pathname[i] == '\\' || pathname[i] == '/') {
+					break;	
+				}
+			}
+			
+			DirCluster = FF_FindDir(pIoman, pathname, i);
+				
+			if(DirCluster) {
+				//FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent)
+				if(FF_FindEntryInDir(pIoman, DirCluster, (FF_T_INT8 *)(pathname + i + 1), 0, mydir)) {
+					ffblk->pParam = (void *) mydir;
+			
+					ffblk->stCrDate.nHour 	= mydir->CreateTime.Hour;
+					ffblk->stCrDate.nMinute = mydir->CreateTime.Minute;
+					ffblk->stCrDate.nSecond = mydir->CreateTime.Second;
+					ffblk->stCrDate.nDay 	= mydir->CreateTime.Day;
+					ffblk->stCrDate.nMonth 	= mydir->CreateTime.Month;
+					ffblk->stCrDate.nYear 	= mydir->CreateTime.Year;
+			
+					ffblk->stMoDate.nHour 	= mydir->ModifiedTime.Hour;
+					ffblk->stMoDate.nMinute = mydir->ModifiedTime.Minute;
+					ffblk->stMoDate.nSecond = mydir->ModifiedTime.Second;
+					ffblk->stMoDate.nDay 	= mydir->ModifiedTime.Day;
+					ffblk->stMoDate.nMonth 	= mydir->ModifiedTime.Month;
+					ffblk->stMoDate.nYear 	= mydir->ModifiedTime.Year;
+			
+					ffblk->stAcDate.nHour 	= mydir->AccessedTime.Hour;
+					ffblk->stAcDate.nMinute = mydir->AccessedTime.Minute;
+					ffblk->stAcDate.nSecond = mydir->AccessedTime.Second;
+					ffblk->stAcDate.nDay 	= mydir->AccessedTime.Day;
+					ffblk->stAcDate.nMonth 	= mydir->AccessedTime.Month;
+					ffblk->stAcDate.nYear 	= mydir->AccessedTime.Year;
+			
+					strcpy(ffblk->acName, mydir->FileName);
+					ffblk->nSize = mydir->Filesize;
+			
+					if(mydir->Attrib == 0x10) {
+						ffblk->nAttr = FS_A_DIR;
+					}
+					else 
+						ffblk->nAttr = 0;
+					return 0;					
+				} else {
+					return -1;	
+				}
+										
+			}
+		}	
+		
 		
 		Result = FF_FindFirst(pIoman, mydir, (FF_T_INT8*) mypath);
 		
