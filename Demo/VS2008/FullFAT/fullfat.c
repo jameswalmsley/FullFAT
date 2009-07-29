@@ -110,6 +110,7 @@ int main(void) {
 				FFTerm_AddExCmd	(pConsole, "mkfile",	(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
 				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
 				FFTerm_AddCmd	(pConsole, "md5win",	(FFT_FN_COMMAND)	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
+				FFTerm_AddCmd	(pConsole, "run",		(FFT_FN_COMMAND)	run_cmd,		runInfo);				// Special Run Command.
 				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
 				
 				// Special Thread IO commands

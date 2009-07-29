@@ -1166,6 +1166,39 @@ const FFT_ERR_TABLE mkwinfileInfo[] =
 	{ NULL }
 };
 
+/**
+ *	@brief	A simple command for breaking out of the FFTerm Environment.
+ *			Allows commands to be executed on the underlying operating system.
+ **/
+int run_cmd(int argc, char **argv) {
+	char cmd[2600] = "";
+	int i;
+	if(argc > 1) {
+		for (i = 1; i < argc; i++) {
+			if(strstr(argv[i], " ")) {
+				strcat(cmd, "\"");
+			}
+			strcat(cmd, argv[i]);
+			
+			if(strstr(argv[i], " ")) {
+				strcat(cmd, "\"");
+			}
+			strcat(cmd, " ");			// Ensure a space between each command line argument.
+		}
+		system(cmd);
+		printf("\n");
+	} else {
+		printf("Usage: %s [command line]\n", argv[0]);
+	}
+	return 0;
+}
+const FFT_ERR_TABLE runInfo[] =
+{
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Breaks out of the FFTerm environment and executes a command.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};
+
 
 int exit_cmd(int argc, char **argv) {
 	if(argc) {
@@ -1325,4 +1358,8 @@ static FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString) {
 
     return FF_TRUE;
 }
+
+
+
+
 

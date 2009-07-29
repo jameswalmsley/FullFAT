@@ -60,6 +60,7 @@ extern const FFT_ERR_TABLE mkfileInfo[];
 extern const FFT_ERR_TABLE mkwinfileInfo[];
 extern const FFT_ERR_TABLE exitInfo[];
 extern const FFT_ERR_TABLE md5winInfo[];
+extern const FFT_ERR_TABLE runInfo[];
 
 
 int cmd_prompt		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
@@ -79,6 +80,7 @@ int mkimg_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkfile_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkwinfile_cmd	(int argc, char **argv);
 int exit_cmd		(int argc, char **argv);
+int run_cmd		(int argc, char **argv);
 int md5win_cmd		(int argc, char **argv);
 
 extern void KillAllThreads(void);
