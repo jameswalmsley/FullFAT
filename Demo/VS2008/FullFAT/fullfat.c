@@ -97,8 +97,10 @@ int main(void) {
 				FFTerm_AddExCmd	(pConsole, "prompt",	(FFT_FN_COMMAND_EX) cmd_prompt,		promptInfo,		&Env);	// Dynamic command prompt (prompt is a reserved command name).
 				FFTerm_AddExCmd	(pConsole, "pwd",		(FFT_FN_COMMAND_EX) pwd_cmd,		pwdInfo,		&Env);	// See cmd.c for their implementations.
 				FFTerm_AddExCmd	(pConsole, "ls",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command
+				FFTerm_AddExCmd	(pConsole, "dir",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command
 				FFTerm_AddExCmd	(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd,			cdInfo,			&Env);	// Change Directory Command
 				FFTerm_AddExCmd	(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file)
+				FFTerm_AddExCmd	(pConsole, "copy",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file)
 				FFTerm_AddExCmd	(pConsole, "icp",		(FFT_FN_COMMAND_EX) icp_cmd,		icpInfo,		&Env);	// Copy command (Windows file to FullFAT file)
 				FFTerm_AddExCmd	(pConsole, "xcp",		(FFT_FN_COMMAND_EX) xcp_cmd,		xcpInfo,		&Env);	// Copy command (FullFAT file to Windows file)
 				FFTerm_AddExCmd	(pConsole, "md5",		(FFT_FN_COMMAND_EX) md5_cmd,		md5Info,		&Env);	// MD5 Data Hashing command.
@@ -106,11 +108,14 @@ int main(void) {
 				FFTerm_AddExCmd	(pConsole, "info",		(FFT_FN_COMMAND_EX) info_cmd,		infoInfo,		&Env);	// Information command.
 				FFTerm_AddExCmd	(pConsole, "view",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
 				FFTerm_AddExCmd	(pConsole, "rm",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
+				FFTerm_AddExCmd	(pConsole, "del",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
 				FFTerm_AddExCmd	(pConsole, "mkimg",		(FFT_FN_COMMAND_EX) mkimg_cmd,		mkimgInfo,		&Env);	// Make image command, (makes a windows file image of the media).
 				FFTerm_AddExCmd	(pConsole, "mkfile",	(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
 				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
 				FFTerm_AddCmd	(pConsole, "md5win",	(FFT_FN_COMMAND)	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
 				FFTerm_AddCmd	(pConsole, "run",		(FFT_FN_COMMAND)	run_cmd,		runInfo);				// Special Run Command.
+				FFTerm_AddCmd	(pConsole, "time",		(FFT_FN_COMMAND)	time_cmd,		timeInfo);				// Time Command.
+				FFTerm_AddCmd	(pConsole, "date",		(FFT_FN_COMMAND)	date_cmd,		dateInfo);				// Date Command.
 				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
 				
 				// Special Thread IO commands

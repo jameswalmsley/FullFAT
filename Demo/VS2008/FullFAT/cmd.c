@@ -1185,8 +1185,10 @@ int run_cmd(int argc, char **argv) {
 			}
 			strcat(cmd, " ");			// Ensure a space between each command line argument.
 		}
-		system(cmd);
+		i = system(cmd);
 		printf("\n");
+
+		return i;
 	} else {
 		printf("Usage: %s [command line]\n", argv[0]);
 	}
@@ -1194,11 +1196,61 @@ int run_cmd(int argc, char **argv) {
 }
 const FFT_ERR_TABLE runInfo[] =
 {
-	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Bad command or filename!",					-1},	// Generic Error must always be the first in the table.
 	{"Breaks out of the FFTerm environment and executes a command.",	FFT_COMMAND_DESCRIPTION},
 	{ NULL }
 };
 
+
+int date_cmd(int argc, char **argv) {
+#ifdef FF_TIME_SUPPORT
+	FF_SYSTEMTIME Time;
+#endif
+
+	if(argc == 1) {
+#ifdef FF_TIME_SUPPORT
+		FF_GetSystemTime(&Time);
+		printf("The current date is: %02d.%02d.%02d\n\n", Time.Day, Time.Month, Time.Year);
+#else
+		printf("Date Support not built. Rebuild FullFAT with FF_TIME_SUPPORT enabled.\n");
+#endif
+
+	} else {
+		printf("Usage: %s\n", argv[0]);
+	}
+	return 0;
+}
+const FFT_ERR_TABLE dateInfo[] =
+{
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Displays the current date.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};
+
+int time_cmd(int argc, char **argv) {
+#ifdef FF_TIME_SUPPORT
+	FF_SYSTEMTIME Time;
+#endif
+
+	if(argc == 1) {
+#ifdef FF_TIME_SUPPORT
+		FF_GetSystemTime(&Time);
+		printf("The current time is: %02d:%02d:%02d\n\n", Time.Hour, Time.Minute, Time.Second);
+#else
+		printf("Time Support not built. Rebuild FullFAT with FF_TIME_SUPPORT enabled.\n");
+#endif
+
+	} else {
+		printf("Usage: %s\n", argv[0]);
+	}
+	return 0;
+}
+const FFT_ERR_TABLE timeInfo[] =
+{
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Displays the current time.",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};
 
 int exit_cmd(int argc, char **argv) {
 	if(argc) {
@@ -1358,8 +1410,3 @@ static FF_T_BOOL wildCompare(const char * pszWildCard, const char * pszString) {
 
     return FF_TRUE;
 }
-
-
-
-
-
