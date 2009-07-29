@@ -748,6 +748,16 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 		//---------- Read Clusters
 		if(nBytes >= nBytesPerCluster) {
+			//----- Thanks to Christopher Clark of DigiPen Institute of Technology in Redmond, US adding this traversal check.
+			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
+			if(nClusterDiff) {
+				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
+					pFile->CurrentCluster += nClusterDiff;
+				}
+			}
+			//----- End of Contributor fix.
+
 			FF_ReadClusters(pFile, (nBytes / nBytesPerCluster), buffer);
 			nBytesToRead = (nBytesPerCluster *  (nBytes / nBytesPerCluster));
 
@@ -1023,6 +1033,15 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 		//---------- Write Clusters
 		if(nBytes >= nBytesPerCluster) {
+			//----- Thanks to Christopher Clark of DigiPen Institute of Technology in Redmond, US adding this traversal check.
+			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
+			if(nClusterDiff) {
+				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
+					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff);
+					pFile->CurrentCluster += nClusterDiff;
+				}
+			}
+			//----- End of Contributor fix.
 
 			nClusters = (nBytes / nBytesPerCluster);
 			
