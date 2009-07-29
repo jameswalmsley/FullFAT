@@ -5,8 +5,8 @@ CC_OPTIONS	= -Wall -O3 -c
 LD			= ld
 CONFIG		= ../../src/ff_config.h
 
-FullFAT.exe: main.o FFTerm.o FFTerm-commands.o FFTerm-error.o ff_ioman.o ff_memory.o ff_fat.o ff_blk.o ff_file.o ff_dir.o ff_error.o ff_crc.o ff_hash.o ff_time.o ff_safety.o blkdev_win32.o cmd.o test_threads.o md5.o
-	$(CC) main.o FFTerm.o FFTerm-commands.o FFTerm-error.o ff_ioman.o ff_memory.o ff_fat.o ff_blk.o ff_file.o ff_dir.o ff_error.o ff_crc.o ff_hash.o ff_time.o ff_safety.o blkdev_win32.o cmd.o test_threads.o md5.o -o FullFAT.exe
+FullFAT.exe: main.o FFTerm.o FFTerm-commands.o FFTerm-error.o ff_ioman.o ff_memory.o ff_fat.o ff_blk.o ff_file.o ff_dir.o ff_error.o ff_crc.o ff_hash.o ff_time.o ff_safety.o ff_string.o blkdev_win32.o cmd.o test_threads.o md5.o
+	$(CC) main.o FFTerm.o FFTerm-commands.o FFTerm-error.o ff_ioman.o ff_memory.o ff_fat.o ff_blk.o ff_file.o ff_dir.o ff_error.o ff_crc.o ff_hash.o ff_time.o ff_safety.o ff_string.o blkdev_win32.o cmd.o test_threads.o md5.o -o FullFAT.exe
     
     # Compilation commands:
 main.o: ../VS2008/FullFAT/fullfat.c
@@ -53,6 +53,9 @@ ff_time.o: ../../src/ff_time.c ../../src/ff_time.h
 	
 ff_safety.o: ../../src/ff_safety.c ../../src/ff_safety.h
 	$(CC) $(CC_OPTIONS) ../../src/ff_safety.c -o ff_safety.o
+	
+ff_string.o: ../../src/ff_string.c ../../src/ff_string.h
+	$(CC) $(CC_OPTIONS) ../../src/ff_string.c -o ff_string.o
 	
 cmd.o: ../VS2008/FullFAT/cmd.c ../VS2008/FullFAT/cmd.h
 	$(CC) $(CC_OPTIONS) ../VS2008/FullFAT/cmd.c -o cmd.o

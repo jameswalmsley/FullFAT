@@ -1196,7 +1196,7 @@ int run_cmd(int argc, char **argv) {
 }
 const FFT_ERR_TABLE runInfo[] =
 {
-	{"Bad command or filename!",					-1},	// Generic Error must always be the first in the table.
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
 	{"Breaks out of the FFTerm environment and executes a command.",	FFT_COMMAND_DESCRIPTION},
 	{ NULL }
 };
