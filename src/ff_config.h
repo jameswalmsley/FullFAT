@@ -77,6 +77,11 @@
 
 #define FF_PATH_CACHE_DEPTH	2	// The Number of PATH's to Cache.
 
+//---------- DON'T USE MALLOC
+//#define FF_NO_MALLOC
+
+//---------- DON'T 
+
 
 //---------- Hash Table Support
 //#define FF_HASH_TABLE_SUPPORT	// Enable HASH to speed up file creation.
