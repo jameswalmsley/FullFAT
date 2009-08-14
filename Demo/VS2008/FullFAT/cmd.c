@@ -919,11 +919,10 @@ const FFT_ERR_TABLE rmInfo[] =
 int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	FILE		*fDest;
-	//FF_BUFFER	*pBuffer;
 	FF_T_UINT8	*buf;
-	FF_T_UINT32	BS = 100;
+	FF_T_UINT32	BS = 2048;
 
-	FF_T_UINT32	read,i = 0;
+	FF_T_UINT32	read,x,i = 0;
 
 	if(argc == 2) {
 		fDest = fopen(argv[1], "wb");
@@ -940,15 +939,16 @@ int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					BS = pEnv->pIoman->pPartition->TotalSectors - i;
 				}
 				read = pEnv->pIoman->pBlkDevice->fnReadBlocks(buf, i, BS, pEnv->pIoman->pBlkDevice->pParam);
-				fwrite(buf, pEnv->pIoman->pPartition->BlkSize, read, fDest);
-
 				i += read;
+				x = fwrite(buf, pEnv->pIoman->pPartition->BlkSize, read, fDest);
+
+				
 
 				if(!read) {	// not reading anymore!
 					break;
 				}
 
-				/*pBuffer = FF_GetBuffer(pEnv->pIoman, i, FF_MODE_READ);
+				/*pBuffer = FF_GetBuffer(pEnv->pIoman, i++, FF_MODE_READ);
 				{
 					if(!pBuffer) {
 						printf("Error, driver I/O failed.\n");
@@ -956,7 +956,9 @@ int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					}
 					fwrite(pBuffer->pBuffer, pEnv->pIoman->pPartition->BlkSize, 1, fDest);
 				}
-				FF_ReleaseBuffer(pEnv->pIoman, pBuffer);*/
+				FF_ReleaseBuffer(pEnv->pIoman, pBuffer);
+				
+			*/
 				printf("%d%% Complete. (%ld of %ld Sectors read)\r", (int)(((float)i / (float)pEnv->pIoman->pPartition->TotalSectors) * (float)100.0), i,  pEnv->pIoman->pPartition->TotalSectors);
 			}
 
@@ -1251,6 +1253,74 @@ const FFT_ERR_TABLE timeInfo[] =
 	{"Displays the current time.",	FFT_COMMAND_DESCRIPTION},
 	{ NULL }
 };
+
+int drivelist_cmd(int argc, char **argv) {
+	TCHAR	Volume[MAX_PATH];
+	HANDLE	hSearch = FindFirstVolume(Volume, MAX_PATH);
+	HANDLE	hVolume;
+	DWORD Error;
+
+	
+
+	if(hSearch) {
+		hVolume = CreateFile(&Volume[0], 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+		
+		Error = GetLastError();
+
+	}
+
+	CloseHandle(hSearch);
+
+}
+
+#define HEX_BUF	16
+
+int hexview_cmd(int argc, char **argv) {
+	
+	FILE *f;
+	char buffer[HEX_BUF];
+	char lines[25][81]; // Screen Buffer
+	int read;
+	int i;
+
+	printf(" HexView 0.2 for FFTerm and FullFAT\n");
+	printf(" By James Walmsley\n");
+	printf("--------------------------------------------------------\n");
+	printf("                         LOADING                        \n");
+	Sleep(1800);
+
+	if(argc == 2) {
+		f = fopen(argv[1], "rb");
+		if(f) {
+			while(read = fread(buffer, 1, HEX_BUF, f)) {
+				for(i = 0; i < read; i++) {
+					printf("%02X", buffer[i]);
+				}
+				if(read < HEX_BUF) {
+					for(i = 0; i < (HEX_BUF - read); i++) {
+						printf("  ");
+					}
+				}
+				printf("\t");
+				for(i = 0; i < read; i++) {
+					if((buffer[i] >= 32 && buffer[i] <= 255)) {
+						printf("%c", buffer[i]);
+					} else {
+						printf(".");
+					}
+				}
+				printf("\n");
+
+			}
+			fclose(f);
+		} else {
+			printf("Couldn't open file!\n");
+		}
+	} else {
+		printf("No file specified!\n");
+	}
+}
+
 
 int exit_cmd(int argc, char **argv) {
 	if(argc) {

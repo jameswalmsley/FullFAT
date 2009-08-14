@@ -35,9 +35,9 @@
 #include "../../../src/fullfat.h"
 #include "../../../../FFTerm/src/FFTerm.h"
 
-typedef struct {	// Pass an environment for the FullFAT commands.
+typedef struct {							// Provides an environment for the FullFAT commands.
 	FF_IOMAN	*pIoman;
-	FF_T_INT8	WorkingDir[FF_MAX_PATH];
+	FF_T_INT8	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
 } FF_ENVIRONMENT;
 
 void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv);
@@ -86,6 +86,8 @@ int run_cmd			(int argc, char **argv);
 int time_cmd		(int argc, char **argv);
 int date_cmd		(int argc, char **argv);
 int md5win_cmd		(int argc, char **argv);
+int hexview_cmd		(int argc, char **argv);
+int drivelist_cmd	(int argc, char **argv);
 
 extern void KillAllThreads(void);
 
