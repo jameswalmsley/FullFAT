@@ -69,8 +69,6 @@ typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64
 											// No other function makes use of 64-bit numbers.
 #endif
 
-typedef FF_T_SINT32		FF_ERROR;			///< A special error code type to ease some inconsistencies in Error reporting.
+typedef FF_T_SINT32			FF_ERROR;		///< A special error code type to ease some inconsistencies in Error reporting.
 
 #endif // end of include guard
-
-
