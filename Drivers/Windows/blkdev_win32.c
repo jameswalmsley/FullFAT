@@ -32,7 +32,7 @@
 #include "blkdev_win32.h"
 
 /*
-	This driver can inteface with Hard drives up to 2TB in size.
+	This driver can interface with very Large Disks.
 */
 
 /*
@@ -40,15 +40,22 @@
 
 	That is that multiple concurrent calls to the low-level I/O layer should be threadsafe.
 	These file I/O drivers require a MUTEX or Semaphore to achieve this.
+
+	To further improve this, a special associative cache, can be implemented above this level.
 */
 
 struct _DEV_INFO {
-	HANDLE		hDev;
-	HANDLE		AccessSem;
-	long long	DiskSize;
-	FF_T_UINT32	BlockSize;
+	HANDLE		hDev;		// Handle to a Block Device or File.
+	HANDLE		AccessSem;	// Access Semaphore.
+	long long	DiskSize;	// Disk Size in Bytes.
+	FF_T_UINT32	BlockSize;	// Block Size.
 };
 
+/**
+ *	@private
+ *	@brief		If the device is a Physical Device, it returns the geometry information.
+ *
+ **/
 static BOOL GetDriveGeometry(DISK_GEOMETRY_EX *pdg, HANDLE hDevice) {
   BOOL bResult;                 // results flag
   DWORD junk;                   // discard results
@@ -68,7 +75,10 @@ static BOOL GetDriveGeometry(DISK_GEOMETRY_EX *pdg, HANDLE hDevice) {
   return (bResult);
 }
 
-
+/**
+ *	@brief	Gets the BlockSize of an opened device.
+ *
+ **/
 FF_T_UINT16 GetBlockSize(HANDLE hDevice) {
 	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
 
@@ -79,15 +89,19 @@ FF_T_UINT16 GetBlockSize(HANDLE hDevice) {
 	return 0;
 }
 
-
+/**
+ *	@brief	Opens a HANDLE to a Windows Blockdevice or File.
+ *
+ **/
 HANDLE fnOpen(char *strDevName, int nBlockSize) {
 	
-	struct _DEV_INFO *ptDevInfo;
-	DISK_GEOMETRY_EX DiskGeo;
-	LARGE_INTEGER	li, address;
+	struct _DEV_INFO	*ptDevInfo;
+	DISK_GEOMETRY_EX	DiskGeo;
+	LARGE_INTEGER		li, address;
 
-	HANDLE hDisk;
-	WCHAR pWide[MAX_PATH];
+	HANDLE				hDisk;
+	WCHAR				pWide[MAX_PATH];
+
 	MultiByteToWideChar(CP_ACP, 0, strDevName, -1, pWide, MAX_PATH);
 	hDisk = CreateFile(pWide, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
 
@@ -118,6 +132,10 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 	return (HANDLE) NULL;
 }
 
+/**
+ *	@brief	Closes The Windows Block Device.
+ *
+ **/
 void fnClose(HANDLE hDevice) {
 	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
 
@@ -128,42 +146,44 @@ void fnClose(HANDLE hDevice) {
 	}
 }
 
+/**
+ *	@brief	Thread-Safe BlockDevice Read operation for Windows.
+ *
+ **/
 signed int fnRead(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDevice) {
-	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
-	LARGE_INTEGER address;
-	DWORD	Read;
-	//unsigned long long address;
-	//unsigned long retVal;
+	struct _DEV_INFO	*ptDevInfo = (struct _DEV_INFO *) hDevice;
+	LARGE_INTEGER		address;
+	DWORD				Read;
 	
 	address.QuadPart = (unsigned long long) sector * ptDevInfo->BlockSize;
 
 	FF_PendSemaphore(ptDevInfo->AccessSem);
 	{
-		//_fseeki64(pParam, address, SEEK_SET);
 		SetFilePointerEx(ptDevInfo->hDev, address, NULL, FILE_BEGIN);
-		//retVal = fread(buffer, 512, sectors, pParam);
 		ReadFile(ptDevInfo->hDev, buffer, ptDevInfo->BlockSize * sectors, &Read, NULL);
 	}
 	FF_ReleaseSemaphore(ptDevInfo->AccessSem);
-	return Read;
+
+	return Read / ptDevInfo->BlockSize;
 }
 
+/**
+ *	@brief	Thread-Safe BlockDevice Write operation for Windows.
+ *
+ **/
 signed int fnWrite(unsigned char *buffer, unsigned long sector, unsigned short sectors, HANDLE hDevice) {
-	struct _DEV_INFO *ptDevInfo = (struct _DEV_INFO *) hDevice;
-	LARGE_INTEGER address;
-	DWORD	Written;
-	//unsigned long retVal;
+	struct _DEV_INFO	*ptDevInfo = (struct _DEV_INFO *) hDevice;
+	LARGE_INTEGER		address;
+	DWORD				Written;
 
 	address.QuadPart = (unsigned long long) sector * ptDevInfo->BlockSize;
 	
 	FF_PendSemaphore(ptDevInfo->AccessSem);
 	{
-		//_fseeki64(pParam, address, SEEK_SET);
 		SetFilePointerEx(ptDevInfo->hDev, address, NULL, FILE_BEGIN);
-		//retVal = fwrite(buffer, BLOCK_SIZE, sectors, pParam);
 		WriteFile(ptDevInfo->hDev, buffer, ptDevInfo->BlockSize * sectors, &Written, NULL);
 	}
 	FF_ReleaseSemaphore(ptDevInfo->AccessSem);
-	return Written;
-}
 
+	return Written / ptDevInfo->BlockSize;
+}
