@@ -46,19 +46,16 @@ int main(void) {
 	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 	HANDLE			hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
 
-	unsigned char	buffer[8192];
-	FF_FILE			*pF;
-
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\write.img", 512);
+	hDisk = fnOpen("c:\\FullFAT.img", 512);
 	
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
-	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE1", 0);
+	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE4", 0);
 
 	if(hDisk) {
 		//---------- Create FullFAT IO Manager
@@ -109,6 +106,8 @@ int main(void) {
 				FFTerm_AddExCmd	(pConsole, "type",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
 				FFTerm_AddExCmd	(pConsole, "rm",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
 				FFTerm_AddExCmd	(pConsole, "del",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
+				FFTerm_AddExCmd	(pConsole, "move",		(FFT_FN_COMMAND_EX) move_cmd,		moveInfo,		&Env);	// Move or rename a file or dir.
+				FFTerm_AddExCmd	(pConsole, "rename",	(FFT_FN_COMMAND_EX) move_cmd,		moveInfo,		&Env);	// Move or rename a file or dir.
 				FFTerm_AddExCmd	(pConsole, "mkimg",		(FFT_FN_COMMAND_EX) mkimg_cmd,		mkimgInfo,		&Env);	// Make image command, (makes a windows file image of the media).
 				FFTerm_AddExCmd	(pConsole, "mkfile",	(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
 				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
@@ -117,34 +116,19 @@ int main(void) {
 				FFTerm_AddCmd	(pConsole, "time",		(FFT_FN_COMMAND)	time_cmd,		timeInfo);				// Time Command.
 				FFTerm_AddCmd	(pConsole, "date",		(FFT_FN_COMMAND)	date_cmd,		dateInfo);				// Date Command.
 				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
-				FFTerm_AddCmd	(pConsole, "hexview",	(FFT_FN_COMMAND)	hexview_cmd,	NULL);					// File Hexviewer.
-				FFTerm_AddCmd	(pConsole, "drivelist",	(FFT_FN_COMMAND)	drivelist_cmd,	NULL);					// List of available drives.
+				FFTerm_AddCmd	(pConsole, "hexview",	(FFT_FN_COMMAND)	hexview_cmd,	hexviewInfo);			// File Hexviewer.
+				FFTerm_AddCmd	(pConsole, "drivelist",	(FFT_FN_COMMAND)	drivelist_cmd,	drivelistInfo);			// List of available drives.
 				
 				// Special Thread IO commands
 				FFTerm_AddExCmd(pConsole, "mkthread",	(FFT_FN_COMMAND_EX) createthread_cmd,	mkthreadInfo,	&Env);
 				FFTerm_AddExCmd(pConsole, "tlist",		(FFT_FN_COMMAND_EX) listthreads_cmd,	listthreadsInfo,&Env);
 				FFTerm_AddExCmd(pConsole, "tkill",		(FFT_FN_COMMAND_EX) killthread_cmd,		killthreadInfo,	&Env);
 				
-				//---------- Some test code used to test the FILE I/O Api.
-				
-				/*pF = FF_Open(pIoman, "\\test2.txt", FF_GetModeBits("a+"), &Error);
-				for(i = 0; i < 1024; i++) {
-					FF_PutC(pF, 'J');
-				}
-				FF_Close(pF);*/
-				
-				/*
-				pF = FF_Open(pIoman, "\\", FF_MODE_DIR, NULL);
-
-				FF_Read(pF, 1, 8192, buffer);
-				*/
-				
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
 				FF_UnmountPartition(pIoman);						// Dis-mount the mounted partition from FullFAT.
 				FF_DestroyIOMAN(pIoman);							// Clean-up the FF_IOMAN Object.
 
-				
 				//---------- Final User Interaction
 				printf("\n\nConsole Was Terminated, END OF Demonstration!, Press ENTER to exit!\n");
 				getchar();

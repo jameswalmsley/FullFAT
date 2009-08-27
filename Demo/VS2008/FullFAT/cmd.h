@@ -60,9 +60,12 @@ extern const FFT_ERR_TABLE mkfileInfo[];
 extern const FFT_ERR_TABLE mkwinfileInfo[];
 extern const FFT_ERR_TABLE exitInfo[];
 extern const FFT_ERR_TABLE md5winInfo[];
+extern const FFT_ERR_TABLE hexviewInfo[];
 extern const FFT_ERR_TABLE runInfo[];
 extern const FFT_ERR_TABLE timeInfo[];
 extern const FFT_ERR_TABLE dateInfo[];
+extern const FFT_ERR_TABLE moveInfo[];
+extern const FFT_ERR_TABLE drivelistInfo[];
 
 
 int cmd_prompt		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
@@ -78,6 +81,7 @@ int info_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mount_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int view_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int rm_cmd			(int argc, char **argv, FF_ENVIRONMENT *pEnv);
+int move_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkimg_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkfile_cmd		(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 int mkwinfile_cmd	(int argc, char **argv);

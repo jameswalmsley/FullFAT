@@ -85,6 +85,8 @@ FF_T_SINT8 FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
+
+	//pDirent->NumLFNs = 0;
 	
 	for(; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
 		if(FF_FetchEntry(pIoman, DirCluster, pDirent->CurrentItem, EntryBuffer)) {
@@ -98,6 +100,7 @@ FF_T_SINT8 FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT 
 			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 				// LFN Processing
 				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+				//pDirent->NumLFNs = numLFNs;
 #ifdef FF_LFN_SUPPORT
 				FF_PopulateLongDirent(pIoman, pDirent, DirCluster, pDirent->CurrentItem);
 				return 0;
@@ -1103,7 +1106,7 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
  *	@return -2 if Dir was not found.
  *
  **/
-FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path) {
+FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path) {
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT16	PathLen = (FF_T_UINT16) strlen(path);
@@ -1172,7 +1175,7 @@ FF_T_SINT8 FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *p
  *	@return FF_ERR_DEVICE_DRIVER_FAILED is device access failed.
  *
  **/
-FF_T_SINT8 FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
+FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
@@ -1638,7 +1641,19 @@ FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *F
 	return MyFile.ObjectCluster;
 }
 
-FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
+
+/**
+ *	@brief Creates a Directory of the specified path.
+ *
+ *	@param	pIoman	Pointer to the FF_IOMAN object.
+ *	@param	Path	Path of the directory to create.
+ *
+ *	@return	FF_ERR_NULL_POINTER if pIoman was NULL.
+ *	@return FF_ERR_DIR_OBJECT_EXISTS if the object specified by path already exists.
+ *	@return	FF_ERR_DIR_INVALID_PATH
+ *	@return FF_ERR_NONE on success.
+ **/
+FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	FF_DIRENT	MyDir;
 	FF_T_UINT32 DirCluster;
 	FF_T_INT8	DirName[FF_MAX_FILENAME];
@@ -1729,5 +1744,29 @@ FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	}
 	
 	return FF_ERR_DIR_INVALID_PATH;
+}
+
+
+
+void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry) {
+
+	FF_T_UINT8	EntryBuffer[32];
+
+	DirEntry--;
+
+	do {
+		FF_FetchEntry(pIoman, DirCluster, DirEntry, EntryBuffer);
+		
+		if(FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB)) == FF_FAT_ATTR_LFN) {
+			FF_putChar(EntryBuffer, (FF_T_UINT16) 0, (FF_T_UINT8) 0xE5);
+			FF_PushEntry(pIoman, DirCluster, DirEntry, EntryBuffer);
+		}
+
+		if(DirEntry == 0) {
+			break;
+		}
+		DirEntry--;
+	}while(FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB)) == FF_FAT_ATTR_LFN);
+
 }
 

@@ -321,7 +321,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	
 	FF_DIRENT	MyDir;
-	FF_T_SINT8	RetVal = FF_ERR_NONE;
+	FF_ERROR	RetVal = FF_ERR_NONE;
 	FF_T_UINT8	i = 0;
 
 	if(!pIoman) {
@@ -371,6 +371,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_unlockFAT(pIoman);
 			
 			// Edit the Directory Entry! (So it appears as deleted);
+			FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry);
 			FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 			EntryBuffer[0] = 0xE5;
 			FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
@@ -424,6 +425,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	// Edit the Directory Entry! (So it appears as deleted);
 	FF_lockDIR(pIoman);
 	{
+		FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry);
 		FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 		EntryBuffer[0] = 0xE5;
 		FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
@@ -436,12 +438,112 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	return 0;
 }
 
+/**
+ *	@public
+ *	@brief	Moves a file or directory from source to destination.
+ *
+ *	@param	pIoman				The FF_IOMAN object pointer.
+ *	@param	szSourceFile		String of the source file to be moved or renamed.
+ *	@param	szDestinationFile	String of the destination file to where the source should be moved or renamed.
+ *
+ *	@return	FF_ERR_NONE on success.
+ *	@return FF_ERR_FILE_DESTINATION_EXISTS if the destination file exists.
+ *	@return FF_ERR_FILE_COULD_NOT_CREATE_DIRENT if dirent creation failed (fatal error!).
+ *	@return FF_ERR_FILE_DIR_NOT_FOUND if destination directory was not found.
+ *	@return FF_ERR_FILE_SOURCE_NOT_FOUND if the source file was not found.
+ *
+ **/
+FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT8 *szDestinationFile) {
+	FF_ERROR	Error;
+	FF_FILE		*pSrcFile, *pDestFile;
+	FF_DIRENT	MyFile;
+	FF_T_UINT8	EntryBuffer[32];
+	FF_T_UINT16 i;
+	FF_T_UINT32	DirCluster;
+
+	if(!pIoman) {
+		return FF_ERR_NULL_POINTER;
+	}
+
+	// Check destination file doesn't exist!
+	pDestFile = FF_Open(pIoman, szDestinationFile, FF_MODE_READ, &Error);
+
+	if(pDestFile || (Error == FF_ERR_FILE_OBJECT_IS_A_DIR)) {
+		FF_Close(pDestFile);
+		return FF_ERR_FILE_DESTINATION_EXISTS;	// YES -- FAIL
+	}
+
+	pSrcFile = FF_Open(pIoman, szSourceFile, FF_MODE_READ, &Error);
+
+	if(Error == FF_ERR_FILE_OBJECT_IS_A_DIR) {
+		// Open a directory for moving!
+		pSrcFile = FF_Open(pIoman, szSourceFile, FF_MODE_DIR, &Error);
+	}
+
+	if(pSrcFile) {
+
+		// Create the new dirent.
+		FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+		MyFile.Attrib			= FF_getChar(EntryBuffer,  (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+		MyFile.Filesize			= pSrcFile->Filesize;
+		MyFile.ObjectCluster	= pSrcFile->ObjectCluster;
+		MyFile.CurrentItem		= 0;
+
+		i = (FF_T_UINT16) strlen(szDestinationFile);
+
+		while(i != 0) {
+			if(szDestinationFile[i] == '\\' || szDestinationFile[i] == '/') {
+				break;
+			}
+			i--;
+		}
+
+		strncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
+
+		if(i == 0) {
+			i = 1;
+		}
+		
+
+		DirCluster = FF_FindDir(pIoman, szDestinationFile, i);
+		
+		if(DirCluster) {
+
+			// Destination Dir was found, we can now create the new entry.
+			if(FF_CreateDirent(pIoman, DirCluster, &MyFile)) {
+				FF_Close(pSrcFile);
+				return FF_ERR_FILE_COULD_NOT_CREATE_DIRENT;	// FAILED
+			}
+
+			// Edit the Directory Entry! (So it appears as deleted);
+			FF_lockDIR(pIoman);
+			{
+				FF_RmLFNs(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry);
+				FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+				EntryBuffer[0] = 0xE5;
+				FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+			}
+			FF_unlockDIR(pIoman);
+			FF_Close(pSrcFile);
+
+			FF_FlushCache(pIoman);
+
+			return FF_ERR_NONE;
+		}
+
+		return FF_ERR_FILE_DIR_NOT_FOUND;
+
+	}
+		
+	return FF_ERR_FILE_SOURCE_NOT_FOUND; // Source not found!
+}
+
 
 /**
  *	@public
  *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.
  *
- *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *	@param	pFile	FF_FILE object that was created by FF_Open().
  *
  *	@return FF_TRUE if End of File was reached. FF_FALSE if not.
  *	@return FF_FALSE if a null pointer was provided.
@@ -829,7 +931,6 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	}
 
 	return nBytesRead;
-
 }
 
 
@@ -1122,7 +1223,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	}
 
 	return nBytesWritten;
-
 }
 
 

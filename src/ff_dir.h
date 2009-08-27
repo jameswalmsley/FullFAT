@@ -48,6 +48,7 @@
 #include "ff_time.h"
 #include "ff_hash.h"
 #include "ff_crc.h"
+#include "ff_file.h"
 #include <string.h>
 
 typedef struct {
@@ -67,13 +68,14 @@ typedef struct {
 	FF_T_UINT32	DirCluster;
 	FF_T_UINT32	CurrentCluster;
 	FF_T_UINT32 AddrCurrentCluster;
+	//FF_T_UINT8	NumLFNs;
 } FF_DIRENT;
 
 		FF_ERROR	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_FindEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs);
-		FF_T_SINT8	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path);
-		FF_T_SINT8	FF_FindNext		(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
+		FF_ERROR	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path);
+		FF_ERROR	FF_FindNext		(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
 		void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer);
 		FF_T_SINT8	FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry);
 		FF_T_SINT8	FF_FetchEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer);
@@ -86,7 +88,7 @@ typedef struct {
 void		FF_lockDIR		(FF_IOMAN *pIoman);
 void		FF_unlockDIR	(FF_IOMAN *pIoman);
 FF_T_UINT32			FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *FileName, FF_DIRENT *pDirent);
-FF_T_SINT8 FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path);
+FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path);
 FF_T_SINT8 FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 FF_T_SINT8 FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen);
@@ -96,6 +98,8 @@ FF_T_BOOL FF_CheckDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT
 FF_T_BOOL FF_DirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 FF_ERROR FF_AddDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash);
 void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
+
+void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry);
 
 #endif
 

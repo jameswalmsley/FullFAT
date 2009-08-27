@@ -191,9 +191,9 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;	// FF_IOMAN object from the Environment
 	FF_DIRENT mydir;					// DIRENT object.
 	int  i = 0;
-	char tester = 0;
+	FF_ERROR tester = 0;
 
-	printf("Type \"ls ?\" for an attribute legend.\n");
+	printf("Type \"%s ?\" for an attribute legend.\n", argv[0]);
 	
 	if(argc == 1) {	// Default, open the working directory.
 		tester = FF_FindFirst(pIoman, &mydir, pEnv->WorkingDir);
@@ -307,16 +307,16 @@ const FFT_ERR_TABLE cdInfo[] =
  *
  **/
 int md5_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	FF_IOMAN *pIoman = pEnv->pIoman;
-	FF_T_INT8 path[FF_MAX_PATH];
+	FF_IOMAN	*pIoman = pEnv->pIoman;
+	FF_T_INT8	path[FF_MAX_PATH];
 	FF_T_UINT8	readBuf[8192];
-	FF_FILE *fSource;
-	FF_ERROR Error;
+	FF_FILE		*fSource;
+	FF_ERROR	Error;
 
-	int len;
+	int			len;
 	md5_state_t state;
-	md5_byte_t digest[16];
-	int di;
+	md5_byte_t	digest[16];
+	int			di;
 	
 	if(argc == 2) {
 		
@@ -369,12 +369,12 @@ const FFT_ERR_TABLE md5Info[] =
 int md5win_cmd(int argc, char **argv) {
 
 	FF_T_UINT8	readBuf[8192];
-	FILE *fSource;
+	FILE		*fSource;
 
-	int len;
+	int			len;
 	md5_state_t state;
-	md5_byte_t digest[16];
-	int di;
+	md5_byte_t	digest[16];
+	int			di;
 	
 	if(argc == 2) {
 		
@@ -404,7 +404,6 @@ int md5win_cmd(int argc, char **argv) {
 
 	return 0;
 }
-
 const FFT_ERR_TABLE md5winInfo[] =
 {	
 	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
@@ -412,6 +411,10 @@ const FFT_ERR_TABLE md5winInfo[] =
 	{ NULL }
 };
 
+/*
+	This isn't a command, but rather a simple copy function designed to aid
+	wildCard copying.
+*/
 int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 	
 	FF_IOMAN *pIoman = pEnv->pIoman;
@@ -474,6 +477,7 @@ int filecopy(const char *src, const char *dest, FF_ENVIRONMENT *pEnv) {
 
 /*
 	Copies with wild-cards!
+	cp_cmd redirects here if it detects a wildCard in the source or destination paths.
 */
 int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
@@ -484,7 +488,7 @@ int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_T_INT8	srcWild[FF_MAX_PATH];
 	FF_T_INT8	destWild[FF_MAX_PATH];
 	FF_DIRENT	mydir;
-	FF_T_SINT8	Tester;
+	FF_ERROR	Tester;
 	FF_T_INT8	*p;
 
 	if(argc != 3) {
@@ -537,8 +541,6 @@ int wildcopy(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		Tester = FF_FindNext(pEnv->pIoman, &mydir);
 	}
-
-
 
 	return 0;
 }
@@ -602,7 +604,6 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	}
 	return 0;
 }
-
 const FFT_ERR_TABLE cpInfo[] =
 {
 	{"Generic or Unknown Error",										-1},
@@ -610,6 +611,10 @@ const FFT_ERR_TABLE cpInfo[] =
 	{ NULL }
 };
 
+
+/**
+ *	@brief	Export copy command, (Copies files from FullFAT to Windows)
+ **/
 int xcp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN	*pIoman = pEnv->pIoman;
 	FF_FILE		*fSource;
@@ -669,6 +674,10 @@ const FFT_ERR_TABLE xcpInfo[] =
 	{ NULL }
 };
 
+
+/**
+ *	@brief	Import copy command, copies a windows file into FullFAT
+ **/
 int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;
 	FF_FILE *fDest;
@@ -725,7 +734,6 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	}
 	return 0;
 }
-
 const FFT_ERR_TABLE icpInfo[] =
 {
 	{"Generic or Unknown Error",							-1},
@@ -733,11 +741,13 @@ const FFT_ERR_TABLE icpInfo[] =
 	{ NULL }
 };
 
-
+/**
+ *	@brief	A simple command for making dirs.
+ **/
 int mkdir_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 	
 	FF_T_INT8	path[FF_MAX_PATH];
-	FF_T_SINT8	Error;
+	FF_ERROR	Error;
 
 	if(argc == 2) {
 		ProcessPath(path, argv[1], pEv);
@@ -758,6 +768,15 @@ const FFT_ERR_TABLE mkdirInfo[] =
 	{ NULL }
 };
 
+
+/**
+ *	@brief	A simple command for displaying some info.
+ *			Displays some information about the currently mounted parttion.
+ *
+ *	The accesing of the FF_PARTITION object is not recommended as this object
+ *	is subject to change in future versions.
+ *
+ **/
 int info_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
 	FF_IOMAN		*pIoman = pEv->pIoman;
 	FF_PARTITION	*pPart	= pEv->pIoman->pPartition;
@@ -916,6 +935,33 @@ const FFT_ERR_TABLE rmInfo[] =
 };
 
 
+int move_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+	FF_T_INT8	src[FF_MAX_PATH];
+	FF_T_INT8	dest[FF_MAX_PATH];
+	FF_ERROR	Error;
+
+	if(argc == 3) {
+		ProcessPath(src, argv[1], pEnv);
+		ProcessPath(dest, argv[2], pEnv);
+
+		Error = FF_Move(pEnv->pIoman, src, dest);
+		if(Error) {
+			printf("Error: %s\n", FF_GetErrMessage(Error));
+		}
+	} else {
+		printf("Usage: %s [Source Path] [Destination Path]\n", argv[0]);
+	}
+
+	return 0;
+}
+const FFT_ERR_TABLE moveInfo[] =
+{														// This demonstrates how FFTerm can provide useful information about specific command failure codes.
+	{"Unknown or Generic Error",				-1},	// Generic Error must always be the first in the table.
+	{"Moves a specified file or folder.",		FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};
+
+
 int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
 	FILE		*fDest;
@@ -942,25 +988,14 @@ int mkimg_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 				i += read;
 				x = fwrite(buf, pEnv->pIoman->pPartition->BlkSize, read, fDest);
 
-				
-
 				if(!read) {	// not reading anymore!
 					break;
 				}
 
-				/*pBuffer = FF_GetBuffer(pEnv->pIoman, i++, FF_MODE_READ);
-				{
-					if(!pBuffer) {
-						printf("Error, driver I/O failed.\n");
-						break;
-					}
-					fwrite(pBuffer->pBuffer, pEnv->pIoman->pPartition->BlkSize, 1, fDest);
-				}
-				FF_ReleaseBuffer(pEnv->pIoman, pBuffer);
-				
-			*/
 				printf("%d%% Complete. (%ld of %ld Sectors read)\r", (int)(((float)i / (float)pEnv->pIoman->pPartition->TotalSectors) * (float)100.0), i,  pEnv->pIoman->pPartition->TotalSectors);
 			}
+
+			printf("\n");
 
 			fclose(fDest);
 			free(buf);
@@ -1203,7 +1238,10 @@ const FFT_ERR_TABLE runInfo[] =
 	{ NULL }
 };
 
-
+/**
+ *	@brief	A simple command for displaying the date.
+ *			This command tests FullFAT time support is working.
+ **/
 int date_cmd(int argc, char **argv) {
 #ifdef FF_TIME_SUPPORT
 	FF_SYSTEMTIME Time;
@@ -1229,6 +1267,11 @@ const FFT_ERR_TABLE dateInfo[] =
 	{ NULL }
 };
 
+
+/**
+ *	@brief	A simple command for displaying the time.
+ *			This command tests FullFAT time support is working.
+ **/
 int time_cmd(int argc, char **argv) {
 #ifdef FF_TIME_SUPPORT
 	FF_SYSTEMTIME Time;
@@ -1254,32 +1297,52 @@ const FFT_ERR_TABLE timeInfo[] =
 	{ NULL }
 };
 
+
+/**
+ *	@brief	A simple command for displaying all the possible physical drives that FullFAT could use.
+ *			This command is unimplemented for 1.0.0.
+ **/
 int drivelist_cmd(int argc, char **argv) {
 	TCHAR	Volume[MAX_PATH];
 	HANDLE	hSearch = FindFirstVolume(Volume, MAX_PATH);
 	HANDLE	hVolume;
 	DWORD Error;
 
-	
+	argc;
+	argv;
 
 	if(hSearch) {
 		hVolume = CreateFile(&Volume[0], 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
 		
 		Error = GetLastError();
 
+		CloseHandle(hVolume);
 	}
 
 	CloseHandle(hSearch);
 
+	return 0;
+
 }
+const FFT_ERR_TABLE drivelistInfo[] =
+{
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Lists all available physical drives (Windows).",	FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};
 
 #define HEX_BUF	16
 
+
+/**
+ *	@brief	A basic Hexview application.
+ *			Allows file's to be viewed as Hex.
+ **/
 int hexview_cmd(int argc, char **argv) {
 	
 	FILE *f;
 	char buffer[HEX_BUF];
-	char lines[25][81]; // Screen Buffer
+//	char lines[25][81]; // Screen Buffer
 	int read;
 	int i;
 
@@ -1287,12 +1350,13 @@ int hexview_cmd(int argc, char **argv) {
 	printf(" By James Walmsley\n");
 	printf("--------------------------------------------------------\n");
 	printf("                         LOADING                        \n");
-	Sleep(1800);
+	Sleep(1000);
 
 	if(argc == 2) {
 		f = fopen(argv[1], "rb");
 		if(f) {
-			while(read = fread(buffer, 1, HEX_BUF, f)) {
+			do{
+				read = fread(buffer, 1, HEX_BUF, f);
 				for(i = 0; i < read; i++) {
 					printf("%02X", buffer[i]);
 				}
@@ -1311,7 +1375,7 @@ int hexview_cmd(int argc, char **argv) {
 				}
 				printf("\n");
 
-			}
+			}while(read);
 			fclose(f);
 		} else {
 			printf("Couldn't open file!\n");
@@ -1319,9 +1383,21 @@ int hexview_cmd(int argc, char **argv) {
 	} else {
 		printf("No file specified!\n");
 	}
+
+	return 0;
 }
+const FFT_ERR_TABLE hexviewInfo[] =
+{
+	{"Unknown or Generic Error",					-1},	// Generic Error must always be the first in the table.
+	{"Simple Hexview application.",					FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};
 
 
+/**
+ *	@brief	A simple command for Killing all test threads and exiting the console.
+ *			This command sends the kill signal to FFTerm.
+ **/
 int exit_cmd(int argc, char **argv) {
 	if(argc) {
 		KillAllThreads();

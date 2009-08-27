@@ -80,6 +80,10 @@ const struct _FFERRTAB
 	{"File operation failed - the file was not opened for writing.",				FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE},
 	{"File operation failed - the file was not opened for reading.",				FF_ERR_FILE_NOT_OPENED_IN_READ_MODE},
 	{"File operation failed - could not extend file.",								FF_ERR_FILE_EXTEND_FAILED},
+	{"Destination file already exists.",											FF_ERR_FILE_DESTINATION_EXISTS},
+	{"Source file was not found.",													FF_ERR_FILE_SOURCE_NOT_FOUND},
+	{"Destination path (dir) was not found.",										FF_ERR_FILE_DIR_NOT_FOUND},
+	{"Failed to create the directory Entry.",										FF_ERR_FILE_COULD_NOT_CREATE_DIRENT},
 };
 
 /**

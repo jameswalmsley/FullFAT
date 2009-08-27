@@ -72,6 +72,10 @@
 #define FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE	-35
 #define FF_ERR_FILE_NOT_OPENED_IN_READ_MODE		-36
 #define FF_ERR_FILE_EXTEND_FAILED				-37	///< Could not extend the file.
+#define FF_ERR_FILE_DESTINATION_EXISTS			-38
+#define FF_ERR_FILE_SOURCE_NOT_FOUND			-39
+#define FF_ERR_FILE_DIR_NOT_FOUND				-40
+#define FF_ERR_FILE_COULD_NOT_CREATE_DIRENT		-41
 
 // Directory Error Codes						-50 +
 #define FF_ERR_DIR_OBJECT_EXISTS				-50	///< A file or folder of the same name already exists in the current directory.
