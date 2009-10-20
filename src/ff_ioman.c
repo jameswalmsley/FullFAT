@@ -410,7 +410,16 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 
 						if(pBuffer->LRU >= pBufLRU->LRU) {
 							if(pBuffer->LRU == pBufLRU->LRU) {
-								if(pBuffer->Persistance > pBufLRU->Persistance) {
+								/*
+									BUGFIX: Minor, Logic Inversion, Minor Performance Penalty
+									THANKS: Jeremy Morgale, Chris Slyfield, and Adam Hills
+													During a code review of this function, (20/10/2009)
+
+									Line below was if(pBuffer->Persistance > pBufLRU->Persistance)
+									Problem was inverted logic!
+
+								*/
+								if(pBuffer->Persistance < pBufLRU->Persistance) {
 									pBufLRU = pBuffer;
 								}
 							} else {
