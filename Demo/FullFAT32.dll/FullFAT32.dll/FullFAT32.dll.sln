@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FullFAT32.dll", "FullFAT32.dll\FullFAT32.dll.vcproj", "{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DLLTestCS", "DLLTestCS\DLLTestCS.csproj", "{C2813DBB-E977-4405-BDFA-E5F113B7A47B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|Win32 = Debug|Win32
+		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Debug|Win32.Build.0 = Debug|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Release|Any CPU.ActiveCfg = Release|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Release|Win32.ActiveCfg = Release|Win32
+		{CE5A5135-8AB4-4FC7-99B1-DF07747C8403}.Release|Win32.Build.0 = Release|Win32
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{C2813DBB-E977-4405-BDFA-E5F113B7A47B}.Release|Win32.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
