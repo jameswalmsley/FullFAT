@@ -52,10 +52,12 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\FullFAT.img", 512);
+	//hDisk = fnOpen("c:\\FullFAT.img", 512);
 	
+	hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
-	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE4", 0);
+	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
 
 	if(hDisk) {
 		//---------- Create FullFAT IO Manager
@@ -146,7 +148,7 @@ int main(void) {
 		// FullFAT failed to initialise. Print some meaningful information from FullFAT itself, using the FF_GetErrMessage() function.
 		printf("Could not initialise FullFAT I/O Manager.\nError calling FF_CreateIOMAN() function.\nError Code %ld\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 	} else {
-		printf("Could not open the I/O Block device\nError calling fopen() function. (Device (file) not found?)\n");
+		printf("Could not open the I/O Block device\nError calling blockdeviceopen() function. (Device (file) not found?)\n");
 	}
 
 	getchar();

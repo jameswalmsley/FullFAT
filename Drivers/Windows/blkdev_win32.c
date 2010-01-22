@@ -99,6 +99,9 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 	DISK_GEOMETRY_EX	DiskGeo;
 	LARGE_INTEGER		li, address;
 
+	BOOL				IOError;
+	DWORD				BytesReturned;
+
 	HANDLE				hDisk;
 	WCHAR				pWide[MAX_PATH];
 
@@ -106,26 +109,33 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 	hDisk = CreateFile(pWide, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
 
 	if(hDisk) {
-		ptDevInfo				= (struct _DEV_INFO *) malloc(sizeof(struct _DEV_INFO));		
-		if(GetDriveGeometry(&DiskGeo, hDisk)) {
-			ptDevInfo->BlockSize	= DiskGeo.Geometry.BytesPerSector;
-			ptDevInfo->DiskSize		= DiskGeo.DiskSize.QuadPart;
-			ptDevInfo->hDev			= hDisk;
-			ptDevInfo->AccessSem	= FF_CreateSemaphore();
 
-			return (HANDLE) ptDevInfo;
-		} else {
-			GetFileSizeEx(hDisk, &li);
-			address.QuadPart = 0;
-			if(!nBlockSize) {
-				ptDevInfo->BlockSize	= 512;
+		// Dismount volume (allow Vista and Seven write access!)
+		IOError = DeviceIoControl(hDisk, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
+
+		if(IOError) {
+
+			ptDevInfo				= (struct _DEV_INFO *) malloc(sizeof(struct _DEV_INFO));		
+			if(GetDriveGeometry(&DiskGeo, hDisk)) {
+				ptDevInfo->BlockSize	= DiskGeo.Geometry.BytesPerSector;
+				ptDevInfo->DiskSize		= DiskGeo.DiskSize.QuadPart;
+				ptDevInfo->hDev			= hDisk;
+				ptDevInfo->AccessSem	= FF_CreateSemaphore();
+
+				return (HANDLE) ptDevInfo;
 			} else {
-				ptDevInfo->BlockSize	= nBlockSize;
+				GetFileSizeEx(hDisk, &li);
+				address.QuadPart = 0;
+				if(!nBlockSize) {
+					ptDevInfo->BlockSize	= 512;
+				} else {
+					ptDevInfo->BlockSize	= nBlockSize;
+				}
+				ptDevInfo->DiskSize		= li.QuadPart;
+				ptDevInfo->hDev			= hDisk;
+				ptDevInfo->AccessSem	= FF_CreateSemaphore();
+				return (HANDLE) ptDevInfo;
 			}
-			ptDevInfo->DiskSize		= li.QuadPart;
-			ptDevInfo->hDev			= hDisk;
-			ptDevInfo->AccessSem	= FF_CreateSemaphore();
-			return (HANDLE) ptDevInfo;
 		}
 	}
 

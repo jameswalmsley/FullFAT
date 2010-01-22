@@ -28,8 +28,8 @@
  *  See http://worm.me.uk/fullfat for more information.                      *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
-#ifndef _FAT_H_
-#define _FAT_H_
+#ifndef _FF_FATDEF_H_
+#define _FF_FATDEF_H_
 
 /*
 	This file defines offsets to various data for the FAT specification.
@@ -48,8 +48,15 @@
 #define FF_FAT_32_SECTORS_PER_FAT	0x024
 #define FF_FAT_ROOT_DIR_CLUSTER		0x02C
 
+#define FF_FAT_16_VOL_LABEL			0x02B
+#define FF_FAT_32_VOL_LABEL			0x047
+
 #define FF_FAT_PTBL					0x1BE
 #define FF_FAT_PTBL_LBA				0x008
+#define FF_FAT_PTBL_ACTIVE          0x000
+#define FF_FAT_PTBL_ID              0x004
+
+#define FF_FAT_MBR_SIGNATURE        0x1FE
 
 #define FF_FAT_DELETED				0xE5
 

@@ -69,9 +69,15 @@ namespace DLLTestCS
 
             // Then mount an image file!
             //Error = FFC_MountImage("\\\\.\\PHYSICALDRIVE1", 0, 0);    // Opening a physical drive!
-            
+
             // Blocksize is most likely 512 bytes, and partition should be 0.
             Error = FFC_MountImage("c:\\myimage.img", 512, 0);
+
+            /*if (Error != 0)
+            {
+                Console.Write("Could not mount image!\n");
+                return;
+            }*/
      
             // Execute commands to fill the image file!
             

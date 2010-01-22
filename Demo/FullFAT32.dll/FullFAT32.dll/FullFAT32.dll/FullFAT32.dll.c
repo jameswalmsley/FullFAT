@@ -198,6 +198,7 @@ DLL_EXPORT int FFC_MountImage(char *szFilename, unsigned long ulBlockSize, unsig
 				fnClose(g_hDisk);
 			}
 			FF_DestroyIOMAN(g_pIoman);
+			g_pIoman = NULL;
 			return -1;
 		}
 
@@ -217,7 +218,7 @@ DLL_EXPORT int FFC_UnmountImage() {
 	
 	FF_ERROR Error;
 
-	if(g_pConsole) {
+	if(g_pIoman) {
 		Error =  FF_UnmountPartition(g_pIoman);
 
 		if(Error) {
@@ -228,6 +229,8 @@ DLL_EXPORT int FFC_UnmountImage() {
 		g_pConsole = NULL;
 
 		fnClose(g_hDisk);
+
+		g_hDisk = NULL;
 
 		return 0;
 	}

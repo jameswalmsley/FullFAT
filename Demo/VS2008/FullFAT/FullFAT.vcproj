@@ -249,6 +249,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\..\ffterm\src\FFTerm-Platform.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\..\FFTerm\src\FFTerm.c"
 					>
 				</File>
