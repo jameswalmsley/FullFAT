@@ -25,7 +25,7 @@ FF_T_SINT32	FF_GetSystemTime(FF_SYSTEMTIME *pTime) {
 	pTime->Minute	= str_t.tm_min;
 	pTime->Second	= str_t.tm_sec;
 	pTime->Day		= str_t.tm_mday;
-	pTime->Month	= str_t.tm_mon;
+	pTime->Month	= str_t.tm_mon + 1;
 	pTime->Year		= str_t.tm_year + 1900;
 
 	return 0;
