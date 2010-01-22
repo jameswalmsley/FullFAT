@@ -21,7 +21,7 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See EXCEPTIONS.TXT for extra restrictions on the use of FullFAT.         *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
  *  Removing the above notice is illegal and will invalidate this license.   *
  *****************************************************************************
@@ -29,239 +29,128 @@
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 
-/**
- *	This file calls unit-tests for all modules, and displays the results.
- *	On sucessful completion it will enter a Demonstration Terminal allowing
- *	you to ls through a file-system on a connected device.
- *
- *	You should ensure all Unit-tests are passed on your platform.
- **/
 
-/*
-	NOTE THIS DEMO IS HIGHLY SUBJECT TO CHANGE:
-	AND MOST UNIT TESTS HAVE NOT BEEN INCLUDED AT THIS POINT:
+#include "cmd.h"										// The Demo's Header File for shell commands.
+#include "test_threads.h"
+#include "../../src/fullfat.h"						// Include everything required for FullFAT.
+#include "../../../FFTerm/src/FFTerm.h"				// Include the FFTerm project header.
+#include "../../Drivers/Linux/blkdev_linux.h"		// Prototypes for our Windows 32-bit driver.
 
-	SIMPLY USE A BASIC DEMO
-*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <time.h>
-#include <sys/fcntl.h>
-#include <sys/ioctl.h>
-#include <linux/fs.h>
-#include <termios.h>
-#include <string.h>
-
-#include "../../src/ff_ioman.h"
-#include "../../src/ff_fat.h"
-
-#define PARTITION_NUMBER	0		///< Change this to the primary partition to be mounted (0 to 3)
-#define COPY_BUFFER_SIZE	8096	// Increase This for Faster File Copies
-
-int mygetch( ) {
-	struct termios oldt,newt;
-	int ch;
-	tcgetattr( STDIN_FILENO, &oldt );
-	newt = oldt;
-	newt.c_lflag &= ~( ICANON | ECHO );
-	tcsetattr( STDIN_FILENO, TCSANOW, &newt );
-	ch = getchar();
-	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
-	return ch;
-}
-
-void test(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test2(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-void test_ipod(char *buffer, unsigned long sector, unsigned short sectors, void *pParam);
-
-void FF_PrintDir(FF_DIRENT *pDirent) {
-	unsigned char attr[5] = { '-','-','-','-', '\0' };
-	if(pDirent->Attrib & FF_FAT_ATTR_READONLY)
-			attr[0] = 'R';
-	if(pDirent->Attrib & FF_FAT_ATTR_HIDDEN)
-			attr[1] = 'H';
-	if(pDirent->Attrib & FF_FAT_ATTR_SYSTEM)
-			attr[2] = 'S';
-	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
-			attr[3] = 'D';
-
-	printf("%s %12u %s\n", attr, pDirent->Filesize, pDirent->FileName);
-}
+#define PARTITION_NUMBER	0							// FullFAT can mount primary partitions only. Specified at Runtime.
 
 int main(void) {
-	clock_t startTick, endTick; 
-	FILE *fDev,*fDest;
-	int f;
-	FF_FILE *fSource;
-	FF_IOMAN *pIoman = FF_CreateIOMAN(NULL, 4096, 512);
 	
-	char buffer[COPY_BUFFER_SIZE];
-	char commandLine[1024];
-	char commandShadow[2600];
-	char source[260], destination[260];
-	char workingDir[2600] = "\\";
-	char tester;
-	unsigned long BytesRead;
-	FF_T_UINT32 i;
-	FF_DIRENT mydir;
-	unsigned long long time;
-	float transferRate;
-	fDev = fopen("/dev/sdb", "rb");		// fopen seems to be more reliable, and its valid.
-//f = open(argv[1], O_RDONLY);
-	//f = open("/dev/sdb2", O_RDONLY);
-	printf("Main Handle %d\n", f);
+	FFT_CONSOLE		*pConsole;							// FFTerm Console Pointer.										
+	FF_ERROR		Error = FF_ERR_NONE;				// ERROR code value.
+	FF_IOMAN		*pIoman;							// FullFAT I/O Manager Pointer, to be created.
+	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
+	BLK_DEV_LINUX	hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
 
+	//----------- Initialise the environment
+	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
+	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 
-	printf("FullFAT by James Walmsley - Windows Demonstration\n");
-	printf("Use the command help for more information\n\n");
+	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
+	// and is only used in conjunction with DriveImage files.
+	//hDisk = fnOpen("c:\\FullFAT.img", 512);
 	
-	if(fDev) {
-		FF_RegisterBlkDevice(pIoman, 512,(FF_WRITE_BLOCKS) test_512, (FF_READ_BLOCKS) test_512, fDev);
-		if(FF_MountPartition(pIoman, PARTITION_NUMBER)) {
-			fclose(f);
-			printf("FullFAT couldn't mount the specified partition\n");
+	hDisk = fnOpen("/dev/sdc", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
+
+	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
+	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
+
+	if(hDisk) {
+		//---------- Create FullFAT IO Manager
+		pIoman = FF_CreateIOMAN(NULL, 4096, GetBlockSize(hDisk), &Error);	// Using the BlockSize from the Device Driver (see blkdev_win32.c)
+
+		if(pIoman) {
+			//---------- Register a Block Device with FullFAT.
+			Error = FF_RegisterBlkDevice(pIoman, GetBlockSize(hDisk), (FF_WRITE_BLOCKS) fnWrite, (FF_READ_BLOCKS) fnRead, hDisk);
+			if(Error) {
+				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %ld.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
+			}
+
+			//---------- Try to Mount the Partition with FullFAT.
+			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);
+			if(Error) {
+				if(hDisk) {
+					fnClose(hDisk);
+				}
+				FF_DestroyIOMAN(pIoman);
+				printf("FullFAT Couldn't mount the specified parition!\n");
+
+				printf("FF_MountPartition() function returned with Error %ld\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
+				getchar();
+				return -1;
+			}
+
+			Env.pIoman = pIoman;
+
+			//---------- Create the Console. (FFTerm - FullFAT Terminal).
+			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
+
+			if(pConsole) {
+				FFTerm_SetConsoleMode(pConsole, 0);
+				//---------- Add Commands to the console.
+				FFTerm_AddExCmd	(pConsole, "prompt",	(FFT_FN_COMMAND_EX) cmd_prompt,		promptInfo,		&Env);	// Dynamic command prompt (prompt is a reserved command name).
+				FFTerm_AddExCmd	(pConsole, "pwd",		(FFT_FN_COMMAND_EX) pwd_cmd,		pwdInfo,		&Env);	// See cmd.c for their implementations.
+				FFTerm_AddExCmd	(pConsole, "ls",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command.
+				FFTerm_AddExCmd	(pConsole, "dir",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command.
+				FFTerm_AddExCmd	(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd,			cdInfo,			&Env);	// Change Directory Command.
+				FFTerm_AddExCmd	(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file).
+				FFTerm_AddExCmd	(pConsole, "copy",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file).
+				FFTerm_AddExCmd	(pConsole, "icp",		(FFT_FN_COMMAND_EX) icp_cmd,		icpInfo,		&Env);	// Copy command (Windows file to FullFAT file).
+				FFTerm_AddExCmd	(pConsole, "xcp",		(FFT_FN_COMMAND_EX) xcp_cmd,		xcpInfo,		&Env);	// Copy command (FullFAT file to Windows file).
+				FFTerm_AddExCmd	(pConsole, "md5",		(FFT_FN_COMMAND_EX) md5_cmd,		md5Info,		&Env);	// MD5 Data Hashing command.
+				FFTerm_AddExCmd	(pConsole, "mkdir",		(FFT_FN_COMMAND_EX) mkdir_cmd,		mkdirInfo,		&Env);	// Make directory command.
+				FFTerm_AddExCmd	(pConsole, "info",		(FFT_FN_COMMAND_EX) info_cmd,		infoInfo,		&Env);	// Information command.
+				FFTerm_AddExCmd	(pConsole, "view",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
+				FFTerm_AddExCmd	(pConsole, "type",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
+				FFTerm_AddExCmd	(pConsole, "rm",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
+				FFTerm_AddExCmd	(pConsole, "del",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
+				FFTerm_AddExCmd	(pConsole, "move",		(FFT_FN_COMMAND_EX) move_cmd,		moveInfo,		&Env);	// Move or rename a file or dir.
+				FFTerm_AddExCmd	(pConsole, "rename",	(FFT_FN_COMMAND_EX) move_cmd,		moveInfo,		&Env);	// Move or rename a file or dir.
+				FFTerm_AddExCmd	(pConsole, "mkimg",		(FFT_FN_COMMAND_EX) mkimg_cmd,		mkimgInfo,		&Env);	// Make image command, (makes a windows file image of the media).
+				FFTerm_AddExCmd	(pConsole, "mkfile",	(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
+				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
+				FFTerm_AddCmd	(pConsole, "md5win",	(FFT_FN_COMMAND)	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
+				FFTerm_AddCmd	(pConsole, "run",		(FFT_FN_COMMAND)	run_cmd,		runInfo);				// Special Run Command.
+				FFTerm_AddCmd	(pConsole, "time",		(FFT_FN_COMMAND)	time_cmd,		timeInfo);				// Time Command.
+				FFTerm_AddCmd	(pConsole, "date",		(FFT_FN_COMMAND)	date_cmd,		dateInfo);				// Date Command.
+				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
+				FFTerm_AddCmd	(pConsole, "hexview",	(FFT_FN_COMMAND)	hexview_cmd,	hexviewInfo);			// File Hexviewer.
+				//FFTerm_AddCmd	(pConsole, "drivelist",	(FFT_FN_COMMAND)	drivelist_cmd,	drivelistInfo);			// List of available drives.
+				
+				// Special Thread IO commands
+				//FFTerm_AddExCmd(pConsole, "mkthread",	(FFT_FN_COMMAND_EX) createthread_cmd,	mkthreadInfo,	&Env);
+				//FFTerm_AddExCmd(pConsole, "tlist",		(FFT_FN_COMMAND_EX) listthreads_cmd,	listthreadsInfo,&Env);
+				//FFTerm_AddExCmd(pConsole, "tkill",		(FFT_FN_COMMAND_EX) killthread_cmd,		killthreadInfo,	&Env);
+				
+				//---------- Start the console.
+				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
+				FF_UnmountPartition(pIoman);						// Dis-mount the mounted partition from FullFAT.
+				FF_DestroyIOMAN(pIoman);							// Clean-up the FF_IOMAN Object.
+
+				//---------- Final User Interaction
+				printf("\n\nConsole Was Terminated, END OF Demonstration!, Press ENTER to exit!\n");
+				getchar();
+
+				fnClose(hDisk);
+
+				return 0;
+			}
+			
+			printf("Could not start the console: %s\n", FFTerm_GetErrMessage(Error));			// Problem starting the FFTerm console.
 			getchar();
 			return -1;
 		}
 
-		while(1) {
-			printf("FullFAT:%s>",workingDir);
-			for(i = 0; i < 1024; i++) {
-				commandLine[i] = mygetch();
-				putchar(commandLine[i]);
-				if(commandLine[i] == '\n') {
-					putchar('\n');
-					commandLine[i] = '\0';
-					break;
-				}
-			}
-			if(strstr(commandLine, "cd")) {
-				
-				if(commandLine[3] != '\\' && commandLine[3] != '/') {
-					if(strlen(workingDir) == 1) {
-						sprintf(commandShadow, "\\%s", (commandLine + 3));
-					} else {
-						sprintf(commandShadow, "%s\\%s", workingDir, (commandLine + 3));
-					}
-				} else {
-					sprintf(commandShadow, "%s", (commandLine + 3));
-				}
-
-				if(FF_FindDir(pIoman, commandShadow, strlen(commandShadow))) {
-					sprintf(workingDir, "%s", commandShadow);
-				} else {
-					printf("Path %s Not Found\n", commandShadow);
-				}
-			}
-
-			if(strstr(commandLine, "ls") || strstr(commandLine, "dir")) {
-				i = 0;
-				tester = 0;
-				tester = FF_FindFirst(pIoman, &mydir, workingDir);
-				while(tester == 0) {
-					FF_PrintDir(&mydir);
-					i++;
-					tester = FF_FindNext(pIoman, &mydir);
-				}
-				printf("\n%d Items\n", i);
-				putchar('\n');
-			}
-
-			if(strstr(commandLine, "view")) {
-				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (commandLine+5)); 
-				} else {
-					sprintf(buffer, "%s\\%s", workingDir, (commandLine+5));
-				}
-				
-				fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
-				if(fSource) {
-					for(i = 0; i < fSource->Filesize; i++) {
-						printf("%c", FF_GetC(fSource));
-					}
-
-					FF_Close(fSource);
-				}else {
-					printf("File Not Found!\n");
-				}
-			}
-
-			if(strstr(commandLine, "pwd")) {
-				printf("%s\n", workingDir);
-			}
-
-			if(strstr(commandLine, "help")) {
-				printf("The following commands are available:\n\n");
-				printf("pwd \t\t- Print the working directory\n");
-				printf("ls or dir \t- List the contents of the working directory\n");
-				printf("cd \t\t- Change working directory e.g. cd path_to_dir\n");
-				printf("cp \t\t- Copy a file to the hard disk.\n");
-				printf("\t\t  e.g. cp filename c:\\filename\n");
-				printf("exit \t\t- Quits the FullFAT test suite.\n");
-				printf("\nFullFAT is developed and maintained by James Walmsley\n");
-				printf("\nVisit www.worm.me.uk/fullfat for more information, and contact details\n\n");
-			}
-
-			if(strstr(commandLine, "info")) {
-				switch(pIoman->pPartition->Type) {
-					case FF_T_FAT32:
-						printf("FAT32 Formatted Drive\n"); break;
-					case FF_T_FAT16:
-						printf("FAT16 Formatted Drive\n"); break;
-				}
-				printf("Block Size: %d\n", pIoman->pPartition->BlkSize);
-			}
-
-			if(strstr(commandLine, "cp")) {
-				sscanf((commandLine + 3), "%s %s", source, destination);
-				
-				if(strlen(workingDir) == 1) {
-					sprintf(buffer, "\\%s", (source)); 
-				} else {
-					sprintf(buffer, "%s\\%s", workingDir, (source));
-				}
-				
-				fDest = fopen(destination, "wb");
-				if(fDest) {
-					fSource = FF_Open(pIoman, buffer, FF_MODE_READ);
-					if(fSource) {
-						QueryPerformanceCounter(&start_ticks);  
-						do{
-							BytesRead = FF_Read(fSource, COPY_BUFFER_SIZE, 1, (FF_T_UINT8 *)buffer);
-							fwrite(buffer, BytesRead, 1, fDest);
-							QueryPerformanceCounter(&end_ticks); 
-							cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
-							time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
-							transferRate = (fSource->FilePointer / time) / 1024;
-							printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\r", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
-						}while(BytesRead > 0);
-						printf("%3.0f%% - %10d Bytes Copied, %7.2f Kb/S\n", ((float)((float)fSource->FilePointer/(float)fSource->Filesize) * 100), fSource->FilePointer, transferRate);
-						fclose(fDest);
-						FF_Close(fSource);
-					} else {
-						fclose(fDest);
-						printf("Error Opening Source\n");
-					}
-				} else {
-					printf("Error Opening Destination\n");
-				}
-				strcpy(source, "");
-				strcpy(destination, "");
-			}
-
-			if(strstr(commandLine, "exit") || strstr(commandLine, "quit")) {
-				close(f);
-				return 0;
-			}
-		}
-		
+		// FullFAT failed to initialise. Print some meaningful information from FullFAT itself, using the FF_GetErrMessage() function.
+		printf("Could not initialise FullFAT I/O Manager.\nError calling FF_CreateIOMAN() function.\nError Code %ld\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 	} else {
-		
-		printf("Couldn't Open Block Device\n");
-		printf("Run FullFAT as Root (sudo ./FullFAT)\n");
-		getchar();
+		printf("Could not open the I/O Block device\nError calling blockdeviceopen() function. (Device (file) not found?)\n");
 	}
 
+	getchar();
+	return -1;
 }

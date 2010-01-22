@@ -44,6 +44,11 @@
 #include <unistd.h> 
 
 
+typedef struct {
+
+
+} 
+
 /*
 	Standard Linux driver, will read very large Harddrives.
 	As long as drive doesn't exceed 2TB.
