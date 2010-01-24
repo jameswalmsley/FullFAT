@@ -31,7 +31,7 @@
 
 
 #include "cmd.h"										// The Demo's Header File for shell commands.
-#include "test_threads.h"
+//#include "test_threads.h"
 #include "../../src/fullfat.h"						// Include everything required for FullFAT.
 #include "../../../FFTerm/src/FFTerm.h"				// Include the FFTerm project header.
 #include "../../Drivers/Linux/blkdev_linux.h"		// Prototypes for our Windows 32-bit driver.
