@@ -113,7 +113,7 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 		// Dismount volume (allow Vista and Seven write access!)
 		IOError = DeviceIoControl(hDisk, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
 
-		if(IOError) {
+//		if(IOError) {	// Continue on error! This may be an image file!
 
 			ptDevInfo				= (struct _DEV_INFO *) malloc(sizeof(struct _DEV_INFO));		
 			if(GetDriveGeometry(&DiskGeo, hDisk)) {
@@ -127,7 +127,7 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 				GetFileSizeEx(hDisk, &li);
 				address.QuadPart = 0;
 				if(!nBlockSize) {
-					ptDevInfo->BlockSize	= 512;
+					ptDevInfo->BlockSize	= 512;	// Try to assume the most likely setting!
 				} else {
 					ptDevInfo->BlockSize	= nBlockSize;
 				}
@@ -136,7 +136,7 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 				ptDevInfo->AccessSem	= FF_CreateSemaphore();
 				return (HANDLE) ptDevInfo;
 			}
-		}
+		//}
 	}
 
 	return (HANDLE) NULL;
