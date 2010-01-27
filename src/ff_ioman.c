@@ -638,7 +638,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 				testLong = FF_getLong(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8) {
+			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8 && (testLong & 0x0FFFFFF8) != 0x0FFFFFF0) {
 				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 			}
 #endif
@@ -676,6 +676,61 @@ static FF_T_SINT8 FF_PartitionCount (FF_T_UINT8 *pBuffer)
 	return count;
 }
 
+/*
+	Mount GPT Partition Tables
+*/
+
+#define FF_GPT_HEAD_PART_ENTRY_LBA		0x48
+#define FF_GPT_ENTRY_FIRST_SECTOR_LBA	0x20
+
+static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber) {
+	// Continuing on from FF_MountPartition() pPartition->BeginLBA should be the sector of the GPT Header
+	FF_BUFFER		*pBuffer;
+	FF_PARTITION	*pPart = pIoman->pPartition;
+
+	FF_T_UINT32		ulBeginGPT;
+	FF_T_UINT32		ulEntrySector;
+	FF_T_UINT32		ulSectorOffset;
+
+	if(ulPartitionNumber >= 128) {
+		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+	}
+
+	pBuffer = FF_GetBuffer(pIoman, pPart->BeginLBA, FF_MODE_READ);
+	{
+		if(!pBuffer) {
+			return FF_ERR_DEVICE_DRIVER_FAILED;
+		}
+
+		// Verify this is an EFI header
+		if(memcmp(pBuffer->pBuffer, "EFI PART", 8) != 0) {
+			FF_ReleaseBuffer(pIoman, pBuffer);
+			return FF_ERR_IOMAN_INVALID_FORMAT;
+		}
+
+		ulBeginGPT = FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_PART_ENTRY_LBA);
+	}
+	FF_ReleaseBuffer(pIoman, pBuffer);
+
+	// Calculate Sector Containing the Partition Entry we want to use.
+
+	ulEntrySector	= ((ulPartitionNumber * 128) / pIoman->BlkSize) + ulBeginGPT;
+	ulSectorOffset	= (ulPartitionNumber % (pIoman->BlkSize / 128)) * 128;
+	
+	pBuffer = FF_GetBuffer(pIoman, ulEntrySector, FF_MODE_READ);
+	{
+		if(!pBuffer) {
+			return FF_ERR_DEVICE_DRIVER_FAILED;
+		}
+
+		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, ulSectorOffset + FF_GPT_ENTRY_FIRST_SECTOR_LBA);
+	}
+	FF_ReleaseBuffer(pIoman, pBuffer);
+	
+
+	return FF_ERR_NONE;
+}
+
 /**
  *	@public
  *	@brief	Mounts the Specified partition, the volume specified by the FF_IOMAN object provided.
@@ -697,15 +752,19 @@ static FF_T_SINT8 FF_PartitionCount (FF_T_UINT8 *pBuffer)
 FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer = 0;
+	FF_ERROR		Error;
+
+	FF_T_UINT8		ucPartitionType;
+
 	int partCount;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
 
-	if(PartitionNumber > 3) {
+	/*if(PartitionNumber > 3) {
 		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
-	}
+	}*/
 
 	pPart = pIoman->pPartition;
 
@@ -728,9 +787,30 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		// Volume is not partitioned (MBR Found)
 		pPart->BeginLBA = 0;
 	} else {
-		// Primary Partitions to deal with!
-		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber));
+		
+		ucPartitionType = FF_getChar(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_ID);	// Ensure its not an EFI partition!
+
+		if(ucPartitionType != 0xEE) {
+
+			if(PartitionNumber > 3) {
+				return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+			}
+
+			// Primary Partitions to deal with!
+			pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber));
+		}
+
 		FF_ReleaseBuffer(pIoman, pBuffer);
+
+		if(ucPartitionType == 0xEE) {
+
+			pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA);
+			Error = FF_GetEfiPartitionEntry(pIoman, PartitionNumber);
+
+			if(Error) {
+				return Error;
+			}
+		}
 
 		if(!pPart->BeginLBA) {
 			return FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION;
@@ -781,6 +861,11 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->RootDirSectors	= ((FF_getShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT) * 32) + pPart->BlkSize - 1) / pPart->BlkSize;
 	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
+	
+	if(!pPart->SectorsPerCluster) {
+		return FF_ERR_IOMAN_INVALID_FORMAT;
+	}
+	
 	pPart->NumClusters		= pPart->DataSectors / pPart->SectorsPerCluster;
 
 	if(FF_DetermineFatType(pIoman)) {
