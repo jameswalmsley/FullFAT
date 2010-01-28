@@ -858,6 +858,11 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	}
 
 	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
+
+	if(!pPart->BlkSize) {
+		return FF_ERR_IOMAN_INVALID_FORMAT;
+	}
+	
 	pPart->RootDirSectors	= ((FF_getShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT) * 32) + pPart->BlkSize - 1) / pPart->BlkSize;
 	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
