@@ -108,7 +108,9 @@ HANDLE fnOpen(char *strDevName, int nBlockSize) {
 	MultiByteToWideChar(CP_ACP, 0, strDevName, -1, pWide, MAX_PATH);
 	hDisk = CreateFile(pWide, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
 
-	if(hDisk) {
+	IOError = GetLastError();
+
+	if(hDisk != INVALID_HANDLE_VALUE) {
 
 		// Dismount volume (allow Vista and Seven write access!)
 		IOError = DeviceIoControl(hDisk, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL);
