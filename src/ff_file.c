@@ -416,11 +416,13 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 
 	pFile->FileDeleted = FF_TRUE;
 
-	FF_lockFAT(pIoman);	// Lock the FAT so its thread-safe.
-	{
-		FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
+	if(pFile->ObjectCluster) {	// Ensure there is actually a cluster chain to delete!
+		FF_lockFAT(pIoman);	// Lock the FAT so its thread-safe.
+		{
+			FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
+		}
+		FF_unlockFAT(pIoman);
 	}
-	FF_unlockFAT(pIoman);
 
 	// Edit the Directory Entry! (So it appears as deleted);
 	FF_lockDIR(pIoman);
