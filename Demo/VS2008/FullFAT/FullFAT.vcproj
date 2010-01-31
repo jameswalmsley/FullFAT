@@ -221,6 +221,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\src\ff_format.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\src\ff_hash.c"
 					>
 				</File>
@@ -281,6 +285,10 @@
 			>
 			<File
 				RelativePath=".\cmd.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\ff_format.h"
 				>
 			</File>
 			<File
