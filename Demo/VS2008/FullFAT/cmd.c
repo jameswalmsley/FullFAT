@@ -1304,22 +1304,32 @@ const FFT_ERR_TABLE timeInfo[] =
  **/
 int drivelist_cmd(int argc, char **argv) {
 	TCHAR	Volume[MAX_PATH];
+	TCHAR	PathName[MAX_PATH];
 	HANDLE	hSearch = FindFirstVolume(Volume, MAX_PATH);
-	HANDLE	hVolume;
-	DWORD Error;
+	DWORD	Error;
+	BOOL	RetVal;
+
+	FF_T_UINT32 i = 0;
 
 	argc;
 	argv;
 
-	if(hSearch) {
-		hVolume = CreateFile(&Volume[0], 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
-		
-		Error = GetLastError();
 
-		CloseHandle(hVolume);
+	if(hSearch != INVALID_HANDLE_VALUE) {
+
+		printf("VolumeID  :: Mount Point\n");
+
+		do {
+			RetVal = GetVolumePathNamesForVolumeName(Volume, PathName, MAX_PATH, &Error);
+
+			wprintf(TEXT("%d. %s\n"), i++, PathName);
+
+			RetVal = FindNextVolume(hSearch, Volume, MAX_PATH);
+
+		} while(RetVal);
+
+		FindVolumeClose(hSearch);		
 	}
-
-	CloseHandle(hSearch);
 
 	return 0;
 
