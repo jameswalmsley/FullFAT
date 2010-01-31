@@ -46,6 +46,7 @@
 
 #include "ff_ioman.h"	// Includes ff_types.h, ff_safety.h, <stdio.h>
 #include "ff_fatdef.h"
+#include "ff_crc.h"
 
 extern FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
 extern FF_T_UINT32 FF_CountFreeClusters		(FF_IOMAN *pIoman);
@@ -680,8 +681,12 @@ static FF_T_SINT8 FF_PartitionCount (FF_T_UINT8 *pBuffer)
 	Mount GPT Partition Tables
 */
 
+#define FF_GPT_HEAD_ENTRY_SIZE			0x54
+#define	FF_GPT_HEAD_TOTAL_ENTRIES		0x50
 #define FF_GPT_HEAD_PART_ENTRY_LBA		0x48
 #define FF_GPT_ENTRY_FIRST_SECTOR_LBA	0x20
+#define FF_GPT_HEAD_CRC					0x10
+#define FF_GPT_HEAD_LENGTH				0x0C
 
 static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber) {
 	// Continuing on from FF_MountPartition() pPartition->BeginLBA should be the sector of the GPT Header
@@ -691,6 +696,9 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	FF_T_UINT32		ulBeginGPT;
 	FF_T_UINT32		ulEntrySector;
 	FF_T_UINT32		ulSectorOffset;
+	FF_T_UINT32		ulTotalPartitionEntries;
+	FF_T_UINT32		ulPartitionEntrySize;
+	FF_T_UINT32		ulGPTHeadCRC, ulGPTCrcCheck, ulGPTHeadLength;
 
 	if(ulPartitionNumber >= 128) {
 		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
@@ -708,14 +716,34 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 			return FF_ERR_IOMAN_INVALID_FORMAT;
 		}
 
-		ulBeginGPT = FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_PART_ENTRY_LBA);
+		ulBeginGPT					= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_PART_ENTRY_LBA);
+		ulTotalPartitionEntries		= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_TOTAL_ENTRIES);
+		ulPartitionEntrySize		= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_ENTRY_SIZE);
+		ulGPTHeadCRC				= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_CRC);
+		ulGPTHeadLength				= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_LENGTH);
+
+		// Calculate Head CRC
+
+		// Blank CRC field
+		FF_putLong(pBuffer->pBuffer, FF_GPT_HEAD_CRC, 0x00000000);
+
+		// Calculate CRC
+		ulGPTCrcCheck = FF_GetCRC32(pBuffer->pBuffer, ulGPTHeadLength);
+
+		// Restore The CRC field
+		FF_putLong(pBuffer->pBuffer, FF_GPT_HEAD_CRC, ulGPTHeadCRC);
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
+	// Check CRC
+	if(ulGPTHeadCRC != ulGPTCrcCheck) {
+		return FF_ERR_IOMAN_GPT_HEADER_CORRUPT;
+	}
+	
 	// Calculate Sector Containing the Partition Entry we want to use.
 
-	ulEntrySector	= ((ulPartitionNumber * 128) / pIoman->BlkSize) + ulBeginGPT;
-	ulSectorOffset	= (ulPartitionNumber % (pIoman->BlkSize / 128)) * 128;
+	ulEntrySector	= ((ulPartitionNumber * ulPartitionEntrySize) / pIoman->BlkSize) + ulBeginGPT;
+	ulSectorOffset	= (ulPartitionNumber % (pIoman->BlkSize / ulPartitionEntrySize)) * ulPartitionEntrySize;
 	
 	pBuffer = FF_GetBuffer(pIoman, ulEntrySector, FF_MODE_READ);
 	{
@@ -726,7 +754,10 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, ulSectorOffset + FF_GPT_ENTRY_FIRST_SECTOR_LBA);
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
-	
+
+	if(!pPart->BeginLBA) {
+		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+	}
 
 	return FF_ERR_NONE;
 }
@@ -793,6 +824,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		if(ucPartitionType != 0xEE) {
 
 			if(PartitionNumber > 3) {
+				FF_ReleaseBuffer(pIoman, pBuffer);
 				return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
 			}
 

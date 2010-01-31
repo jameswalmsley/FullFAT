@@ -30,21 +30,18 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_crc.h
+ *	@file		ff_format.c
  *	@author		James Walmsley
- *	@ingroup	CRC
- *
+ *	@ingroup	FORMAT
+ *	
  **/
 
-#ifndef _FF_CRC_H_
-#define _FF_CRC_H_
 
-#include "ff_types.h"
-#include "ff_config.h"
+#ifndef _FF_FORMAT_H_
+#define _FF_FORMAT_H_
 
-FF_T_UINT8	FF_GetCRC8	(FF_T_UINT8 *pbyData, FF_T_UINT32 stLength);
-FF_T_UINT16 FF_GetCRC16	(FF_T_UINT8 *pbyData, FF_T_UINT32 stLength);
-FF_T_UINT32 FF_GetCRC32	(FF_T_UINT8 *pbyData, FF_T_UINT32 stLength);
+
+
+
 
 #endif
-

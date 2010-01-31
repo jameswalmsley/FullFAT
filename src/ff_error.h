@@ -61,6 +61,7 @@
 #define FF_ERR_IOMAN_DEV_INVALID_BLKSIZE		-18 ///< IOMAN object BlkSize is not compatible with the blocksize of this device driver.
 #define FF_ERR_IOMAN_PARTITION_MOUNTED			-19	///< Device is in use by an actively mounted partition. Unmount the partition first.
 #define FF_ERR_IOMAN_ACTIVE_HANDLES				-20 ///< The partition cannot be unmounted until all active file handles are closed. (There may also be active handles on the cache).
+#define FF_ERR_IOMAN_GPT_HEADER_CORRUPT			-21	///< The GPT partition table appears to be corrupt, refusing to mount.
 
 
 // File Error Codes								-30 +

@@ -65,6 +65,7 @@ const struct _FFERRTAB
     {"Cannot register device. (BlkSize not a multiple of 512).",					FF_ERR_IOMAN_DEV_INVALID_BLKSIZE},
     {"Cannot unregister device, a partition is still mounted.",						FF_ERR_IOMAN_PARTITION_MOUNTED},
     {"Cannot unmount the partition while there are active FILE handles.",			FF_ERR_IOMAN_ACTIVE_HANDLES},
+	{"The GPT partition header appears to be corrupt, refusing to mount.",			FF_ERR_IOMAN_GPT_HEADER_CORRUPT},
     {"Cannot open the file, file already in use.",									FF_ERR_FILE_ALREADY_OPEN},
     {"The specified file could not be found.",										FF_ERR_FILE_NOT_FOUND},
     {"Cannot open a Directory.",													FF_ERR_FILE_OBJECT_IS_A_DIR},
