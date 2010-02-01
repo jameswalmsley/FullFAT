@@ -674,6 +674,139 @@ const FFT_ERR_TABLE xcpInfo[] =
 	{ NULL }
 };
 
+typedef struct {
+	void 			*pInfoSem;
+	FF_T_UINT32		ulTotalBytes;
+	FF_T_UINT32		ulBytesComplete;
+	void 			*pBuffer;
+	FF_T_UINT32		ulBufferSize;
+	FF_ERROR		ffErrorCode;
+	FF_T_BOOL		bDone;
+	FF_T_BOOL		bInitiated;
+} FF_COPY_PROGRESS;
+
+typedef struct {
+	const char *szSource;
+	const char *szDestination;
+	int			ReturnCode;
+	FF_ERROR	FFErrorCode;
+	HANDLE		hThread;
+	DWORD		dwThreadID;
+	FF_COPY_PROGRESS	*pProgress;
+	FF_ENVIRONMENT		*pEnv;
+} FF_COPY_THREAD;
+
+
+
+int icp_copy(HANDLE hSource, FF_FILE *ffDestination, FF_COPY_PROGRESS *pProgress, FF_ENVIRONMENT *pEnv) {
+	FF_ERROR		Error;
+	LARGE_INTEGER	SourceSize;
+
+	FF_T_UINT32 iBytesRead;
+	FF_T_UINT32 iBytesWritten;
+
+	if(!pProgress) {
+		return -2;
+	}
+
+	GetFileSizeEx(hSource, &SourceSize);
+
+	if(SourceSize.QuadPart > 0x00000000FFFFFFFF) {	// Fat32 won't handle files larger than 4GB!
+		return -4;
+	}
+
+	FF_PendSemaphore(pProgress->pInfoSem);
+	{
+		pProgress->ulTotalBytes = (FF_T_UINT32) SourceSize.LowPart;
+		pProgress->ulBytesComplete = 0;
+	}
+	FF_ReleaseSemaphore(pProgress->pInfoSem);
+
+	if((FF_T_UINT64) pProgress->ulTotalBytes > FF_GetFreeSize(pEnv->pIoman)) {
+		FF_PendSemaphore(pProgress->pInfoSem);
+		{
+			pProgress->ffErrorCode = FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE;
+			pProgress->bDone = FF_TRUE;
+		}
+		FF_ReleaseSemaphore(pProgress->pInfoSem);
+		return 0;
+	}
+
+	FF_PendSemaphore(pProgress->pInfoSem);
+	{
+		pProgress->bInitiated = FF_TRUE;
+	}
+	FF_ReleaseSemaphore(pProgress->pInfoSem);
+
+	do {
+		ReadFile(hSource, pProgress->pBuffer, pProgress->ulBufferSize, &iBytesRead, NULL);
+		iBytesWritten 	= FF_Write(ffDestination, 1, iBytesRead, pProgress->pBuffer);
+
+		FF_PendSemaphore(pProgress->pInfoSem);
+		{
+			pProgress->ulBytesComplete += iBytesWritten;
+		}
+		FF_ReleaseSemaphore(pProgress->pInfoSem);
+
+		if(iBytesWritten < iBytesRead) {
+			break;
+		}
+
+	} while(iBytesRead > 0);
+
+	pProgress->bDone = FF_TRUE;
+
+	return 0;
+}
+
+DWORD WINAPI icp_copy_thread(LPVOID pParam) {
+
+	FF_COPY_THREAD *pThreadData = (FF_COPY_THREAD *) pParam;
+	HANDLE			hSource;
+	FF_FILE			*ffDestination;
+	FF_ERROR		Error;
+
+
+	if(pParam) {
+		hSource = CreateFileA(pThreadData->szSource, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING , 0, NULL);
+
+		if(!hSource) {
+			pThreadData->pProgress->bDone = FF_TRUE;
+			return -1;
+		}
+
+		ffDestination = FF_Open(pThreadData->pEnv->pIoman, pThreadData->szDestination, FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE, &Error);
+
+		if(!ffDestination) {
+			CloseHandle(hSource);
+			pThreadData->pProgress->ffErrorCode = Error;
+			pThreadData->pProgress->bDone = FF_TRUE;
+			return -5; // Could not open destination
+		}
+		
+		icp_copy(hSource, ffDestination, pThreadData->pProgress, pThreadData->pEnv);
+
+		CloseHandle(hSource);
+		FF_Close(ffDestination);
+	}
+	return -1;
+}
+
+int icpwild_copy(char *szSource, char *szDestination) {
+	HANDLE				hSearch;
+	WIN32_FIND_DATAA 	findData;
+	
+	hSearch = FindFirstFileA(szSource, &findData);
+
+	if(hSearch != INVALID_HANDLE_VALUE) {
+		do {
+			findData.cFileName;
+		} while(1);
+	}
+
+	return 0;
+}
+
 
 /**
  *	@brief	Import copy command, copies a windows file into FullFAT
@@ -684,10 +817,17 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FILE	*fSource;
 	FF_ERROR Error;
 
+	int i = 0;
+
+	FF_COPY_PROGRESS myProgress;
+	FF_COPY_THREAD	myThread;
+	FF_T_BOOL			bDone = FF_FALSE;
+	FF_T_BOOL			bInitiated = FF_FALSE;
+
 	FF_T_INT8 path[2600];
 	FF_T_UINT8 copybuf[COPY_BUFFER_SIZE];
 
-	FF_T_SINT32	BytesRead;
+	FF_T_UINT32	BytesRead;
 	FF_T_UINT32	SourceSize;
 
 	LARGE_INTEGER ticksPerSecond;
@@ -697,37 +837,57 @@ int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	QueryPerformanceFrequency(&ticksPerSecond);
 	
 	if(argc == 3) {
-		fSource = fopen(argv[1], "rb");
-		if(fSource) {
-			fseek(fSource, 0, SEEK_END);
-			SourceSize = ftell(fSource);
-			fseek(fSource, 0, SEEK_SET);
+		memset(&myProgress, 0, sizeof(FF_COPY_PROGRESS));
+		
+		myProgress.pBuffer = malloc(COPY_BUFFER_SIZE);
+		myProgress.ulBufferSize = COPY_BUFFER_SIZE;
+		myProgress.pInfoSem = FF_CreateSemaphore();
+
+		memset(&myThread, 0, sizeof(FF_COPY_THREAD));
+
+		myThread.szDestination = path;
+		myThread.szSource = argv[1];
+		myThread.pEnv = pEnv;
+		myThread.pProgress = &myProgress;
+
+		if(myProgress.pBuffer) {
 			ProcessPath(path, argv[2], pEnv);
-			fDest = FF_Open(pIoman, path, FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE, &Error);
-			if(fDest) {
-				// Do the copy
-				QueryPerformanceCounter(&start_ticks);  
-				do{
-					BytesRead = fread(copybuf, 1, COPY_BUFFER_SIZE, fSource);
-					FF_Write(fDest, BytesRead, 1, (FF_T_UINT8 *) copybuf);
-					QueryPerformanceCounter(&end_ticks); 
+
+			QueryPerformanceFrequency(&start_ticks);
+
+			myThread.hThread = CreateThread(0, 0, icp_copy_thread, &myThread, 0, &myThread.dwThreadID);
+
+			do {
+				FF_PendSemaphore(myProgress.pInfoSem);
+				{
+					bDone = myProgress.bDone;
+					bInitiated = myProgress.bInitiated;
+					//Get the bytes read etc.
+					BytesRead = myProgress.ulBytesComplete;
+					SourceSize = myProgress.ulTotalBytes;
+				}
+				FF_ReleaseSemaphore(myProgress.pInfoSem);
+
+				if(bInitiated) {
+					QueryPerformanceCounter(&end_ticks);
+
 					cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
 					time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
-					transferRate = (ftell(fSource) / time) / 1024;
-					printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)ftell(fSource)/(float)SourceSize) * 100), ftell(fSource), transferRate);
-				}while(BytesRead > 0);
-				printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\n", ((float)((float)ftell(fSource)/(float)SourceSize) * 100), ftell(fSource), transferRate);	
+					transferRate = (float)((float)BytesRead / 1024.0) / (float)((float)0.050 * (float)i++);
+					printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)BytesRead/(float)SourceSize) * 100), BytesRead, transferRate);
+				}
 
-				fclose(fSource);
-				FF_Close(fDest);
-			} else {
-				fclose(fSource);
-				printf("Could not open destination file - %s\n", FF_GetErrMessage(Error));
+				Sleep(50);
+
+			}while(bDone == FF_FALSE);
+
+			if(myProgress.ffErrorCode) {
+				printf("FullFAT reported and error: \n%s\n", FF_GetErrMessage(myProgress.ffErrorCode));
 			}
-
-		} else {
-			printf("Could not open source file.\n");
 		}
+
+		FF_DestroySemaphore(myProgress.pInfoSem);
+		free(myProgress.pBuffer);
 		
 	} else {
 		printf("Usage: %s [source file] [destination file]\n", argv[0]);
