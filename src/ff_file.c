@@ -679,6 +679,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 				NextCluster = FF_FindFreeCluster(pIoman);
 				if(!NextCluster) {
 					FF_unlockFAT(pIoman);
+					FF_DecreaseFreeClusters(pIoman, i);
 					return FF_ERR_FAT_NO_FREE_CLUSTERS;
 				}
 				FF_putFatEntry(pIoman, CurrentCluster, NextCluster);

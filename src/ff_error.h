@@ -62,6 +62,7 @@
 #define FF_ERR_IOMAN_PARTITION_MOUNTED			-19	///< Device is in use by an actively mounted partition. Unmount the partition first.
 #define FF_ERR_IOMAN_ACTIVE_HANDLES				-20 ///< The partition cannot be unmounted until all active file handles are closed. (There may also be active handles on the cache).
 #define FF_ERR_IOMAN_GPT_HEADER_CORRUPT			-21	///< The GPT partition table appears to be corrupt, refusing to mount.
+#define FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE		-22
 
 
 // File Error Codes								-30 +

@@ -1019,8 +1019,9 @@ FF_ERROR FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 	//{
 		if(!pIoman->pPartition->FreeClusterCount) {
 			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		} else {
+			pIoman->pPartition->FreeClusterCount += Count;
 		}
-		pIoman->pPartition->FreeClusterCount += Count;
 	//}
 	//FF_ReleaseSemaphore(pIoman->pSemaphore);
 
@@ -1033,8 +1034,9 @@ FF_ERROR FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 	//{
 		if(!pIoman->pPartition->FreeClusterCount) {
 			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+		} else {
+			pIoman->pPartition->FreeClusterCount -= Count;
 		}
-		pIoman->pPartition->FreeClusterCount -= Count;
 	//}
 	//FF_unlockFAT(pIoman);
 

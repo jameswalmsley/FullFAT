@@ -85,6 +85,7 @@ const struct _FFERRTAB
 	{"Source file was not found.",													FF_ERR_FILE_SOURCE_NOT_FOUND},
 	{"Destination path (dir) was not found.",										FF_ERR_FILE_DIR_NOT_FOUND},
 	{"Failed to create the directory Entry.",										FF_ERR_FILE_COULD_NOT_CREATE_DIRENT},
+	{"Not enough free disk space to complete the disk transaction.",				FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE},
 };
 
 /**
