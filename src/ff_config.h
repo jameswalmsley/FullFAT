@@ -88,10 +88,10 @@
 #define	FF_MALLOC(aSize)		malloc(aSize)
 #define	FF_FREE(apPtr)			free(apPtr)
 
-//#define FF_INLINE_MEMORY_ACCESS
+#define FF_INLINE_MEMORY_ACCESS
 
-//#define FF_INLINE static __forceinline	// Keywords to inline functions (Windows)
-#define FF_INLINE static inline				// Standard for GCC
+#define FF_INLINE static __forceinline	// Keywords to inline functions (Windows)
+//#define FF_INLINE static inline				// Standard for GCC
 
 
 //---------- Hash Table Support

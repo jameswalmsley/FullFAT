@@ -341,10 +341,11 @@ FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 }
 
 FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
-	FF_FILE *pFile;
-	FF_ERROR Error = FF_ERR_NONE;
-	FF_T_UINT8 EntryBuffer[32];
-	FF_T_SINT8 RetVal = FF_ERR_NONE;
+	FF_FILE 			*pFile;
+	FF_ERROR 			Error = FF_ERR_NONE;
+	FF_T_UINT8 			EntryBuffer[32];
+	FF_FETCH_CONTEXT	FetchContext;
+	FF_T_SINT8 			RetVal = FF_ERR_NONE;
 #ifdef FF_PATH_CACHE
 	FF_T_UINT32 i;
 #endif
@@ -369,10 +370,14 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 				FF_UnlinkClusterChain(pIoman, pFile->ObjectCluster, 0);	// 0 to delete the entire chain!
 			}
 			FF_unlockFAT(pIoman);
+
+			// Initialise the dirent Fetch Context object for faster removal of dirents.
+
+			FF_InitEntryFetch(pIoman, pFile->DirCluster, &FetchContext);
 			
 			// Edit the Directory Entry! (So it appears as deleted);
-			FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry);
-			FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+			FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry, &FetchContext);
+			FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 			EntryBuffer[0] = 0xE5;
 			FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 #ifdef FF_PATH_CACHE
@@ -407,6 +412,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_FILE *pFile;
 	FF_ERROR Error = 0;
 	FF_T_UINT8 EntryBuffer[32];
+	FF_FETCH_CONTEXT FetchContext;
 
 	pFile = FF_Open(pIoman, path, FF_MODE_READ, &Error);
 
@@ -427,8 +433,9 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	// Edit the Directory Entry! (So it appears as deleted);
 	FF_lockDIR(pIoman);
 	{
-		FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry);
-		FF_FetchEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+		FF_InitEntryFetch(pIoman, pFile->DirCluster, &FetchContext);
+		FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry, &FetchContext);
+		FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 		EntryBuffer[0] = 0xE5;
 		FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
 	}
@@ -462,6 +469,7 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT16 i;
 	FF_T_UINT32	DirCluster;
+	FF_FETCH_CONTEXT	FetchContext;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
@@ -485,7 +493,9 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 	if(pSrcFile) {
 
 		// Create the new dirent.
-		FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+		FF_InitEntryFetch(pIoman, pSrcFile->DirCluster, &FetchContext);
+		FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+		//FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
 		MyFile.Attrib			= FF_getChar(EntryBuffer,  (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
 		MyFile.Filesize			= pSrcFile->Filesize;
 		MyFile.ObjectCluster	= pSrcFile->ObjectCluster;
@@ -520,8 +530,10 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 			// Edit the Directory Entry! (So it appears as deleted);
 			FF_lockDIR(pIoman);
 			{
-				FF_RmLFNs(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry);
-				FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+
+				FF_RmLFNs(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, &FetchContext);
+				FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+				//FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
 				EntryBuffer[0] = 0xE5;
 				FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
 			}

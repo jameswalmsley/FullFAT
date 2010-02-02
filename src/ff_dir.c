@@ -77,19 +77,23 @@ static FF_T_UINT8 FF_CreateChkSum(const FF_T_UINT8 *pa_pShortName) {
 	return ChkSum;
 }
 
-FF_T_SINT8 FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
+
+FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT *pFetchContext) {
 	
-	FF_T_UINT8	numLFNs;
-	FF_T_UINT8	EntryBuffer[32];
+	FF_T_UINT8			numLFNs;
+	FF_T_UINT8			EntryBuffer[32];
+	//FF_FETCH_CONTEXT	FetchContext;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
 
 	//pDirent->NumLFNs = 0;
+
+	//FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
 	
 	for(; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
-		if(FF_FetchEntry(pIoman, DirCluster, pDirent->CurrentItem, EntryBuffer)) {
+		if(FF_FetchEntryWithContext(pIoman, pDirent->CurrentItem, pFetchContext, EntryBuffer)) {
 			return -2;
 		}
 		if(EntryBuffer[0] != 0xE5) {
@@ -102,7 +106,8 @@ FF_T_SINT8 FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT 
 				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
 				//pDirent->NumLFNs = numLFNs;
 #ifdef FF_LFN_SUPPORT
-				FF_PopulateLongDirent(pIoman, pDirent, DirCluster, pDirent->CurrentItem);
+				FF_PopulateLongDirent(pIoman, pDirent, pDirent->CurrentItem, pFetchContext);
+				//FF_PopulateLongDirent(pIoman, pDirent, pFetchContext->ulDirCluster, pDirent->CurrentItem);
 				return 0;
 #else 
 				pDirent->CurrentItem += (numLFNs - 1);
@@ -134,9 +139,10 @@ FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8
 
 FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name) {
 
-    FF_T_UINT16 i;
-    FF_T_UINT8      EntryBuffer[32];
-    FF_T_UINT8      Attrib;
+    FF_T_UINT16 		i;
+    FF_T_UINT8      	EntryBuffer[32];
+    FF_T_UINT8     		Attrib;
+	FF_FETCH_CONTEXT	FetchContext;
 
 #ifdef FF_HASH_TABLE_SUPPORT
 
@@ -168,9 +174,10 @@ FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8
 		{
 #endif
 #endif
+			FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
 
 			for(i = 0; i < 0xFFFF; i++) {
-				FF_FetchEntry(pIoman, DirCluster, i, EntryBuffer);
+				FF_FetchEntryWithContext(pIoman, i, &FetchContext, EntryBuffer);
 				Attrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
 				if(FF_getChar(EntryBuffer, 0x00) != 0xE5) {
 					if(Attrib != FF_FAT_ATTR_LFN) {
@@ -199,12 +206,15 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_T_INT8		Filename[FF_MAX_FILENAME];
 	FF_T_INT8		MyFname[FF_MAX_FILENAME];
 	FF_T_BOOL		bBreak = FF_FALSE;
+	FF_FETCH_CONTEXT FetchContext;
 	
 	pDirent->CurrentItem = 0;
 	nameLen = (FF_T_UINT16) strlen(name);
 
+	FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
+
 	while(!bBreak) {	
-		if(FF_FindNextInDir(pIoman, DirCluster, pDirent)) {
+		if(FF_FindNextInDir(pIoman, pDirent, &FetchContext)) {
 			break;	// end of dir, file not found!
 		}
 
@@ -837,6 +847,63 @@ void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *En
 	pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
 }
 
+/*
+	Initialises a context object for FF_FetchEntryWithContext()
+*/
+FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_CONTEXT *pContext) {
+	memset(pContext, 0, sizeof(FF_FETCH_CONTEXT));
+
+	pContext->ulChainLength 		= FF_GetChainLength(pIoman, ulDirCluster, NULL);	// Get the total length of the chain.
+	pContext->ulDirCluster			= ulDirCluster;
+	pContext->ulCurrentClusterLCN 	= ulDirCluster;
+	pContext->ulCurrentClusterNum 	= 0;
+	pContext->ulCurrentEntry		= 0;
+
+	return FF_ERR_NONE;
+}
+
+FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer) {
+	FF_BUFFER 	*pBuffer;
+	FF_T_UINT32	ulItemLBA;
+	FF_T_UINT32	ulRelItem;
+	FF_T_UINT32	ulClusterNum;
+
+	ulClusterNum 					= FF_getClusterChainNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	ulRelItem						= FF_getMinorBlockEntry		(pIoman, ulEntry, (FF_T_UINT16)32);
+
+	if(ulClusterNum != pContext->ulCurrentClusterNum) {
+		// Traverse the fat gently!
+		if(ulClusterNum > pContext->ulCurrentClusterNum) {
+			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulCurrentClusterLCN, (ulClusterNum - pContext->ulCurrentClusterNum));
+		} else {
+			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulDirCluster, ulClusterNum);
+		}
+		pContext->ulCurrentClusterNum = ulClusterNum;
+	}
+
+	if(pIoman->pPartition->Type != FF_T_FAT32) {
+		// Handle Root Dirs that don't have cluster chains!
+
+	}
+
+	if((ulClusterNum + 1) > pContext->ulChainLength) {
+		return FF_ERR_DIR_END_OF_DIR;	// End of Dir was reached!
+	}
+
+	ulItemLBA = FF_Cluster2LBA	(pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	ulItemLBA = FF_getRealLBA	(pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
+
+	pBuffer = FF_GetBuffer(pIoman, ulItemLBA, FF_MODE_READ);
+	{
+		memcpy(pEntryBuffer, (pBuffer->pBuffer + (ulRelItem*32)), 32);
+		pBuffer->Persistance = 1;
+	}
+	FF_ReleaseBuffer(pIoman, pBuffer);
+ 
+    return FF_ERR_NONE;
+}
+
+/*
 FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
 	FF_T_UINT32 itemLBA;
@@ -875,7 +942,7 @@ FF_T_SINT8 FF_FetchEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 n
  
     return FF_ERR_NONE;
 }
-
+*/
 
 FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer) {
 	FF_BUFFER *pBuffer;
@@ -908,8 +975,11 @@ FF_T_SINT8 FF_PushEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nE
 FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	FF_T_UINT8 EntryBuffer[32];
 	FF_T_UINT8 numLFNs;
+	FF_FETCH_CONTEXT	FetchContext;
+
+	FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
 	
-	if(FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer)) {
+	if(FF_FetchEntryWithContext(pIoman, nEntry, &FetchContext, EntryBuffer)) {
 			return FF_ERR_DIR_END_OF_DIR;
 	}
 	if(EntryBuffer[0] != 0xE5) {
@@ -923,7 +993,8 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 			// LFN Processing
 			numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
 	#ifdef FF_LFN_SUPPORT
-			FF_PopulateLongDirent(pIoman, pDirent, DirCluster, nEntry);
+			FF_PopulateLongDirent(pIoman, pDirent, nEntry, &FetchContext);
+			//FF_PopulateLongDirent(pIoman, pDirent, DirCluster, nEntry);
 			return 0;
 	#else 
 			pDirent->CurrentItem += (numLFNs - 1);
@@ -1007,7 +1078,7 @@ void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 #endif
 
 
-FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry) {
+FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16 nEntry, FF_FETCH_CONTEXT *pFetchContext) {
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_INT8	ShortName[13];
 	FF_T_UINT8 numLFNs;
@@ -1016,8 +1087,12 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 	FF_T_UINT16 i,y;
 	FF_T_UINT16 lenlfn = 0;
 	FF_T_UINT16 myShort;
+	//FF_FETCH_CONTEXT FetchContext;
+
+	//FF_InitEntryFetch(pIoman, pFetchContext->ulDirCluster, &FetchContext);
 	
-	FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+	//FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+	FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
 	numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
 	// Handle the name
 	CheckSum = FF_getChar(EntryBuffer, FF_FAT_LFN_CHECKSUM);
@@ -1039,7 +1114,8 @@ FF_T_SINT8 FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 			lenlfn++;
 		}
 
-		FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+		//FF_FetchEntry(pIoman, DirCluster, nEntry++, EntryBuffer);
+		FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
 		numLFNs--;
 	}
 
@@ -1110,6 +1186,7 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT16	PathLen = (FF_T_UINT16) strlen(path);
+	
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
@@ -1120,9 +1197,13 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 	if(pDirent->DirCluster == 0) {
 		return FF_ERR_DIR_INVALID_PATH;
 	}
+
+	// Initialise the Fetch Context
+	FF_InitEntryFetch(pIoman, pDirent->DirCluster, &pDirent->FetchContext);
 	
 	for(pDirent->CurrentItem = 0; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
-		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
+		if(FF_FetchEntryWithContext(pIoman, pDirent->CurrentItem, &pDirent->FetchContext, EntryBuffer)) {
+		//if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
 			return FF_ERR_DIR_END_OF_DIR;
 		}
 		if(EntryBuffer[0] != FF_FAT_DELETED) {
@@ -1137,12 +1218,14 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 #ifdef FF_LFN_SUPPORT
 				// Fetch the shortname, and get it's checksum, or for a deleted item with
 				// orphaned LFN entries.
-				if(FF_FetchEntry(pIoman, pDirent->DirCluster, (pDirent->CurrentItem + numLFNs), EntryBuffer)) {
+				if(FF_FetchEntryWithContext(pIoman, (pDirent->CurrentItem + numLFNs), &pDirent->FetchContext, EntryBuffer)) {
+				//if(FF_FetchEntry(pIoman, pDirent->DirCluster, (pDirent->CurrentItem + numLFNs), EntryBuffer)) {
 					return FF_ERR_DIR_END_OF_DIR;
 				}
 				
 				if(EntryBuffer[0] != FF_FAT_DELETED) {
-					FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+					FF_PopulateLongDirent(pIoman, pDirent, pDirent->CurrentItem, &pDirent->FetchContext);
+					//FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
 					return FF_ERR_NONE;
 				}
 #else 
@@ -1185,7 +1268,8 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	}
 	
 	for(; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
-		if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
+		if(FF_FetchEntryWithContext(pIoman, pDirent->CurrentItem, &pDirent->FetchContext, EntryBuffer)) {
+		//if(FF_FetchEntry(pIoman, pDirent->DirCluster, pDirent->CurrentItem, EntryBuffer)) {
 			return FF_ERR_DIR_END_OF_DIR;
 		}
 		if(EntryBuffer[0] != FF_FAT_DELETED) {
@@ -1200,12 +1284,14 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 #ifdef FF_LFN_SUPPORT
 				// Fetch the shortname, and get it's checksum, or for a deleted item with
 				// orphaned LFN entries.
-				if(FF_FetchEntry(pIoman, pDirent->DirCluster, (pDirent->CurrentItem + numLFNs), EntryBuffer)) {
+				if(FF_FetchEntryWithContext(pIoman, (pDirent->CurrentItem + numLFNs), &pDirent->FetchContext, EntryBuffer)) {
+				//if(FF_FetchEntry(pIoman, pDirent->DirCluster, (pDirent->CurrentItem + numLFNs), EntryBuffer)) {
 					return FF_ERR_DIR_END_OF_DIR;
 				}
 				
 				if(EntryBuffer[0] != FF_FAT_DELETED) {
-					FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+					//FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+					FF_PopulateLongDirent(pIoman, pDirent, pDirent->CurrentItem, &pDirent->FetchContext);
 					return FF_ERR_NONE;
 				}
 #else 
@@ -1243,9 +1329,13 @@ FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UIN
 	FF_T_SINT8	RetVal;
 	FF_T_UINT32	DirLength;
 	FF_T_UINT32	iEndOfChain;
+	FF_FETCH_CONTEXT FetchContext;
+
+	FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
 	
 	for(nEntry = 0; nEntry < 0xFFFF; nEntry++) {
-		if(FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer) == FF_ERR_DIR_END_OF_DIR) {
+		if(FF_FetchEntryWithContext(pIoman, nEntry, &FetchContext, EntryBuffer) == FF_ERR_DIR_END_OF_DIR) {
+		//if(FF_FetchEntry(pIoman, DirCluster, nEntry, EntryBuffer) == FF_ERR_DIR_END_OF_DIR) {
 			RetVal = FF_ExtendDirectory(pIoman, DirCluster);
 			if(RetVal != FF_ERR_NONE) {
 				return RetVal;
@@ -1748,14 +1838,15 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 
 
 
-void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry) {
+void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry, FF_FETCH_CONTEXT *pContext) {
 
 	FF_T_UINT8	EntryBuffer[32];
 
 	DirEntry--;
 
 	do {
-		FF_FetchEntry(pIoman, DirCluster, DirEntry, EntryBuffer);
+		//FF_FetchEntry(pIoman, DirCluster, DirEntry, EntryBuffer);
+		FF_FetchEntryWithContext(pIoman, DirEntry, pContext, EntryBuffer);
 		
 		if(FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB)) == FF_FAT_ATTR_LFN) {
 			FF_putChar(EntryBuffer, (FF_T_UINT16) 0, (FF_T_UINT8) 0xE5);

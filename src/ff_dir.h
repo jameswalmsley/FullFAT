@@ -52,6 +52,14 @@
 #include <string.h>
 
 typedef struct {
+	FF_T_UINT32	ulChainLength;
+	FF_T_UINT32	ulDirCluster;
+	FF_T_UINT32	ulCurrentClusterLCN;
+	FF_T_UINT32	ulCurrentClusterNum;
+	FF_T_UINT32	ulCurrentEntry;
+} FF_FETCH_CONTEXT;
+
+typedef struct {
 	FF_T_INT8	FileName[FF_MAX_FILENAME];
 	FF_T_UINT8	Attrib;
 	FF_T_UINT32 Filesize;
@@ -69,19 +77,34 @@ typedef struct {
 	FF_T_UINT32	CurrentCluster;
 	FF_T_UINT32 AddrCurrentCluster;
 	//FF_T_UINT8	NumLFNs;
+
+	FF_FETCH_CONTEXT FetchContext;
+
 } FF_DIRENT;
+
+
+
+
 
 		FF_ERROR	FF_GetEntry		(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8  FF_PutEntry		(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_FindEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs);
 		FF_ERROR	FF_FindFirst	(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path);
 		FF_ERROR	FF_FindNext		(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
+		
+		
 		void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer);
-		FF_T_SINT8	FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry);
-		FF_T_SINT8	FF_FetchEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer);
+		FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16 nEntry, FF_FETCH_CONTEXT *pFetchContext);
+		//FF_T_SINT8	FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry);
+
+		FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_CONTEXT *pContext);
+		FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer);
+		FF_T_SINT8	FF_FetchEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pBuffer);
+
 		FF_T_SINT8	FF_PushEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer);
 		FF_T_BOOL	FF_isEndOfDir	(FF_T_UINT8 *EntryBuffer);
-		FF_T_SINT8	FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
+		FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT *pFetchContext);
+		//FF_T_SINT8	FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 		FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName);
 
@@ -99,7 +122,7 @@ FF_T_BOOL FF_DirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 FF_ERROR FF_AddDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash);
 void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 
-void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry);
+void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry, FF_FETCH_CONTEXT *pContext);
 
 #endif
 
