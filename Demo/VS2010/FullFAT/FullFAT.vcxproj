@@ -84,6 +84,7 @@
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_safety_win32.c" />
+    <ClCompile Include="..\..\..\Drivers\Windows\ff_time_win32.c" />
     <ClCompile Include="..\..\..\src\ff_blk.c" />
     <ClCompile Include="..\..\..\src\ff_crc.c" />
     <ClCompile Include="..\..\..\src\ff_dir.c" />
@@ -95,7 +96,6 @@
     <ClCompile Include="..\..\..\src\ff_ioman.c" />
     <ClCompile Include="..\..\..\src\ff_memory.c" />
     <ClCompile Include="..\..\..\src\ff_string.c" />
-    <ClCompile Include="..\..\..\src\ff_time.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\cmd.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c" />

@@ -93,6 +93,9 @@ int md5win_cmd		(int argc, char **argv);
 int hexview_cmd		(int argc, char **argv);
 int drivelist_cmd	(int argc, char **argv);
 
+int icpdir_copy(const char *szSource, const char *szDestination, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv);
+int icp_copy(char *szSource, char *szDestination, FF_ENVIRONMENT *pEnv);
+
 extern void KillAllThreads(void);
 
 #endif

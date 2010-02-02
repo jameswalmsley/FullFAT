@@ -698,8 +698,7 @@ typedef struct {
 
 
 
-int icp_copy(HANDLE hSource, FF_FILE *ffDestination, FF_COPY_PROGRESS *pProgress, FF_ENVIRONMENT *pEnv) {
-	FF_ERROR		Error;
+int icp_copy_handler(HANDLE hSource, FF_FILE *ffDestination, FF_COPY_PROGRESS *pProgress, FF_ENVIRONMENT *pEnv) {
 	LARGE_INTEGER	SourceSize;
 
 	FF_T_UINT32 iBytesRead;
@@ -729,7 +728,7 @@ int icp_copy(HANDLE hSource, FF_FILE *ffDestination, FF_COPY_PROGRESS *pProgress
 			pProgress->bDone = FF_TRUE;
 		}
 		FF_ReleaseSemaphore(pProgress->pInfoSem);
-		return 0;
+		return -5;
 	}
 
 	FF_PendSemaphore(pProgress->pInfoSem);
@@ -777,6 +776,10 @@ DWORD WINAPI icp_copy_thread(LPVOID pParam) {
 
 		ffDestination = FF_Open(pThreadData->pEnv->pIoman, pThreadData->szDestination, FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE, &Error);
 
+		if(Error == FF_ERR_FILE_INVALID_PATH) {
+			
+		}
+
 		if(!ffDestination) {
 			CloseHandle(hSource);
 			pThreadData->pProgress->ffErrorCode = Error;
@@ -784,27 +787,272 @@ DWORD WINAPI icp_copy_thread(LPVOID pParam) {
 			return -5; // Could not open destination
 		}
 		
-		icp_copy(hSource, ffDestination, pThreadData->pProgress, pThreadData->pEnv);
+		icp_copy_handler(hSource, ffDestination, pThreadData->pProgress, pThreadData->pEnv);
 
 		CloseHandle(hSource);
 		FF_Close(ffDestination);
+
+		switch(pThreadData->pProgress->ffErrorCode) {
+			case FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE:
+				FF_RmFile(pThreadData->pEnv->pIoman, pThreadData->szDestination);
+				break;
+
+			default:
+				break;
+		}
 	}
-	return -1;
+	return 0;
 }
 
-int icpwild_copy(char *szSource, char *szDestination) {
-	HANDLE				hSearch;
-	WIN32_FIND_DATAA 	findData;
+
+void copy_append_path(char *path, const char *filename) {
+	char c;
+	c = path[strlen(path) - 1];
+	if(c != '\\' && c != '/') {
+		strcat(path, "\\");
+	}
+
+	strcat(path, filename);
+}
+
+
+
+int icpdir_copy(const char *szSource, const char *szDestination, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv) {
+	HANDLE 				hSearch;
+	WIN32_FIND_DATAA	findData;
+	BOOL				bFound = TRUE;
+	char 				path[FF_MAX_PATH];
+	char				SourceDir[MAX_PATH];
+	char c;
+	int i = 0;
+
+	strcpy(SourceDir, szSource);
+	c = SourceDir[strlen(SourceDir) - 1];
+	if(c != '\\' && c != '/') {
+		strcat(SourceDir, "\\");
+	}
+
+	c = szDestination[strlen(szDestination) - 1];
+	if(c == '\\' || c == '/') {
+		i = 1;
+	}
+
+	strcat(SourceDir, "*");
 	
-	hSearch = FindFirstFileA(szSource, &findData);
+	hSearch = FindFirstFileA(SourceDir, &findData);
+
+	if(!FF_FindDir(pEnv->pIoman, szDestination, strlen(szDestination) - i)) {
+		if(szDestination[strlen(szDestination) - 1] == '\\' || szDestination[strlen(szDestination) - 1] == '/') {
+			strncpy(path, szDestination, strlen(szDestination) - 1);
+			path[strlen(szDestination) - 1] = '\0';
+		} else {
+			strcpy(path, szDestination);
+		}
+		FF_MkDir(pEnv->pIoman, path);
+	}
 
 	if(hSearch != INVALID_HANDLE_VALUE) {
 		do {
-			findData.cFileName;
-		} while(1);
+			if(strcmp(findData.cFileName, ".") && strcmp(findData.cFileName, "..")) {
+
+				strcpy(SourceDir, szSource);
+				copy_append_path(SourceDir, findData.cFileName);
+
+				strcpy(path, szDestination);
+				copy_append_path(path, findData.cFileName);
+				//
+				printf("%s\n", path);
+				if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+					if(bRecursive == FF_TRUE) {
+						icpdir_copy(SourceDir, path, FF_TRUE, pEnv);
+					}
+				} else {
+					icp_copy(SourceDir, path, pEnv);
+				}
+			}
+
+			bFound = FindNextFileA(hSearch, &findData);
+		} while(bFound == TRUE);
+
+		FindClose(hSearch);
 	}
 
 	return 0;
+}
+
+static const char *getWildcard(const char *String) {
+	int i = strlen(String);
+
+	while(String[i] != '\\' && String[i] != '/') {
+		i--;
+	}
+
+	return &String[i+1];
+}
+
+
+int icpwild_copy(const char *szSource, const char *szDestination, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv) {
+	HANDLE 				hSearch;
+	WIN32_FIND_DATAA	findData;
+	BOOL				bFound = TRUE;
+	char 				path[FF_MAX_PATH];
+	char				SourceDir[MAX_PATH];
+	const char 			*szWCsrc;
+	const char			*szWCdest;
+	BOOL				bDestHasWC = FALSE;
+	char c;
+	int i = 0;
+
+	strcpy(SourceDir, szSource);
+	strcpy(path, szDestination);
+
+	szWCsrc = getWildcard(szSource);
+	szWCdest = getWildcard(szDestination);
+
+	if(!strcmp(szWCsrc, szWCdest)) {
+		bDestHasWC = TRUE;
+	}
+
+	SourceDir[(szWCsrc - szSource)] = '\0';
+	
+	if(bDestHasWC) {
+		path[(szWCdest - szDestination)] = '\0';
+	}	
+
+	strcat(SourceDir, "*");
+	
+	hSearch = FindFirstFileA(SourceDir, &findData);
+
+	if(!FF_FindDir(pEnv->pIoman, path, strlen(path))) {
+		c = szDestination[strlen(szDestination) - 1];
+		if((c == '\\' || c == '/') && strlen(szDestination) > 1 ) {
+			strncpy(path, szDestination, strlen(szDestination) - 1);
+			path[strlen(szDestination) - 1] = '\0';
+		} else {
+			strcpy(path, szDestination);
+		}
+		FF_MkDir(pEnv->pIoman, path);
+	}
+
+	if(hSearch != INVALID_HANDLE_VALUE) {
+		do {
+			if(wildCompare(szWCsrc, findData.cFileName)) {
+				if(strcmp(findData.cFileName, ".") && strcmp(findData.cFileName, "..")) {
+
+					strcpy(SourceDir, szSource);
+					SourceDir[(szWCsrc - szSource)] = '\0';
+					copy_append_path(SourceDir, findData.cFileName);
+
+					strcpy(path, szDestination);
+					if(bDestHasWC) {
+						path[(szWCdest - szDestination)] = '\0';
+					}
+					copy_append_path(path, findData.cFileName);
+
+					if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+						if(bRecursive == FF_TRUE) {
+							c = SourceDir[strlen(SourceDir) - 1];
+	
+							if((c != '\\' && c != '/') ) {
+								strcat(SourceDir, "\\");
+							}
+
+							// add a \* on the end here!!!
+
+							strcat(SourceDir, "*");
+
+							icpwild_copy(SourceDir, path, FF_TRUE, pEnv);
+						}
+					} else {
+						printf("%s\n", path);
+						icp_copy(SourceDir, path, pEnv);
+					}
+				}
+			}
+			bFound = FindNextFileA(hSearch, &findData);
+		} while(bFound == TRUE);
+
+		FindClose(hSearch);
+	}
+
+	return 0;
+}
+
+
+int icp_copy(char *szSource, char *szDestination, FF_ENVIRONMENT *pEnv) {
+	FF_COPY_PROGRESS 	myProgress;
+	FF_COPY_THREAD		myThread;
+	FF_T_BOOL			bDone = FF_FALSE;
+	FF_T_BOOL			bInitiated = FF_FALSE;
+	FF_T_UINT32			BytesRead, SourceSize;
+
+	memset(&myProgress, 0, sizeof(FF_COPY_PROGRESS));
+	memset(&myThread, 0, sizeof(FF_COPY_THREAD));
+
+	myThread.szSource = szSource;
+	myThread.szDestination = szDestination;
+	myThread.pEnv = pEnv;
+	myThread.pProgress = &myProgress;
+
+	myProgress.pBuffer = malloc(COPY_BUFFER_SIZE);
+	myProgress.ulBufferSize = COPY_BUFFER_SIZE;
+	myProgress.pInfoSem = FF_CreateSemaphore();
+
+	myThread.hThread = CreateThread(0, 0, icp_copy_thread, &myThread, 0, &myThread.dwThreadID);
+
+	do {
+		FF_PendSemaphore(myProgress.pInfoSem);
+		{
+			bDone = myProgress.bDone;
+			bInitiated = myProgress.bInitiated;
+			//Get the bytes read etc.
+			BytesRead = myProgress.ulBytesComplete;
+			SourceSize = myProgress.ulTotalBytes;
+		}
+		FF_ReleaseSemaphore(myProgress.pInfoSem);
+
+		Sleep(1);
+
+	}while(bDone == FF_FALSE);
+
+	if(myProgress.ffErrorCode) {
+		printf("FullFAT reported and error: \n%s\n", FF_GetErrMessage(myProgress.ffErrorCode));
+	}
+
+	FF_DestroySemaphore(myProgress.pInfoSem);
+	free(myProgress.pBuffer);
+
+	return 0;
+}
+
+static FF_T_BOOL ff_isDir(char *path, FF_IOMAN *pIoman) {
+	FF_T_BOOL retVal = FF_FALSE;
+
+	if(FF_FindDir(pIoman, path, strlen(path))) {
+		retVal = FF_TRUE;
+	}
+
+	return retVal;
+}
+
+static BOOL win_isDir(char *path) {
+
+	HANDLE hSearch;
+	WIN32_FIND_DATAA findData;
+
+	BOOL retVal = FALSE;
+
+	hSearch = FindFirstFileA(path, &findData);
+
+	if(hSearch != INVALID_HANDLE_VALUE) {
+		if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			retVal = TRUE;
+		}
+	}
+
+	FindClose(hSearch);
+	
+	return retVal;
 }
 
 
@@ -812,86 +1060,53 @@ int icpwild_copy(char *szSource, char *szDestination) {
  *	@brief	Import copy command, copies a windows file into FullFAT
  **/
 int icp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	FF_IOMAN *pIoman = pEnv->pIoman;
-	FF_FILE *fDest;
-	FILE	*fSource;
-	FF_ERROR Error;
-
-	int i = 0;
-
-	FF_COPY_PROGRESS myProgress;
-	FF_COPY_THREAD	myThread;
-	FF_T_BOOL			bDone = FF_FALSE;
-	FF_T_BOOL			bInitiated = FF_FALSE;
-
-	FF_T_INT8 path[2600];
-	FF_T_UINT8 copybuf[COPY_BUFFER_SIZE];
-
-	FF_T_UINT32	BytesRead;
-	FF_T_UINT32	SourceSize;
-
-	LARGE_INTEGER ticksPerSecond;
-	LARGE_INTEGER start_ticks, end_ticks, cputime;
-	float time, transferRate;
-
-	QueryPerformanceFrequency(&ticksPerSecond);
 	
-	if(argc == 3) {
-		memset(&myProgress, 0, sizeof(FF_COPY_PROGRESS));
+	int i;
+	char *src = NULL;
+	char *dest = NULL;
+
+	FF_T_INT8	path[FF_MAX_PATH];
+
+	FF_T_BOOL bRecursive = FF_FALSE;
+	
+	if(argc >= 3 && argc <= 4) {
 		
-		myProgress.pBuffer = malloc(COPY_BUFFER_SIZE);
-		myProgress.ulBufferSize = COPY_BUFFER_SIZE;
-		myProgress.pInfoSem = FF_CreateSemaphore();
-
-		memset(&myThread, 0, sizeof(FF_COPY_THREAD));
-
-		myThread.szDestination = path;
-		myThread.szSource = argv[1];
-		myThread.pEnv = pEnv;
-		myThread.pProgress = &myProgress;
-
-		if(myProgress.pBuffer) {
-			ProcessPath(path, argv[2], pEnv);
-
-			QueryPerformanceFrequency(&start_ticks);
-
-			myThread.hThread = CreateThread(0, 0, icp_copy_thread, &myThread, 0, &myThread.dwThreadID);
-
-			do {
-				FF_PendSemaphore(myProgress.pInfoSem);
-				{
-					bDone = myProgress.bDone;
-					bInitiated = myProgress.bInitiated;
-					//Get the bytes read etc.
-					BytesRead = myProgress.ulBytesComplete;
-					SourceSize = myProgress.ulTotalBytes;
+		for(i = 1; i < argc; i++) {
+			if(strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--recursive") == 0) {
+				bRecursive = FF_TRUE;
+			} else {
+				// Mandatory argument!
+				if(!src) {
+					src = argv[i];
+				} else if(!dest) {
+					dest = argv[i];
 				}
-				FF_ReleaseSemaphore(myProgress.pInfoSem);
-
-				if(bInitiated) {
-					QueryPerformanceCounter(&end_ticks);
-
-					cputime.QuadPart = end_ticks.QuadPart - start_ticks.QuadPart;
-					time = ((float)cputime.QuadPart/(float)ticksPerSecond.QuadPart);
-					transferRate = (float)((float)BytesRead / 1024.0) / (float)((float)0.050 * (float)i++);
-					printf("%3.0f%% - %10ld Bytes Copied, %7.2f Kb/S\r", ((float)((float)BytesRead/(float)SourceSize) * 100), BytesRead, transferRate);
-				}
-
-				Sleep(50);
-
-			}while(bDone == FF_FALSE);
-
-			if(myProgress.ffErrorCode) {
-				printf("FullFAT reported and error: \n%s\n", FF_GetErrMessage(myProgress.ffErrorCode));
 			}
 		}
 
-		FF_DestroySemaphore(myProgress.pInfoSem);
-		free(myProgress.pBuffer);
+		ProcessPath(path, dest, pEnv);
+
+		if(strstr(src, "*")) {
+			icpwild_copy(src, path, bRecursive, pEnv);
+			return 0;
+		}
+
+		if(win_isDir(src)) {
+			if(bRecursive == FF_TRUE) {
+				icpdir_copy(src, path, bRecursive, pEnv);
+			} else {
+				printf("%s omitting directory '%s'\n", argv[0], src);
+			}
+
+			return 0;
+		}
 		
-	} else {
-		printf("Usage: %s [source file] [destination file]\n", argv[0]);
+		icp_copy(src, path, pEnv);
+		
+		return 0;
 	}
+
+	printf("Usage: %s [options] [source {WildCard}] [destination {WildCard}]\n", argv[0]);
 	return 0;
 }
 const FFT_ERR_TABLE icpInfo[] =
@@ -1034,57 +1249,161 @@ const FFT_ERR_TABLE viewInfo[] =
 	{ NULL }
 };
 
+int wild_rm(char *path, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv) {
+	FF_DIRENT	findData;
+	FF_ERROR	Error;
+
+	char 		TargetPath[FF_MAX_PATH];
+
+	const char 	*szWildCard = getWildcard(path);
+
+	strcpy(TargetPath, path);
+
+	TargetPath[(szWildCard - path)] = '\0';
+
+	Error = FF_FindFirst(pEnv->pIoman, &findData, TargetPath);
+
+	if(Error) {
+		return -1;
+	}
+
+	do {
+		if(strcmp(findData.FileName, ".") && strcmp(findData.FileName, "..")) {
+			
+			strcpy(TargetPath, path);
+			TargetPath[(szWildCard - path)] = '\0';
+			copy_append_path(TargetPath, findData.FileName);
+
+			if(findData.Attrib & FF_FAT_ATTR_DIR) {
+				// Item is a directory simply delete it!
+				if(bRecursive == FF_TRUE) {
+					copy_append_path(TargetPath, szWildCard);
+					wild_rm(TargetPath, bRecursive, pEnv);
+					if(wildCompare(szWildCard, findData.FileName)) {
+						strcpy(TargetPath, path);
+						TargetPath[(szWildCard - path)] = '\0';
+						copy_append_path(TargetPath, findData.FileName);
+						FF_RmDir(pEnv->pIoman, TargetPath);
+					}
+				}
+			} else {
+			
+				if(wildCompare(szWildCard, findData.FileName)) {
+					// Delete Object!
+					strcpy(TargetPath, path);
+					TargetPath[(szWildCard - path)] = '\0';
+					copy_append_path(TargetPath, findData.FileName);
+					
+					FF_RmFile(pEnv->pIoman, TargetPath);
+				}
+			}
+		}
+
+		Error = FF_FindNext(pEnv->pIoman, &findData);
+	} while(!Error);
+
+	return 0;
+}
+
+int dir_rm(const char *path, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv) {
+	FF_DIRENT 	findData;
+	FF_ERROR	Error;
+
+	char		TargetPath[FF_MAX_PATH];
+
+	Error = FF_FindFirst(pEnv->pIoman, &findData, path);
+
+	if(Error) {
+		return -1;
+	}
+
+	do {
+		if(strcmp(findData.FileName, ".") && strcmp(findData.FileName, "..")) {
+			strcpy(TargetPath, path);
+			copy_append_path(TargetPath, findData.FileName);
+			
+			if(findData.Attrib & FF_FAT_ATTR_DIR) {
+				// Item is a directory simply delete it!
+				if(bRecursive == FF_TRUE) {
+					dir_rm(TargetPath, bRecursive, pEnv);
+					FF_RmDir(pEnv->pIoman, TargetPath);
+				}
+			} else {
+				
+				FF_RmFile(pEnv->pIoman, TargetPath);
+			}
+		}
+		Error = FF_FindNext(pEnv->pIoman, &findData);
+	} while(!Error);
+
+	return 0;
+}
 
 /*
 	A View command to type out the contents of a file using FullFAT.
 */
 int rm_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
-	FF_ERROR	Error;
-	FF_DIRENT	mydir;	// Used to detect if its a file or folder.
-	FF_T_INT8	path[FF_MAX_PATH];
-	FF_T_INT8	realpath[FF_MAX_PATH];
-	FF_T_INT8	*pName;
 	int i;
+	char *argPath = NULL;
+	FF_ERROR Error;
 
-	if(argc == 2) {
+	FF_T_INT8	path[FF_MAX_PATH];
 
-		ProcessPath(path, argv[1], pEnv);
+	FF_T_BOOL bRecursive = FF_FALSE;
+	
+	if(argc >= 2 && argc <= 3) {
+		
+		for(i = 1; i < argc; i++) {
+			if(strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--recursive") == 0) {
+				bRecursive = FF_TRUE;
+			} else {
+				// Mandatory argument!
+				if(!argPath) {
+					argPath = argv[i];
+				}
+			}
+		}
 
-		for(i = strlen(path); ; i--) {
-			if(path[i] == '\\' || path[i] == '/') {
-				pName = &path[i + 1];
+		ProcessPath(path, argPath, pEnv);
+
+		// Wild Remove?
+		if(strstr(path, "*")) {
+			wild_rm(path, bRecursive, pEnv);
+			return 0;
+		}
+
+		if(ff_isDir(path, pEnv->pIoman)) {
+			if(bRecursive == FF_TRUE) {
+				dir_rm(path, bRecursive, pEnv);
+				FF_RmDir(pEnv->pIoman, path);
+			} else {
+				printf("%s: cannot remove '%s': Is a directory\n", argv[0], path);
+			}
+
+			return 0;
+		}
+		
+		// Simple file removal!
+
+		Error = FF_RmFile(pEnv->pIoman, path);
+
+		switch(Error) {
+			case FF_ERR_FILE_NOT_FOUND:
+				printf("%s: cannot remove '%s': No such file or directory\n", argv[0], path);
 				break;
-			}
+
+			default:
+				if(Error) {
+					printf("FullFAT Error: %s\n", FF_GetErrMessage(Error));
+				}
+				break;
 		}
-
-		memcpy(realpath, path, i + 1);
-		realpath[i+1] = '\0';
-
-		Error = FF_FindFirst(pEnv->pIoman, &mydir, realpath);
-
-		while(!FF_strmatch(mydir.FileName, pName, 0)) {
-			Error = FF_FindNext(pEnv->pIoman, &mydir);
-			if(Error) {	// File
-				printf("File or Folder not found!\n");
-				return 0;
-			}
-		}
-
-		if(mydir.Attrib & FF_FAT_ATTR_DIR) {
-			Error = FF_RmDir(pEnv->pIoman, path);
-		} else {
-			Error = FF_RmFile(pEnv->pIoman, path);
-		}
-
-		if(Error) {
-			printf("Could not remove file or folder: %s\n", FF_GetErrMessage(Error));
-		}
-
-
-	} else {
-		printf("Usage: %s [filename]\n", argv[0]);
+		
+		return 0;
 	}
+
+	printf("Usage: %s [options] [source {WildCard}] [destination {WildCard}]\n", argv[0]);
 	return 0;
 }
 const FFT_ERR_TABLE rmInfo[] =
