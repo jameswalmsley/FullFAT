@@ -125,77 +125,54 @@ FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT
 	
 	return -1;
 }
-/*
-FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name) {
 
-	FF_DIRENT MyDir;
 
-	if(FF_FindEntry(pIoman, DirCluster, name, &MyDir, FF_FALSE)) {
-		return FF_FALSE;
-	}
-	
-	return FF_TRUE;
-}*/
-
-FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name) {
+FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_T_INT8 *szShortName) {
 
     FF_T_UINT16 		i;
     FF_T_UINT8      	EntryBuffer[32];
     FF_T_UINT8     		Attrib;
 	FF_FETCH_CONTEXT	FetchContext;
+	FF_T_UINT32			ulHash;
 
-#ifdef FF_HASH_TABLE_SUPPORT
 
-		if(!FF_DirHashed(pIoman, DirCluster)) {
-			for(i = 0; i < 0xFFFF; i++) {
-				if(FF_FetchEntry(pIoman, DirCluster, i, EntryBuffer)) {
-					FF_SetDirHashed(pIoman, DirCluster);
-					break;
-				}
-				Attrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
-				if(FF_getChar(EntryBuffer, 0x00) != 0xE5) {
-					if(Attrib != FF_FAT_ATTR_LFN) {
-						if(FF_isEndOfDir(EntryBuffer)) {
-							FF_SetDirHashed(pIoman, DirCluster);
-							break;
-						}
-						FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
-						FF_AddDirentHash(pIoman, DirCluster, FF_GetCRC16((FF_T_UINT8 *) EntryBuffer, strlen(EntryBuffer)));
-					}
-				}
-			}
-		}
+#ifdef FF_HASH_CACHE
+	if(!FF_DirHashed(pIoman, ulDirCluster)) {
+		// Hash the directory
+		FF_HashDir(pIoman, ulDirCluster);
+	}
 
 #if FF_HASH_FUNCTION == CRC16
-		if(FF_CheckDirentHash(pIoman, DirCluster, (FF_T_UINT32)FF_GetCRC16((FF_T_UINT8 *) name, strlen(name)))) {
+	ulHash = (FF_T_UINT32) FF_GetCRC16((FF_T_UINT8 *) szShortName, strlen(szShortName));
 #elif FF_HASH_FUNCTION == CRC8
-		if(FF_CheckDirentHash(pIoman, DirCluster, (FF_T_UINT32)FF_GetCRC8((FF_T_UINT8 *) name, strlen(name)))) {
-#else
-		{
+	ulHash = (FF_T_UINT32) FF_GetCRC8((FF_T_UINT8 *) szShortName, strlen(szShortName));
 #endif
-#endif
-			FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
+	
+	if(!FF_CheckDirentHash(pIoman, ulDirCluster, ulHash)) {
+		return FF_FALSE;
+	}
 
-			for(i = 0; i < 0xFFFF; i++) {
-				FF_FetchEntryWithContext(pIoman, i, &FetchContext, EntryBuffer);
-				Attrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
-				if(FF_getChar(EntryBuffer, 0x00) != 0xE5) {
-					if(Attrib != FF_FAT_ATTR_LFN) {
-						FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
-						if(FF_isEndOfDir(EntryBuffer)) {
-								return FF_FALSE;
-						}
-						if(strcmp(name, (FF_T_INT8 *)EntryBuffer) == 0) {
-								return FF_TRUE;
-						}
-					}
+#endif
+
+	FF_InitEntryFetch(pIoman, ulDirCluster, &FetchContext);
+
+	for(i = 0; i < 0xFFFF; i++) {
+		FF_FetchEntryWithContext(pIoman, i, &FetchContext, EntryBuffer);
+		Attrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
+		if(FF_getChar(EntryBuffer, 0x00) != 0xE5) {
+			if(Attrib != FF_FAT_ATTR_LFN) {
+				FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
+				if(FF_isEndOfDir(EntryBuffer)) {
+					return FF_FALSE;
+				}
+				if(strcmp(szShortName, (FF_T_INT8 *)EntryBuffer) == 0) {
+					return FF_TRUE;
 				}
 			}
-#ifdef FF_HASH_TABLE_SUPPORT
 		}
-#endif
+	}
         
-        return FF_FALSE;
+    return FF_FALSE;
 }
 
 FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
@@ -812,13 +789,13 @@ void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *En
 	FF_ProcessShortName(pDirent->FileName);		// Format the shortname, for pleasant viewing.
 
 #ifdef FF_HASH_TABLE_SUPPORT
-#if FF_HASH_FUNCTION == CRC16
+/*#if FF_HASH_FUNCTION == CRC16
 	FF_AddDirentHash(pIoman, pDirent->DirCluster, (FF_T_UINT32)FF_GetCRC16((FF_T_UINT8 *) pDirent->FileName, strlen(pDirent->FileName)));
 #elif FF_HASH_FUNCTION == CRC8
 	FF_AddDirentHash(pIoman, pDirent->DirCluster, (FF_T_UINT32)FF_GetCRC8((FF_T_UINT8 *) pDirent->FileName, strlen(pDirent->FileName)));
-#endif
+#endif*/
 #else
-	pIoman = NULL;
+	//pIoman = NULL;
 #endif
 
 	FF_tolower(pDirent->FileName, (FF_T_UINT32)strlen(pDirent->FileName));
@@ -1018,55 +995,117 @@ FF_T_BOOL FF_isEndOfDir(FF_T_UINT8 *EntryBuffer) {
 	return FF_FALSE;
 }
 
-#ifdef FF_HASH_TABLE_SUPPORT
-FF_ERROR FF_AddDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash) {
+#ifdef FF_HASH_CACHE
+FF_ERROR FF_AddDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_T_UINT32 ulHash) {
 	FF_T_UINT32 i;
 	FF_HASH_TABLE pHash = NULL;
-	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-		if(pIoman->pPartition->PathCache[i].DirCluster == DirCluster) {
-			pHash = pIoman->pPartition->PathCache[i].pHashTable;
+	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
+		if(pIoman->HashCache[i].ulDirCluster == ulDirCluster) {
+			pHash = pIoman->HashCache[i].pHashTable;
 			break;
 		}
 	}
 
 	if(pHash) {
-		FF_SetHash(pHash, nHash);
+		FF_SetHash(pHash, ulHash);
 	}
 
 	return FF_ERR_NONE;
 }
 
-FF_T_BOOL FF_CheckDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash) {
+FF_T_BOOL FF_CheckDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_T_UINT32 ulHash) {
 	FF_T_UINT32 i;
 	FF_HASH_TABLE pHash = NULL;
-	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-		if(pIoman->pPartition->PathCache[i].DirCluster == DirCluster) {
-			pHash = pIoman->pPartition->PathCache[i].pHashTable;
+	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
+		if(pIoman->HashCache[i].ulDirCluster == ulDirCluster) {
+			pHash = pIoman->HashCache[i].pHashTable;
 			break;
 		}
 	}
 
 	if(pHash) {
-		return FF_isHashSet(pHash, nHash);
+		return FF_isHashSet(pHash, ulHash);
 	}
 
 	return FF_FALSE;
 }
 
-FF_T_BOOL FF_DirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
+FF_T_BOOL FF_DirHashed(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
 	FF_T_UINT32 i;
-	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-		if(pIoman->pPartition->PathCache[i].DirCluster == DirCluster) {
-			if(pIoman->pPartition->PathCache[i].bHashed) {
-				return FF_TRUE;
-			}
+	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
+		if(pIoman->HashCache[i].ulDirCluster == ulDirCluster) {
+			return FF_TRUE;
 		}
 	}
 
 	return FF_FALSE;
 }
 
-void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
+FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
+	// Find most suitable Hash Table to replace!
+	FF_T_UINT32 		i;
+	FF_HASHCACHE 		*pHashCache = NULL;
+	FF_FETCH_CONTEXT	FetchContext;
+	FF_T_UINT8			EntryBuffer[32], ucAttrib;
+	FF_T_UINT32			ulHash;
+
+	if(FF_DirHashed(pIoman, ulDirCluster)) {
+		return FF_ERR_NONE;			// Don't wastefully re-hash a dir!
+	}
+
+	printf("----- Hashing Directory\n");
+
+	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
+		if(!pIoman->HashCache[i].ulNumHandles) {
+			if(!pHashCache) {
+				pHashCache = &pIoman->HashCache[i];
+			} else {
+				if((pIoman->HashCache[i].ulMisses > pHashCache->ulMisses)) {
+					pHashCache = &pIoman->HashCache[i];
+				}
+			}
+		}
+	}
+
+	if(pHashCache) {
+		// Clear the hash table!
+		FF_ClearHashTable(pHashCache->pHashTable);
+		pHashCache->ulDirCluster = ulDirCluster;
+		pHashCache->ulMisses = 0;
+		
+		// Hash the directory!
+		
+		FF_InitEntryFetch(pIoman, ulDirCluster, &FetchContext);
+
+		for(i = 0; i < 0xFFFF; i++) {
+			FF_FetchEntryWithContext(pIoman, i, &FetchContext, EntryBuffer);
+			ucAttrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
+			if(FF_getChar(EntryBuffer, 0x00) != 0xE5) {
+				if(ucAttrib != FF_FAT_ATTR_LFN) {
+					FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
+					if(FF_isEndOfDir(EntryBuffer)) {
+						//return FF_FALSE;
+					}
+					
+					// Generate the Hash
+#if FF_HASH_FUNCTION == CRC16
+					ulHash = FF_GetCRC16(EntryBuffer, strlen((FF_T_SINT8 *) EntryBuffer));
+#elif FF_HASH_FUNCTION == CRC8
+					ulHash = FF_GetCRC8(EntryBuffer, strlen((FF_T_SINT8 *) EntryBuffer));
+#endif
+					FF_SetHash(pHashCache->pHashTable, ulHash);
+					
+				}
+			}
+		}
+
+		return FF_ERR_NONE;
+	}
+
+	return -1;
+}
+
+/*void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	int i;
 	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
 		if(pIoman->pPartition->PathCache[i].DirCluster == DirCluster) {
@@ -1074,7 +1113,7 @@ void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 			return;
 		}
 	}
-}
+}*/
 #endif
 
 
@@ -1131,11 +1170,11 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	}
 
 #ifdef FF_HASH_TABLE_SUPPORT
-#if FF_HASH_FUNCTION == CRC16
-	FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32)FF_GetCRC16((FF_T_UINT8 *) ShortName, strlen(ShortName)));
+/*#if FF_HASH_FUNCTION == CRC16
+	FF_AddDirentHash(pIoman, pFetchContext->ulDirCluster, (FF_T_UINT32)FF_GetCRC16((FF_T_UINT8 *) ShortName, strlen(ShortName)));
 #elif FF_HASH_FUNCTION == CRC8
 	FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32)FF_GetCRC8((FF_T_UINT8 *) ShortName, strlen(ShortName)));
-#endif
+#endif*/
 #endif
 	
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
@@ -1477,7 +1516,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	memcpy(MyShortName, ShortName, 11);
 	FF_ProcessShortName(MyShortName);
 	
-	if(!FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir) && FitsShort) {
+	if(FitsShort && !FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir)) {
 		return 0;
 	} else {
 		if(FitsShort) {
@@ -1494,6 +1533,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 			memcpy(MyShortName, ShortName, 11);
 			FF_ProcessShortName(MyShortName);
 			if(!FF_ShortNameExists(pIoman, DirCluster, MyShortName)) {
+				//FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32) FF_GetCRC16(MyShortName, strlen(MyShortName)));
 				return 0;
 			}
 		}
@@ -1621,7 +1661,7 @@ static void FF_MakeNameCompliant(FF_T_INT8 *Name) {
 		if(*Name < 0x20 || *Name == 0x7F || *Name == 0x22 || *Name == 0x7C) {	// Leave all extended chars as they are.
 			*Name = '_';
 		}
-		if(*Name >= 0x2A && *Name <= 0x2F && *Name != 0x2B && *Name != 0x2E) {
+		if(*Name >= 0x2A && *Name <= 0x2F && *Name != 0x2B && *Name != 0x2E && *Name != 0x2D) {
 			*Name = '_';
 		}
 		if(*Name >= 0x3A && *Name <= 0x3F) {

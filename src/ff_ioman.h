@@ -112,11 +112,22 @@ typedef struct {
 typedef struct {
 	FF_T_INT8	Path[FF_MAX_PATH];
 	FF_T_UINT32	DirCluster;
+	/*
 #ifdef FF_HASH_TABLE_SUPPORT
 	FF_HASH_TABLE pHashTable;
 	FF_T_BOOL	bHashed;
 #endif
+	*/
 } FF_PATHCACHE;
+
+#ifdef FF_HASH_CACHE
+typedef struct {
+	FF_T_UINT32		ulDirCluster;	///< The Starting Cluster of the dir that the hash represents.
+	FF_HASH_TABLE	pHashTable;		///< Pointer to the Hash Table object.
+	FF_T_UINT32		ulNumHandles;	///< Number of active Handles using this hash table.
+	FF_T_UINT32		ulMisses;		///< Number of times this Hash Table was missed, (i.e. how redundant it is).
+} FF_HASHCACHE;
+#endif
 
 /**
  *	@private
@@ -191,6 +202,9 @@ typedef struct {
 	FF_T_UINT8		PreventFlush;		///< Flushing to disk only allowed when 0
 	FF_T_UINT8		MemAllocation;		///< Bit-Mask identifying allocated pointers.
 	FF_T_UINT8		Locks;				///< Lock Flag for FAT & DIR Locking etc (This must be accessed via a semaphore).
+#ifdef FF_HASH_CACHE
+	FF_HASHCACHE	HashCache[FF_HASH_CACHE_DEPTH];
+#endif
 } FF_IOMAN;
 
 // Bit-Masks for Memory Allocation testing.

@@ -120,7 +120,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 FF_T_BOOL FF_CheckDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash);
 FF_T_BOOL FF_DirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 FF_ERROR FF_AddDirentHash(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash);
-void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
+FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster);
+
+//void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 
 void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry, FF_FETCH_CONTEXT *pContext);
 

@@ -153,9 +153,14 @@ FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tok
 		}
 		tokenEnd = i;
 	}
-	
-	memcpy(token, (string + tokenStart), (FF_T_UINT32)(tokenEnd - tokenStart));
-	token[tokenEnd - tokenStart] = '\0';
+	if((tokenEnd - tokenStart) < FF_MAX_FILENAME) {
+		memcpy(token, (string + tokenStart), (FF_T_UINT32)(tokenEnd - tokenStart));
+		token[tokenEnd - tokenStart] = '\0';
+	} else {
+		memcpy(token, (string + tokenStart), (FF_T_UINT32)(FF_MAX_FILENAME));
+		token[FF_MAX_FILENAME-1] = '\0';
+	}
+	//token[tokenEnd - tokenStart] = '\0';
 	*tokenNumber += 1;
 
 	return token;	
