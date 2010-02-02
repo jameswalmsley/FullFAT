@@ -80,7 +80,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 	FF_T_UINT8	ucPartitionType;
 	FF_T_SINT8	scPartitionCount;
 
-	FF_T_UINT32 ulPartitionBeginLBA, ulPartitionLength, ulPnum;
+	FF_T_UINT32 /*ulPartitionBeginLBA, ulPartitionLength,*/ ulPnum;
 
 	FF_ERROR	Error = FF_ERR_NONE;
 
@@ -124,7 +124,7 @@ FF_ERROR FF_Format(FF_IOMAN *pIoman, FF_T_UINT32 ulStartLBA, FF_T_UINT32 ulEndLB
 	ulTotalClusters = ulTotalSectors / (ulClusterSize / pIoman->BlkSize);
 
 
-
+	return -1;
 
 
 }

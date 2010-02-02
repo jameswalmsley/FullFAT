@@ -191,7 +191,7 @@ FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8
         return FF_FALSE;
 }
 
-FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
+FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
 
 	FF_T_UINT16		fnameLen;
 	FF_T_UINT16		compareLength;

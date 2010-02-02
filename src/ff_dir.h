@@ -82,7 +82,7 @@ typedef struct {
 		FF_T_SINT8	FF_PushEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer);
 		FF_T_BOOL	FF_isEndOfDir	(FF_T_UINT8 *EntryBuffer);
 		FF_T_SINT8	FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
-		FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
+		FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
 		FF_T_SINT8	FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName);
 
 void		FF_lockDIR		(FF_IOMAN *pIoman);
