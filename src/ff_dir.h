@@ -57,6 +57,7 @@ typedef struct {
 	FF_T_UINT32	ulCurrentClusterLCN;
 	FF_T_UINT32	ulCurrentClusterNum;
 	FF_T_UINT32	ulCurrentEntry;
+	FF_BUFFER	*pBuffer;
 } FF_FETCH_CONTEXT;
 
 typedef struct {
@@ -99,9 +100,11 @@ typedef struct {
 
 		FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_CONTEXT *pContext);
 		FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer);
-		FF_T_SINT8	FF_FetchEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pBuffer);
+		FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer);
+		void FF_CleanupEntryFetch(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext);
+		//FF_T_SINT8	FF_FetchEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pBuffer);
 
-		FF_T_SINT8	FF_PushEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer);
+		FF_T_SINT8	FF_PushEntry	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pParam);
 		FF_T_BOOL	FF_isEndOfDir	(FF_T_UINT8 *EntryBuffer);
 		FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT *pFetchContext);
 		//FF_T_SINT8	FF_FindNextInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
@@ -124,7 +127,8 @@ FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster);
 
 //void FF_SetDirHashed(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
 
-void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry, FF_FETCH_CONTEXT *pContext);
+//void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 DirEntry, FF_FETCH_CONTEXT *pContext);
+void FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT16 usDirEntry, FF_FETCH_CONTEXT *pContext);
 
 #endif
 

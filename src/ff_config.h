@@ -96,7 +96,7 @@
 //#define FF_INLINE static inline		// Standard for GCC
 
 //---------- Inline Memory Independence Routines for better performance, but bigger codesize.
-#define FF_INLINE_MEMORY_ACCESS
+//#define FF_INLINE_MEMORY_ACCESS
 //---------- Inline Block Calculation Routines for slightly better performance in critical sections.
 #define FF_INLINE_BLOCK_CALCULATIONS
 

@@ -376,10 +376,13 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_InitEntryFetch(pIoman, pFile->DirCluster, &FetchContext);
 			
 			// Edit the Directory Entry! (So it appears as deleted);
-			FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry, &FetchContext);
+			FF_RmLFNs(pIoman, pFile->DirEntry, &FetchContext);
 			FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 			EntryBuffer[0] = 0xE5;
-			FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+			//FF_ReleaseBuffer(pIoman, FetchContext.pBuffer);
+			//FetchContext.pBuffer = NULL;
+			//FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+			FF_PushEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 #ifdef FF_PATH_CACHE
 			FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
 			{
@@ -396,12 +399,16 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			
 			FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
 
+			FF_CleanupEntryFetch(pIoman, &FetchContext);
+
 			FF_FlushCache(pIoman);
 		} else {
 			RetVal = FF_ERR_DIR_NOT_EMPTY;
 		}
 	}
 	FF_unlockDIR(pIoman);
+
+	
 	
 	FF_Close(pFile); // Free the file pointer resources
 	// File is now lost!
@@ -434,10 +441,14 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_lockDIR(pIoman);
 	{
 		FF_InitEntryFetch(pIoman, pFile->DirCluster, &FetchContext);
-		FF_RmLFNs(pIoman, pFile->DirCluster, pFile->DirEntry, &FetchContext);
+		FF_RmLFNs(pIoman, pFile->DirEntry, &FetchContext);
 		FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 		EntryBuffer[0] = 0xE5;
-		FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+		//FF_ReleaseBuffer(pIoman, FetchContext.pBuffer);
+		//FetchContext.pBuffer = NULL;
+		//FF_PushEntry(pIoman, pFile->DirCluster, pFile->DirEntry, EntryBuffer);
+		FF_PushEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
+		FF_CleanupEntryFetch(pIoman, &FetchContext);
 	}
 	FF_unlockDIR(pIoman);
 
@@ -531,11 +542,13 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 			FF_lockDIR(pIoman);
 			{
 
-				FF_RmLFNs(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, &FetchContext);
+				FF_RmLFNs(pIoman, pSrcFile->DirEntry, &FetchContext);
 				FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
 				//FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
 				EntryBuffer[0] = 0xE5;
-				FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+				//FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+				FF_PushEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);
 			}
 			FF_unlockDIR(pIoman);
 			FF_Close(pSrcFile);
