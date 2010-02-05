@@ -5,6 +5,15 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Header Files\FFTerm">
+      <UniqueIdentifier>{a0f982db-cc2a-4040-8410-88fa8ebaf3e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\FullFAT">
+      <UniqueIdentifier>{faaaf8a3-2940-4933-9fdb-7e554b3f2ecf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\SuperCache">
+      <UniqueIdentifier>{cc8ccb01-30a2-4a86-b3d1-118226fe6c25}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
@@ -22,6 +31,9 @@
     <Filter Include="Source Files\FullFAT">
       <UniqueIdentifier>{3513790f-1c1c-45f9-8594-99c7826ef38c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\SuperCache">
+      <UniqueIdentifier>{7dd9df49-ec84-4e9a-bfbf-24e086de8e51}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Commands.c">
@@ -35,6 +47,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c">
       <Filter>Source Files\FFTerm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\SuperCache\src\sc_error.c">
+      <Filter>Source Files\SuperCache</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\SuperCache\src\sc_supercache.c">
+      <Filter>Source Files\SuperCache</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c">
       <Filter>Source Files\Driver</Filter>
@@ -52,6 +70,9 @@
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ff_dir.c">
+      <Filter>Source Files\FullFAT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\ff_dir2.c">
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ff_error.c">
@@ -90,5 +111,88 @@
     <ClCompile Include="..\..\VS2008\FullFAT\test_threads.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Commands.h">
+      <Filter>Header Files\FFTerm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Config.h">
+      <Filter>Header Files\FFTerm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Error.h">
+      <Filter>Header Files\FFTerm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Platform.h">
+      <Filter>Header Files\FFTerm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Types.h">
+      <Filter>Header Files\FFTerm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm.h">
+      <Filter>Header Files\FFTerm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\SuperCache\src\sc_error.h">
+      <Filter>Header Files\SuperCache</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\SuperCache\src\sc_supercache.h">
+      <Filter>Header Files\SuperCache</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\SuperCache\src\sc_types.h">
+      <Filter>Header Files\SuperCache</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_blk.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_config.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_crc.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_dir.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_dir2.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_error.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_fat.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_fatdef.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_file.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_format.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_hash.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_ioman.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_memory.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_safety.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_string.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_time.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_types.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\fullfat.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

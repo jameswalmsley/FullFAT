@@ -45,23 +45,26 @@ int main(void) {
 	FF_IOMAN		*pIoman;							// FullFAT I/O Manager Pointer, to be created.
 	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 	HANDLE			hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
+	FF_DIRENT	myDir;
 
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 
+	
+
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
 	hDisk = fnOpen("c:\\ImageFile1.img", 512);
 	
-	//hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	//hDisk = fnOpen("\\\\.\\F:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
 
 	if(hDisk) {
 		//---------- Create FullFAT IO Manager
-		pIoman = FF_CreateIOMAN(NULL, 4096, GetBlockSize(hDisk), &Error);	// Using the BlockSize from the Device Driver (see blkdev_win32.c)
+		pIoman = FF_CreateIOMAN(NULL, 8192, GetBlockSize(hDisk), &Error);	// Using the BlockSize from the Device Driver (see blkdev_win32.c)
 
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.
@@ -115,7 +118,7 @@ int main(void) {
 				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
 				FFTerm_AddCmd	(pConsole, "md5win",	(FFT_FN_COMMAND)	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
 				FFTerm_AddCmd	(pConsole, "run",		(FFT_FN_COMMAND)	run_cmd,		runInfo);				// Special Run Command.
-				FFTerm_AddCmd	(pConsole, "time",		(FFT_FN_COMMAND)	time_cmd,		timeInfo);				// Time Command.
+				//FFTerm_AddCmd	(pConsole, "time",		(FFT_FN_COMMAND)	time_cmd,		timeInfo);				// Time Command.
 				FFTerm_AddCmd	(pConsole, "date",		(FFT_FN_COMMAND)	date_cmd,		dateInfo);				// Date Command.
 				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
 				FFTerm_AddCmd	(pConsole, "hexview",	(FFT_FN_COMMAND)	hexview_cmd,	hexviewInfo);			// File Hexviewer.
@@ -130,6 +133,9 @@ int main(void) {
 				//icpdir_copy("c:\\test\\", "\\test\\", FF_FALSE, &Env);
 				//int icpwild_copy(const char *szSource, const char *szDestination, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv)
 				//icpwild_copy("c:\\test\\ff\\fullfat\\src\\*.c", "\\ffsrc\\", FF_FALSE, &Env);
+
+//				FF_FindFirst(Env.pIoman, &myDir, "\\ff\\FFTerm\\src\\*.c");
+//				FF_FindNext(Env.pIoman, &myDir);
 				
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).

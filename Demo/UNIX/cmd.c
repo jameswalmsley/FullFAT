@@ -191,6 +191,7 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_DIRENT mydir;					// DIRENT object.
 	int  i = 0;
 	FF_ERROR tester = 0;
+	FF_T_INT8	path[FF_MAX_PATH];
 
 	printf("Type \"%s ?\" for an attribute legend.\n", argv[0]);
 	
@@ -208,13 +209,15 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			return 0;
 		}
 
+		ProcessPath(path, argv[1], pEnv);	// Make path absolute if relative.
+
 										// Otherwise try to open a provided path.
-		if(!FF_FindDir(pIoman, argv[1], (FF_T_UINT16) strlen(argv[1]))) {
-			printf("Path %s Not Found!\n\n", argv[1]);	// Dir not found!
+		/*if(!FF_FindDir(pIoman, path, (FF_T_UINT16) strlen(path))) {
+			printf("Path %s Not Found!\n\n", path);	// Dir not found!
 			return 0;
-		}
-		tester = FF_FindFirst(pIoman, &mydir, argv[1]);	// Find first Object.
-		printf("Directory Listing of: %s\n", argv[1]);
+		}*/
+		tester = FF_FindFirst(pIoman, &mydir, path);	// Find first Object.
+		printf("Directory Listing of: %s\n", path);
 	} else {
 		printf("Usage: %s\n", argv[0]);
 		printf("Or: %s ? \t// Displays a legend!\n", argv[0]);

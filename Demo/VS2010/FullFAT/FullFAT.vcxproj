@@ -56,6 +56,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -82,12 +83,15 @@
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Error.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Platform.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c" />
+    <ClCompile Include="..\..\..\..\SuperCache\src\sc_error.c" />
+    <ClCompile Include="..\..\..\..\SuperCache\src\sc_supercache.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_safety_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_time_win32.c" />
     <ClCompile Include="..\..\..\src\ff_blk.c" />
     <ClCompile Include="..\..\..\src\ff_crc.c" />
     <ClCompile Include="..\..\..\src\ff_dir.c" />
+    <ClCompile Include="..\..\..\src\ff_dir2.c" />
     <ClCompile Include="..\..\..\src\ff_error.c" />
     <ClCompile Include="..\..\..\src\ff_fat.c" />
     <ClCompile Include="..\..\..\src\ff_file.c" />
@@ -100,6 +104,35 @@
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\test_threads.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Commands.h" />
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Config.h" />
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Error.h" />
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Platform.h" />
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Types.h" />
+    <ClInclude Include="..\..\..\..\ffterm\src\FFTerm.h" />
+    <ClInclude Include="..\..\..\..\SuperCache\src\sc_error.h" />
+    <ClInclude Include="..\..\..\..\SuperCache\src\sc_supercache.h" />
+    <ClInclude Include="..\..\..\..\SuperCache\src\sc_types.h" />
+    <ClInclude Include="..\..\..\src\ff_blk.h" />
+    <ClInclude Include="..\..\..\src\ff_config.h" />
+    <ClInclude Include="..\..\..\src\ff_crc.h" />
+    <ClInclude Include="..\..\..\src\ff_dir.h" />
+    <ClInclude Include="..\..\..\src\ff_dir2.h" />
+    <ClInclude Include="..\..\..\src\ff_error.h" />
+    <ClInclude Include="..\..\..\src\ff_fat.h" />
+    <ClInclude Include="..\..\..\src\ff_fatdef.h" />
+    <ClInclude Include="..\..\..\src\ff_file.h" />
+    <ClInclude Include="..\..\..\src\ff_format.h" />
+    <ClInclude Include="..\..\..\src\ff_hash.h" />
+    <ClInclude Include="..\..\..\src\ff_ioman.h" />
+    <ClInclude Include="..\..\..\src\ff_memory.h" />
+    <ClInclude Include="..\..\..\src\ff_safety.h" />
+    <ClInclude Include="..\..\..\src\ff_string.h" />
+    <ClInclude Include="..\..\..\src\ff_time.h" />
+    <ClInclude Include="..\..\..\src\ff_types.h" />
+    <ClInclude Include="..\..\..\src\fullfat.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
