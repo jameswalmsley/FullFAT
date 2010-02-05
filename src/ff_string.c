@@ -166,7 +166,12 @@ FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tok
 	return token;	
 }
 
-
+/*
+	A Wild-Card Comparator Library function, Provided by Adam Fullerton.
+	This can be extended or altered to improve or advance wildCard matching
+	of the FF_FindFirst() and FF_FindNext() API's.
+*/
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
 FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
     /* Check to see if the string contains the wild card */
     if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
@@ -236,4 +241,4 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
 
     return FF_TRUE;
 }
-
+#endif

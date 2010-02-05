@@ -61,26 +61,29 @@ typedef struct {
 } FF_FETCH_CONTEXT;
 
 typedef struct {
-	FF_T_INT8	FileName[FF_MAX_FILENAME];
-	FF_T_UINT8	Attrib;
 	FF_T_UINT32 Filesize;
 	FF_T_UINT32	ObjectCluster;
-
+	
+	// Book Keeping
+	FF_T_UINT32	CurrentCluster;
+	FF_T_UINT32 AddrCurrentCluster;
+	FF_T_UINT32	DirCluster;
+	FF_T_UINT16	CurrentItem;
+	// End Book Keeping
+		
 #ifdef FF_TIME_SUPPORT	
 	FF_SYSTEMTIME	CreateTime;		///< Date and Time Created.
 	FF_SYSTEMTIME	ModifiedTime;	///< Date and Time Modified.
 	FF_SYSTEMTIME	AccessedTime;	///< Date of Last Access.
 #endif
 
-	//---- Book Keeping for FF_Find Functions
-	FF_T_UINT16	CurrentItem;	
-	FF_T_UINT32	DirCluster;
-	FF_T_UINT32	CurrentCluster;
-	FF_T_UINT32 AddrCurrentCluster;
-	//FF_T_UINT8	NumLFNs;
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
+	FF_T_INT8	szWildCard[FF_MAX_FILENAME];
+#endif
 
+	FF_T_INT8	FileName[FF_MAX_FILENAME];
+	FF_T_UINT8	Attrib;
 	FF_FETCH_CONTEXT FetchContext;
-
 } FF_DIRENT;
 
 

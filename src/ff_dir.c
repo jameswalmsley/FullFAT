@@ -1317,13 +1317,39 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT16	PathLen = (FF_T_UINT16) strlen(path);
-	
+
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS	
+	FF_T_UINT16 i = 0;
+	const FF_T_INT8	*szWildCard;	// Check for a Wild-card.
+#endif
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER;
 	}
 
+	// Detect a Wild-Card on the End, or Filename, as apposed to a complete path.
 	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen);	// Get the directory cluster, if it exists.
+
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
+	pDirent->szWildCard[0] = '\0';	// WildCard blank if its not a wildCard.
+	if(!pDirent->DirCluster) {
+		// Possibly not a complete path! -- Try and open without final token of the path.
+		szWildCard = &path[PathLen - 1];
+		while(*szWildCard != '\\' && *szWildCard != '/') {
+			i++;
+			szWildCard--;
+			if(!(PathLen - i)) {
+				break;
+			}
+		}
+				
+		pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen - i);
+		if(pDirent->DirCluster) {
+			// Valid Dir found, copy the wildCard to filename!
+			strncpy(pDirent->szWildCard, ++szWildCard, FF_MAX_FILENAME);
+		}
+	}
+#endif
 
 	if(pDirent->DirCluster == 0) {
 		return FF_ERR_DIR_INVALID_PATH;
@@ -1360,8 +1386,22 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 				if(EntryBuffer[0] != FF_FAT_DELETED) {
 					FF_PopulateLongDirent(pIoman, pDirent, pDirent->CurrentItem, &pDirent->FetchContext);
 					//FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
+					
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
+					if(strcmp(pDirent->szWildCard, "")) {
+						if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
+							FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+							return FF_ERR_NONE;							
+						}
+						pDirent->CurrentItem -= 1;
+					} else {
+						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						return FF_ERR_NONE;
+					}
+#else
 					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 					return FF_ERR_NONE;
+#endif
 				}
 #else 
 				pDirent->CurrentItem += (numLFNs - 1);
@@ -1371,9 +1411,24 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 			
 			} else {
 				FF_PopulateShortDirent(pIoman, pDirent, EntryBuffer);
-				pDirent->CurrentItem += 1;
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
+				if(strcmp(pDirent->szWildCard, "")) {
+					if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
+						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						pDirent->CurrentItem += 1;
+						return FF_ERR_NONE;							
+					}
+				} else {
+					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+					pDirent->CurrentItem += 1;
+					return FF_ERR_NONE;
+				}
+#else
+
 				FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+				pDirent->CurrentItem += 1;
 				return FF_ERR_NONE;
+#endif
 			}
 		}
 	}
@@ -1433,8 +1488,21 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 				if(EntryBuffer[0] != FF_FAT_DELETED) {
 					//FF_PopulateLongDirent(pIoman, pDirent, pDirent->DirCluster, pDirent->CurrentItem);
 					FF_PopulateLongDirent(pIoman, pDirent, pDirent->CurrentItem, &pDirent->FetchContext);
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
+					if(strcmp(pDirent->szWildCard, "")) {
+						if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
+							FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+							return FF_ERR_NONE;							
+						}
+						pDirent->CurrentItem -= 1;
+					} else {
+						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						return FF_ERR_NONE;
+					}
+#else
 					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 					return FF_ERR_NONE;
+#endif
 				}
 #else 
 				pDirent->CurrentItem += (numLFNs - 1);
@@ -1444,9 +1512,24 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 			
 			} else {
 				FF_PopulateShortDirent(pIoman, pDirent, EntryBuffer);
-				pDirent->CurrentItem += 1;
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
+				if(strcmp(pDirent->szWildCard, "")) {
+					if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
+						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						pDirent->CurrentItem += 1;
+						return FF_ERR_NONE;
+					}
+				} else {
+					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+					pDirent->CurrentItem += 1;
+					return FF_ERR_NONE;
+				}
+#else
+
 				FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+				pDirent->CurrentItem += 1;
 				return FF_ERR_NONE;
+#endif
 			}
 		}
 	}

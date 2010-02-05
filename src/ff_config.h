@@ -65,6 +65,9 @@
 //#define FF_MOUNT_FIND_FREE			// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
 										// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
 
+//---------- FIND API WILD-CARD SUPPORT
+#define FF_FINDAPI_ALLOW_WILDCARDS		// Defined to enable Wild-cards in the API. Disabling this, makes the API consistent with 1.0.x series.
+
 //---------- PATH CACHE
 //#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
