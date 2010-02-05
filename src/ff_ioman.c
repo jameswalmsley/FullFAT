@@ -211,7 +211,9 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
  **/
 FF_ERROR FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 
+#ifdef FF_HASH_CACHE
 	FF_T_UINT32 i;
+#endif
 
 	// Ensure no NULL pointer was provided.
 	if(!pIoman) {

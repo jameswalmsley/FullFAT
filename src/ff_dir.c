@@ -133,7 +133,9 @@ FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_T_IN
     FF_T_UINT8      	EntryBuffer[32];
     FF_T_UINT8     		Attrib;
 	FF_FETCH_CONTEXT	FetchContext;
+#ifdef FF_HASH_CACHE
 	FF_T_UINT32			ulHash;
+#endif
 
 
 #ifdef FF_HASH_CACHE
@@ -840,7 +842,7 @@ FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_
 	pContext->ulCurrentClusterNum 	= 0;
 	pContext->ulCurrentEntry		= 0;
 
-	/*if(pIoman->pPartition->Type != FF_T_FAT32) {
+	if(pIoman->pPartition->Type != FF_T_FAT32) {
 		// Handle Root Dirs that don't have cluster chains!
 		if(pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
 			// This is a RootDIR, special consideration needs to be made, because it doesn't have a Cluster chain!
@@ -849,7 +851,7 @@ FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_
 				pContext->ulChainLength = 1;
 			}
 		}
-	}*/
+	}
 
 	return FF_ERR_NONE;
 }
@@ -880,7 +882,7 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 		pContext->ulCurrentClusterNum = ulClusterNum;
 	}
 
-	/*if(pIoman->pPartition->Type != FF_T_FAT32) {
+	if(pIoman->pPartition->Type != FF_T_FAT32) {
 		// Handle Root Dirs that don't have cluster chains!
 		if(pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
 			// This is a RootDIR, special consideration needs to be made, because it doesn't have a Cluster chain!
@@ -890,7 +892,7 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 				return FF_ERR_DIR_END_OF_DIR;
 			}
 		}
-	}*/
+	}
 
 	if((ulClusterNum + 1) > pContext->ulChainLength) {
 		return FF_ERR_DIR_END_OF_DIR;	// End of Dir was reached!
@@ -968,6 +970,18 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
 			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulDirCluster, ulClusterNum);
 		}
 		pContext->ulCurrentClusterNum = ulClusterNum;
+	}
+
+	if(pIoman->pPartition->Type != FF_T_FAT32) {
+		// Handle Root Dirs that don't have cluster chains!
+		if(pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
+			// This is a RootDIR, special consideration needs to be made, because it doesn't have a Cluster chain!
+			pContext->ulCurrentClusterLCN = pContext->ulDirCluster;
+			ulClusterNum = 0;
+			if(ulEntry > ((pIoman->pPartition->RootDirSectors * pIoman->pPartition->BlkSize) / 32)) {
+				return FF_ERR_DIR_END_OF_DIR;
+			}
+		}
 	}
 
 	if((ulClusterNum + 1) > pContext->ulChainLength) {
@@ -1129,7 +1143,7 @@ FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
 		return FF_ERR_NONE;			// Don't wastefully re-hash a dir!
 	}
 
-	printf("----- Hashing Directory\n");
+	//printf("----- Hashing Directory\n");
 
 	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
 		if(!pIoman->HashCache[i].ulNumHandles) {

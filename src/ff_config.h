@@ -66,21 +66,21 @@
 										// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
 
 //---------- PATH CACHE
-#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
+//#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 										// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
-#define FF_PATH_CACHE_DEPTH		10		// The Number of PATH's to Cache. (Memory Requirement ~= FF_PATH_CACHE_DEPTH * FF_MAX_PATH).
+#define FF_PATH_CACHE_DEPTH		5		// The Number of PATH's to Cache. (Memory Requirement ~= FF_PATH_CACHE_DEPTH * FF_MAX_PATH).
 
 //---------- Hash Table Support
-#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
-#define FF_HASH_CACHE_DEPTH		2		// Number of Directories to be Hashed. (For CRC16 memory is 8KB * DEPTH)
+//#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
+#define FF_HASH_CACHE_DEPTH		10		// Number of Directories to be Hashed. (For CRC16 memory is 8KB * DEPTH)
 #define FF_HASH_FUNCTION		CRC16	// Choose a 16-bit hash. 
 //#define FF_HASH_FUNCTION		CRC8	// Choose an 8-bit hash.
 
 
 //---------- BLKDEV USES SEMAPHORE
-#define FF_BLKDEV_USES_SEM				// When defined, each call to fnReadBlocks and fnWriteBlocks will be done while semaphore is locked
+//#define FF_BLKDEV_USES_SEM				// When defined, each call to fnReadBlocks and fnWriteBlocks will be done while semaphore is locked
 										// See also ff_safety.c
 										// (HT addition) - Thanks to Hein Tibosch
 
@@ -119,7 +119,7 @@
 #ifdef FF_LFN_SUPPORT
 #define FF_MAX_FILENAME		(129)
 #else
-#define	FF_MAX_FILENAME		13
+#define	FF_MAX_FILENAME		(13)
 #endif
 
 #ifdef FF_USE_NATIVE_STDIO
