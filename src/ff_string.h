@@ -44,6 +44,7 @@
 #define _FF_STRING_H_
 
 #include "ff_types.h"
+#include "ff_config.h"
 
 void			FF_tolower	(FF_T_INT8 *string, FF_T_UINT32 strLen);
 void			FF_toupper	(FF_T_INT8 *string, FF_T_UINT32 strLen);

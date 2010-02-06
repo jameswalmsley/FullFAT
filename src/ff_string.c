@@ -172,11 +172,11 @@ FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tok
 	of the FF_FindFirst() and FF_FindNext() API's.
 */
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
-FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
-    /* Check to see if the string contains the wild card */
+/*FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
+    // Check to see if the string contains the wild card 
     if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
     {
-        /* if it does not then do a straight string compare */
+        // if it does not then do a straight string compare
         if (strcmp(pszWildCard, pszString))
         {
             return FF_FALSE;
@@ -187,20 +187,20 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
         while ((*pszWildCard)
         &&     (*pszString))
         {
-            /* Test for the wild card */
+            // Test for the wild card 
             if (*pszWildCard == '*')
             {
-                /* Eat more than one */
+                // Eat more than one 
                 while (*pszWildCard == '*')
                 {
                     pszWildCard++;
                 }
-                /* If there are more chars in the string */
+                // If there are more chars in the string
                 if (*pszWildCard)
                 {
-                    /* Search for the next char */
+                    // Search for the next char
                     pszString = memchr(pszString, (int)*pszWildCard,  strlen(pszString));
-                    /* if it does not exist then the strings don't match */
+                    // if it does not exist then the strings don't match
                     if (!pszString)
                     {
                         return FF_FALSE;
@@ -211,7 +211,7 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
                 {
                     if (*pszWildCard)
                     {
-                        /* continue */
+                        // continue
                         break;      
                     }
                     else
@@ -222,17 +222,17 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
             }
             else 
             {
-                /* Fail if they don't match */
+                // Fail if they don't match 
                 if (*pszWildCard != *pszString)
                 {
                     return FF_FALSE;
                 }
             }
-            /* Bump both pointers */
+            // Bump both pointers
             pszWildCard++;
             pszString++;
         }
-        /* fail if different lengths */
+        // fail if different lengths 
         if (*pszWildCard != *pszString)
         {
             return FF_FALSE;
@@ -240,5 +240,44 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
     }
 
     return FF_TRUE;
+}*/
+/*
+	This is a better Wild-card compare function, that works perfectly, and is much more efficient.
+	This function was contributed by one of our commercial customers.
+*/
+FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
+    register const FF_T_INT8 *pszWc 	= NULL;
+	register const FF_T_INT8 *pszStr 	= NULL;	// Encourage the string pointers to be placed in memory.
+    do {
+        if ( *pszWildCard == '*' ) {
+			while(*(1 + pszWildCard++) == '*'); // Eat up multiple '*''s
+			pszWc = (pszWildCard - 1);
+            pszStr = pszString;
+        }
+		if (*pszWildCard == '?' && !*pszString) {
+			return FF_FALSE;	// False when the string is ended, yet a ? charachter is demanded.
+		}
+#ifdef FF_WILDCARD_CASE_INSENSITIVE
+        if (*pszWildCard != '?' && tolower(*pszWildCard) != tolower(*pszString)) {
+#else
+		if (*pszWildCard != '?' && *pszWildCard != *pszString) {
+#endif
+			if (pszWc == NULL) {
+				return FF_FALSE;
+			}
+            pszWildCard = pszWc;
+            pszString = pszStr++;
+        }
+    } while ( *pszWildCard++ && *pszString++ );
+
+	while(*pszWildCard == '*') {
+		pszWildCard++;
+	}
+
+	if(!*pszWildCard) {	// WildCard is at the end. (Terminated)
+		return FF_TRUE;	// Therefore this must be a match.
+	}
+
+	return FF_FALSE;	// If not, then return FF_FALSE!
 }
 #endif

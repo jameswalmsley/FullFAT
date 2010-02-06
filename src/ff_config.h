@@ -68,6 +68,8 @@
 //---------- FIND API WILD-CARD SUPPORT
 #define FF_FINDAPI_ALLOW_WILDCARDS		// Defined to enable Wild-cards in the API. Disabling this, makes the API consistent with 1.0.x series.
 
+#define FF_WILDCARD_CASE_INSENSITIVE	// Alter the case insensitivity of the Wild-card checking behaviour.
+
 //---------- PATH CACHE
 //#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
