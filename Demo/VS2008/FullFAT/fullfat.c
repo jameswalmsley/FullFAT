@@ -31,12 +31,57 @@
 
 
 #include "cmd.h"										// The Demo's Header File for shell commands.
+#include "cmd_helpers.h"								// FF_GetOpts();
 #include "test_threads.h"
 #include "../../../src/fullfat.h"						// Include everything required for FullFAT.
 #include "../../../../FFTerm/src/FFTerm.h"				// Include the FFTerm project header.
 #include "../../../Drivers/Windows/blkdev_win32.h"		// Prototypes for our Windows 32-bit driver.
 
 #define PARTITION_NUMBER	1							// FullFAT can mount primary partitions only. Specified at Runtime.
+
+int getopttester(int argc, char **argv) {
+	FF_GETOPT_CONTEXT Ctx;
+	int option;
+
+	Ctx.nextchar 	= 0;
+	Ctx.optarg		= 0;
+	Ctx.optind		= 0;
+	Ctx.optopt		= 0;
+
+	if(argc < 3) {
+		printf("Usage: \n");
+		return 0;
+	}
+
+	option = FF_getopt((argc - 2), (argv + 2), argv[1], &Ctx);
+
+	if(option != EOF) {
+
+		do {
+			switch(option) {
+				case '?':
+					printf("Unrecognised option on commandline: %c\n", Ctx.optopt);
+					break;
+
+				case ':':
+					printf("Missing option argument\n");
+					break;
+
+				default:
+					printf("Option %c detected.", option);
+					if(Ctx.optarg) {
+						printf(" with argument: %s", Ctx.optarg);
+					}
+					printf("\n");
+					break;
+			}
+
+			option = FF_getopt((argc - 2), (argv + 2), argv[1], &Ctx);
+		} while(option != EOF);
+	}
+
+	return 0;
+}
 
 int main(void) {
 	
@@ -55,7 +100,7 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\ImageFile1.img", 512);
+	hDisk = fnOpen("c:\\ImageFile.img", 512);
 	
 	//hDisk = fnOpen("\\\\.\\F:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
@@ -129,10 +174,14 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "tlist",		(FFT_FN_COMMAND_EX) listthreads_cmd,	listthreadsInfo,&Env);
 				FFTerm_AddExCmd(pConsole, "tkill",		(FFT_FN_COMMAND_EX) killthread_cmd,		killthreadInfo,	&Env);
 
+				FFTerm_AddCmd(pConsole, "getopt", getopttester, NULL);
+
 				//int icpdir_copy(const char *szSource, const char *szDestination, FF_BOOL bRecursive)
 				//icpdir_copy("c:\\test\\", "\\test\\", FF_FALSE, &Env);
 				//int icpwild_copy(const char *szSource, const char *szDestination, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv)
 				//icpwild_copy("c:\\test\\ff\\fullfat\\src\\*.c", "\\ffsrc\\", FF_FALSE, &Env);
+
+				//ls_dir("\\", FF_TRUE, FF_TRUE, &Env);
 
 //				FF_FindFirst(Env.pIoman, &myDir, "\\ff\\FFTerm\\src\\*.c");
 //				FF_FindNext(Env.pIoman, &myDir);

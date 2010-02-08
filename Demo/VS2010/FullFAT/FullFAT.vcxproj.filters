@@ -48,12 +48,6 @@
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c">
       <Filter>Source Files\FFTerm</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\SuperCache\src\sc_error.c">
-      <Filter>Source Files\SuperCache</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\SuperCache\src\sc_supercache.c">
-      <Filter>Source Files\SuperCache</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c">
       <Filter>Source Files\Driver</Filter>
     </ClCompile>
@@ -70,9 +64,6 @@
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ff_dir.c">
-      <Filter>Source Files\FullFAT</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\ff_dir2.c">
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ff_error.c">
@@ -100,6 +91,12 @@
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
     <ClCompile Include="..\..\VS2008\FullFAT\cmd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\VS2008\FullFAT\cmd_helpers.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\VS2008\FullFAT\dir.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c">
@@ -152,9 +149,6 @@
     <ClInclude Include="..\..\..\src\ff_dir.h">
       <Filter>Header Files\FullFAT</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\ff_dir2.h">
-      <Filter>Header Files\FullFAT</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\ff_error.h">
       <Filter>Header Files\FullFAT</Filter>
     </ClInclude>
@@ -193,6 +187,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\fullfat.h">
       <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\VS2008\FullFAT\cmd_helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\VS2008\FullFAT\dir.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

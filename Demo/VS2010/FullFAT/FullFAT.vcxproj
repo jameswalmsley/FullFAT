@@ -83,15 +83,12 @@
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Error.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Platform.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c" />
-    <ClCompile Include="..\..\..\..\SuperCache\src\sc_error.c" />
-    <ClCompile Include="..\..\..\..\SuperCache\src\sc_supercache.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_safety_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_time_win32.c" />
     <ClCompile Include="..\..\..\src\ff_blk.c" />
     <ClCompile Include="..\..\..\src\ff_crc.c" />
     <ClCompile Include="..\..\..\src\ff_dir.c" />
-    <ClCompile Include="..\..\..\src\ff_dir2.c" />
     <ClCompile Include="..\..\..\src\ff_error.c" />
     <ClCompile Include="..\..\..\src\ff_fat.c" />
     <ClCompile Include="..\..\..\src\ff_file.c" />
@@ -101,6 +98,8 @@
     <ClCompile Include="..\..\..\src\ff_memory.c" />
     <ClCompile Include="..\..\..\src\ff_string.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\cmd.c" />
+    <ClCompile Include="..\..\VS2008\FullFAT\cmd_helpers.c" />
+    <ClCompile Include="..\..\VS2008\FullFAT\dir.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\test_threads.c" />
@@ -119,7 +118,6 @@
     <ClInclude Include="..\..\..\src\ff_config.h" />
     <ClInclude Include="..\..\..\src\ff_crc.h" />
     <ClInclude Include="..\..\..\src\ff_dir.h" />
-    <ClInclude Include="..\..\..\src\ff_dir2.h" />
     <ClInclude Include="..\..\..\src\ff_error.h" />
     <ClInclude Include="..\..\..\src\ff_fat.h" />
     <ClInclude Include="..\..\..\src\ff_fatdef.h" />
@@ -133,6 +131,8 @@
     <ClInclude Include="..\..\..\src\ff_time.h" />
     <ClInclude Include="..\..\..\src\ff_types.h" />
     <ClInclude Include="..\..\..\src\fullfat.h" />
+    <ClInclude Include="..\..\VS2008\FullFAT\cmd_helpers.h" />
+    <ClInclude Include="..\..\VS2008\FullFAT\dir.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

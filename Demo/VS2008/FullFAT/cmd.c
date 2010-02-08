@@ -33,6 +33,8 @@
 #include "md5.h"
 #include <stdio.h>
 #include <windows.h>
+#include "dir.h"
+#include "cmd_helpers.h"
 
 
 /**
@@ -65,13 +67,13 @@ static void ExpandPath(char *acPath);
 static void FF_PrintDir(FF_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };	// String of Attribute Flags.
 	if(pDirent->Attrib & FF_FAT_ATTR_READONLY)
-			attr[0] = 'R';
+		attr[0] = 'R';
 	if(pDirent->Attrib & FF_FAT_ATTR_HIDDEN)
-			attr[1] = 'H';
+		attr[1] = 'H';
 	if(pDirent->Attrib & FF_FAT_ATTR_SYSTEM)
-			attr[2] = 'S';
+		attr[2] = 'S';
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
-			attr[3] = 'D';
+		attr[3] = 'D';
 #ifdef FF_TIME_SUPPORT	// Different Print formats dependent on if Time support is built-in.
 	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
 #else
@@ -79,7 +81,19 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 #endif
 }
 
+static void SD_PrintDirent(SD_DIRENT *pDirent) {
+	unsigned char attr[5] = { '-','-','-','-', '\0' };	// String of Attribute Flags.
+	if(pDirent->ulAttributes & SD_ATTRIBUTE_RDONLY)
+		attr[0] = 'R';
+	if(pDirent->ulAttributes & SD_ATTRIBUTE_HIDDEN)
+		attr[1] = 'H';
+	if(pDirent->ulAttributes & SD_ATTRIBUTE_SYSTEM)
+		attr[2] = 'S';
+	if(pDirent->ulAttributes & SD_ATTRIBUTE_DIR)
+		attr[3] = 'D';
 
+	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu  %s\n", pDirent->tmCreated.cDay, pDirent->tmCreated.cMonth, pDirent->tmCreated.iYear, pDirent->tmCreated.cHour, pDirent->tmCreated.cMinute, attr, pDirent->ulFileSize, pDirent->szFileName);
+}
 
 
 /**
@@ -177,7 +191,203 @@ const FFT_ERR_TABLE pwdInfo[] =
 };
 
 
+static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
+	pDest->tmCreated.cDay = pSource->CreateTime.Day;
+	pDest->tmCreated.cMonth = pSource->CreateTime.Month;
+	pDest->tmCreated.iYear = pSource->CreateTime.Year;
+	pDest->tmCreated.cHour = pSource->CreateTime.Hour;
+	pDest->tmCreated.cMinute = pSource->CreateTime.Minute;
+	pDest->tmCreated.cSecond = pSource->CreateTime.Second;
 
+	pDest->tmLastAccessed.cDay = pSource->AccessedTime.Day;
+	pDest->tmLastAccessed.cMonth = pSource->AccessedTime.Month;
+	pDest->tmLastAccessed.iYear = pSource->AccessedTime.Year;
+	pDest->tmLastAccessed.cHour = pSource->AccessedTime.Hour;
+	pDest->tmLastAccessed.cMinute = pSource->AccessedTime.Minute;
+	pDest->tmLastAccessed.cSecond = pSource->AccessedTime.Second;
+
+	pDest->tmCreated.cDay = pSource->CreateTime.Day;
+	pDest->tmCreated.cMonth = pSource->CreateTime.Month;
+	pDest->tmCreated.iYear = pSource->CreateTime.Year;
+	pDest->tmCreated.cHour = pSource->CreateTime.Hour;
+	pDest->tmCreated.cMinute = pSource->CreateTime.Minute;
+	pDest->tmCreated.cSecond = pSource->CreateTime.Second;
+}
+
+int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
+	FF_DIRENT	findData;
+	FF_ERROR	Result;
+	SD_ERROR	RetVal;
+	SD_DIR		Dir;
+	SD_DIRENT	Dirent;
+	char		recursivePath[FF_MAX_PATH];
+	
+	int columns, columnWidth;
+	int i;
+
+	// First Pass to calculate column widths!
+	Result = FF_FindFirst(pEnv->pIoman, &findData, szPath);
+
+	if(Result) {
+		return -5; // No dirs;
+	}
+
+	// Create the Directory object.
+	Dir = SD_CreateDir();
+
+	// Feed in the directory data!
+
+	do {
+		Dirent.szFileName = findData.FileName;
+		Dirent.ulFileSize = findData.Filesize;
+		
+		// Created Time Stamp!
+		transferdatetime(&findData, &Dirent);
+		
+		Dirent.ulAttributes = 0;
+
+		// Process the attributes!
+		if(findData.Attrib & FF_FAT_ATTR_READONLY)
+			Dirent.ulAttributes |= SD_ATTRIBUTE_RDONLY;
+		if(findData.Attrib & FF_FAT_ATTR_HIDDEN)
+			Dirent.ulAttributes |= SD_ATTRIBUTE_HIDDEN;
+		if(findData.Attrib & FF_FAT_ATTR_SYSTEM)
+			Dirent.ulAttributes |= SD_ATTRIBUTE_SYSTEM;
+		if(findData.Attrib & FF_FAT_ATTR_DIR)
+			Dirent.ulAttributes |= SD_ATTRIBUTE_DIR;
+		if(findData.Attrib & FF_FAT_ATTR_ARCHIVE)
+			Dirent.ulAttributes |= SD_ATTRIBUTE_ARCHIVE;
+
+		SD_AddDirent(Dir, &Dirent);
+
+		Result = FF_FindNext(pEnv->pIoman, &findData);
+	} while(!Result);
+
+	// Second Pass to print the columns nicely.
+
+	columns = FFTerm_GetConsoleWidth() / (SD_GetMaxFileName(Dir) + 2);
+	columnWidth = FFTerm_GetConsoleWidth() / columns;
+	
+	if(!columns) {
+		columns++;
+	}
+
+	RetVal = SD_FindFirst(Dir, &Dirent);
+
+	if(!bList) {
+		do {
+			for(i = 0; i < columns; i++) {
+				if(bShowHidden) {
+					printf("%-*s", columnWidth, Dirent.szFileName);
+				} else {
+					if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
+						printf("%-*s", columnWidth, Dirent.szFileName);
+					}
+				}
+				RetVal = SD_FindNext(Dir, &Dirent);
+				if(RetVal) {
+					break;
+				}
+			}
+		} while(!RetVal);
+
+	} else {
+		do {
+			if(bShowHidden) {
+				if(!(bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
+					SD_PrintDirent(&Dirent);
+				}
+			} else {
+									
+				if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
+					if(!(bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
+						SD_PrintDirent(&Dirent);
+					}
+				}
+			}
+			RetVal = SD_FindNext(Dir, &Dirent);
+		} while(!RetVal);
+	}
+	printf("\n");
+
+	if(bRecursive) {
+		RetVal = SD_FindFirst(Dir, &Dirent);
+
+		do {
+			if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
+				if(!(Dirent.szFileName[0] == '.' && (Dirent.szFileName[1] == '.' || Dirent.szFileName[1] == '\0'))) {
+					strcpy(recursivePath, szPath);
+					if(recursivePath[strlen(recursivePath) - 1] != '\\' && recursivePath[strlen(recursivePath) - 1] != '/') {
+						strcat(recursivePath, "\\");
+					}
+					
+					strcat(recursivePath, Dirent.szFileName);
+					printf("./%s:\n", recursivePath);
+					ls_dir(recursivePath, bList, bRecursive, bShowHidden, pEnv);
+				}
+			}
+			
+			RetVal = SD_FindNext(Dir, &Dirent);
+		} while(!RetVal);
+	}
+	
+	SD_CleanupDir(Dir);	// Cleanup the directory!
+
+	return 0;
+}
+
+int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+	FF_T_INT8	path[FF_MAX_PATH];
+	const char 		*szPath;
+	FF_T_BOOL	bRecursive = FF_FALSE, bList = FF_FALSE, bShowHidden = FF_FALSE;
+	FF_GETOPT_CONTEXT	Ctx;
+
+	int option;
+
+	Ctx.optind = 0;
+	Ctx.optarg = 0;
+	Ctx.optopt = 0;
+	Ctx.nextchar = 0;
+
+	// Process command line arguments
+
+	option = FF_getopt(argc, argv, "rRlLaA", &Ctx);
+
+	if(option != EOF) {
+		do {
+			switch(option) {
+				case 'r':
+				case 'R':
+					bRecursive = FF_TRUE;
+					break;
+
+				case 'l':
+				case 'L':
+					bList = FF_TRUE;
+					break;
+
+				case 'a':
+				case 'A':
+					bShowHidden = FF_TRUE;
+					break;
+
+				default:
+					break;
+			}
+
+			option = FF_getopt(argc, argv, "rRlLaA", &Ctx);
+		} while(option != EOF);
+	}
+
+	szPath = FF_getarg(argc, argv, 1);	// The first non option argument is the path!
+
+	if(szPath) {
+		ProcessPath(path, szPath, pEnv);
+		return ls_dir(path, bList, bRecursive, bShowHidden, pEnv);
+	}
+
+	return ls_dir(pEnv->WorkingDir, bList, bRecursive, bShowHidden, pEnv);
+}
 
 /**
  *	@public
@@ -187,11 +397,11 @@ const FFT_ERR_TABLE pwdInfo[] =
  *
  *	PARAMS are explained above.
  **/
-int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+/*int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_IOMAN *pIoman = pEnv->pIoman;	// FF_IOMAN object from the Environment
 	FF_DIRENT mydir;					// DIRENT object.
 	int  i = 0;
-	FF_ERROR tester = 0;
+	FF_ERROR Result = 0;
 	FF_T_INT8	path[FF_MAX_PATH];
 
 	printf("Type \"%s ?\" for an attribute legend.\n", argv[0]);
@@ -212,12 +422,13 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		ProcessPath(path, argv[1], pEnv);	// Make path absolute if relative.
 
-										// Otherwise try to open a provided path.
-		/*if(!FF_FindDir(pIoman, path, (FF_T_UINT16) strlen(path))) {
-			printf("Path %s Not Found!\n\n", path);	// Dir not found!
+		Result = FF_FindFirst(pIoman, &mydir, path);	// Find first Object.
+
+		if(Result) {
+			printf("%s: cannot access %s: No such file or directory.\n", argv[0], argv[1]);
 			return 0;
-		}*/
-		tester = FF_FindFirst(pIoman, &mydir, path);	// Find first Object.
+		}
+
 		printf("Directory Listing of: %s\n", path);
 	} else {
 		printf("Usage: %s\n", argv[0]);
@@ -246,7 +457,7 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	printf("\n");
 
 	return 0;
-}
+}*/
 const FFT_ERR_TABLE lsInfo[] =
 {
 	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
@@ -1782,6 +1993,8 @@ const FFT_ERR_TABLE timeInfo[] =
 	{"Displays the current time.",	FFT_COMMAND_DESCRIPTION},
 	{ NULL }
 };
+
+
 
 
 /**

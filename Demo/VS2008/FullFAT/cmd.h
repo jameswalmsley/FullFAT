@@ -96,6 +96,9 @@ int drivelist_cmd	(int argc, char **argv);
 int icpdir_copy(const char *szSource, const char *szDestination, FF_T_BOOL bRecursive, FF_ENVIRONMENT *pEnv);
 int icp_copy(char *szSource, char *szDestination, FF_ENVIRONMENT *pEnv);
 
+// Ordered Dir Listings
+int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
+
 extern void KillAllThreads(void);
 
 #endif
