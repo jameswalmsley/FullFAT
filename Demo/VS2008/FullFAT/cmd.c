@@ -121,7 +121,7 @@ static void SD_PrintDirent(SD_DIRENT *pDirent) {
  *	@param	pEnv	Pointer to an FF_ENVIRONMENT object.
  *
  **/
-void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv) {
+void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
 	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
 			sprintf(dest, "\\%s", src);
@@ -203,26 +203,26 @@ const FFT_ERR_TABLE pwdInfo[] =
 
 
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
-	pDest->tmCreated.cDay = pSource->CreateTime.Day;
-	pDest->tmCreated.cMonth = pSource->CreateTime.Month;
-	pDest->tmCreated.iYear = pSource->CreateTime.Year;
-	pDest->tmCreated.cHour = pSource->CreateTime.Hour;
-	pDest->tmCreated.cMinute = pSource->CreateTime.Minute;
-	pDest->tmCreated.cSecond = pSource->CreateTime.Second;
+	pDest->tmCreated.cDay = (unsigned char) pSource->CreateTime.Day;
+	pDest->tmCreated.cMonth = (unsigned char) pSource->CreateTime.Month;
+	pDest->tmCreated.iYear = (int) pSource->CreateTime.Year;
+	pDest->tmCreated.cHour = (unsigned char) pSource->CreateTime.Hour;
+	pDest->tmCreated.cMinute = (unsigned char) pSource->CreateTime.Minute;
+	pDest->tmCreated.cSecond = (unsigned char) pSource->CreateTime.Second;
 
-	pDest->tmLastAccessed.cDay = pSource->AccessedTime.Day;
-	pDest->tmLastAccessed.cMonth = pSource->AccessedTime.Month;
+	pDest->tmLastAccessed.cDay = (unsigned char) pSource->AccessedTime.Day;
+	pDest->tmLastAccessed.cMonth = (unsigned char)pSource->AccessedTime.Month;
 	pDest->tmLastAccessed.iYear = pSource->AccessedTime.Year;
-	pDest->tmLastAccessed.cHour = pSource->AccessedTime.Hour;
-	pDest->tmLastAccessed.cMinute = pSource->AccessedTime.Minute;
-	pDest->tmLastAccessed.cSecond = pSource->AccessedTime.Second;
+	pDest->tmLastAccessed.cHour = (unsigned char) pSource->AccessedTime.Hour;
+	pDest->tmLastAccessed.cMinute = (unsigned char) pSource->AccessedTime.Minute;
+	pDest->tmLastAccessed.cSecond = (unsigned char) pSource->AccessedTime.Second;
 
-	pDest->tmCreated.cDay = pSource->CreateTime.Day;
-	pDest->tmCreated.cMonth = pSource->CreateTime.Month;
+	pDest->tmCreated.cDay = (unsigned char) pSource->CreateTime.Day;
+	pDest->tmCreated.cMonth = (unsigned char) pSource->CreateTime.Month;
 	pDest->tmCreated.iYear = pSource->CreateTime.Year;
-	pDest->tmCreated.cHour = pSource->CreateTime.Hour;
-	pDest->tmCreated.cMinute = pSource->CreateTime.Minute;
-	pDest->tmCreated.cSecond = pSource->CreateTime.Second;
+	pDest->tmCreated.cHour = (unsigned char) pSource->CreateTime.Hour;
+	pDest->tmCreated.cMinute = (unsigned char) pSource->CreateTime.Minute;
+	pDest->tmCreated.cSecond = (unsigned char) pSource->CreateTime.Second;
 }
 
 int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
@@ -338,6 +338,8 @@ int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL 
 		} while(!RetVal);
 	}
 	printf("\n");
+	
+	printf("%lu items.\n", SD_GetTotalItems(Dir));
 
 	if(bRecursive) {
 		RetVal = SD_FindFirst(Dir, &Dirent);

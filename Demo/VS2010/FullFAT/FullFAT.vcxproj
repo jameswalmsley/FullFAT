@@ -51,7 +51,7 @@
       <Optimization>Disabled</Optimization>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS; _CRT_NONSTDC_NO_WARNINGS;</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +131,7 @@
     <ClInclude Include="..\..\..\src\ff_time.h" />
     <ClInclude Include="..\..\..\src\ff_types.h" />
     <ClInclude Include="..\..\..\src\fullfat.h" />
+    <ClInclude Include="..\..\VS2008\FullFAT\cmd.h" />
     <ClInclude Include="..\..\VS2008\FullFAT\cmd_helpers.h" />
     <ClInclude Include="..\..\VS2008\FullFAT\dir.h" />
   </ItemGroup>

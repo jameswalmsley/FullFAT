@@ -40,7 +40,7 @@ typedef struct {							// Provides an environment for the FullFAT commands.
 	FF_T_INT8	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
 } FF_ENVIRONMENT;
 
-void ProcessPath(char *dest, char *src, FF_ENVIRONMENT *pEnv);
+void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv);
 
 extern const FFT_ERR_TABLE promptInfo[];
 extern const FFT_ERR_TABLE pwdInfo[];

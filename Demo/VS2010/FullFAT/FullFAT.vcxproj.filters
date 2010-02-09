@@ -188,6 +188,9 @@
     <ClInclude Include="..\..\..\src\fullfat.h">
       <Filter>Header Files\FullFAT</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\VS2008\FullFAT\cmd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\VS2008\FullFAT\cmd_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>

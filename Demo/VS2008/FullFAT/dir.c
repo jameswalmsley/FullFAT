@@ -93,6 +93,7 @@ SD_ERROR SD_SortDirents(SD_DIR Dir) {
 
 SD_ERROR SD_AddDirent(SD_DIR Dir, SD_DIRENT *pDirent) {
 	SD_DIRENT *myDirent = (SD_DIRENT *) malloc(sizeof(SD_DIRENT));
+	SD_DIRENT *pSortDirent;
 
 	int i;
 
@@ -107,17 +108,44 @@ SD_ERROR SD_AddDirent(SD_DIR Dir, SD_DIRENT *pDirent) {
 	myDirent->szFileName = (char *) malloc(i + 1);
 	strcpy(myDirent->szFileName, pDirent->szFileName);
 	
-	myDirent->pNextEntry = Dir->pFirstEntry;
-	Dir->pFirstEntry = myDirent;
+	/*myDirent->pNextEntry = Dir->pFirstEntry;
+	Dir->pFirstEntry = myDirent;*/
+
+	if(!Dir->pFirstEntry) {
+		Dir->pFirstEntry = myDirent;
+		myDirent->pNextEntry = NULL;
+	} else {
+		pSortDirent = Dir->pFirstEntry;
+		while(pSortDirent->pNextEntry && stricmp(pSortDirent->szFileName, myDirent->szFileName) < 0) {
+			pSortDirent = pSortDirent->pNextEntry;
+		}
+
+		if(pSortDirent == Dir->pFirstEntry) {
+			// Sort out a first entry swap?
+			if(stricmp(myDirent->szFileName, pSortDirent->szFileName) < 0) {
+				myDirent->pNextEntry = pSortDirent;
+				Dir->pFirstEntry = myDirent;
+			} else {
+				myDirent->pNextEntry = pSortDirent->pNextEntry;
+				pSortDirent->pNextEntry = myDirent;
+			}
+		} else {
+			myDirent->pNextEntry = pSortDirent->pNextEntry;
+			pSortDirent->pNextEntry = myDirent;
+		}
+
+		
+	}
+
 
 	Dir->ulTotalItems += 1;
 	Dir->ulTotalMemory += sizeof(SD_DIRENT) + i + 1;
 	
-	if(i > Dir->ulMaxNameLength) {
+	if((unsigned) i > Dir->ulMaxNameLength) {
 		Dir->ulMaxNameLength = i;
 	}
 
-	SD_SortDirents(Dir);
+	//SD_SortDirents(Dir);
 
 	return 0;
 }
@@ -143,4 +171,8 @@ SD_ERROR SD_FindNext(SD_DIR Dir, SD_DIRENT *pFindData) {
 
 unsigned long SD_GetMaxFileName(SD_DIR Dir) {
 	return Dir->ulMaxNameLength;
+}
+
+unsigned long SD_GetTotalItems(SD_DIR Dir) {
+	return Dir->ulTotalItems;
 }

@@ -39,6 +39,7 @@ SD_ERROR SD_AddDirent	(SD_DIR Dir, SD_DIRENT *pDirent);
 SD_ERROR SD_FindNext	(SD_DIR Dir, SD_DIRENT *pFindData);
 SD_ERROR SD_FindFirst	(SD_DIR Dir, SD_DIRENT *pFindData);
 unsigned long SD_GetMaxFileName(SD_DIR Dir);
+unsigned long SD_GetTotalItems(SD_DIR Dir);
 
 
 #endif

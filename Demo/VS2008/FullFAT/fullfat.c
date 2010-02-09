@@ -90,8 +90,7 @@ int main(void) {
 	FF_IOMAN		*pIoman;							// FullFAT I/O Manager Pointer, to be created.
 	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 	HANDLE			hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
-	FF_DIRENT	myDir;
-
+	
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
