@@ -100,7 +100,7 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\ImageFile.img", 512);
+	hDisk = fnOpen("c:\\ImageFile1.img", 512);
 	
 	//hDisk = fnOpen("\\\\.\\F:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 

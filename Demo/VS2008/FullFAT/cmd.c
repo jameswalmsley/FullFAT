@@ -81,6 +81,8 @@ static void FF_PrintDir(FF_DIRENT *pDirent) {
 #endif
 }
 
+#define DIR_COLOUR FFT_FOREGROUND_BLUE | FFT_FOREGROUND_GREEN | FFT_FOREGROUND_INTENSITY
+
 static void SD_PrintDirent(SD_DIRENT *pDirent) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };	// String of Attribute Flags.
 	if(pDirent->ulAttributes & SD_ATTRIBUTE_RDONLY)
@@ -89,10 +91,19 @@ static void SD_PrintDirent(SD_DIRENT *pDirent) {
 		attr[1] = 'H';
 	if(pDirent->ulAttributes & SD_ATTRIBUTE_SYSTEM)
 		attr[2] = 'S';
-	if(pDirent->ulAttributes & SD_ATTRIBUTE_DIR)
+	if(pDirent->ulAttributes & SD_ATTRIBUTE_DIR) {
 		attr[3] = 'D';
+	}
 
-	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu  %s\n", pDirent->tmCreated.cDay, pDirent->tmCreated.cMonth, pDirent->tmCreated.iYear, pDirent->tmCreated.cHour, pDirent->tmCreated.cMinute, attr, pDirent->ulFileSize, pDirent->szFileName);
+	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu", pDirent->tmCreated.cDay, pDirent->tmCreated.cMonth, pDirent->tmCreated.iYear, pDirent->tmCreated.cHour, pDirent->tmCreated.cMinute, attr, pDirent->ulFileSize);
+	
+	if(pDirent->ulAttributes & SD_ATTRIBUTE_DIR) {
+		FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
+	}
+	
+	printf("  %s\n",  pDirent->szFileName);
+	
+	FFTerm_SetConsoleColour(FFT_FOREGROUND_GREY);
 }
 
 
@@ -265,8 +276,13 @@ int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL 
 
 	// Second Pass to print the columns nicely.
 
-	columns = FFTerm_GetConsoleWidth() / (SD_GetMaxFileName(Dir) + 2);
-	columnWidth = FFTerm_GetConsoleWidth() / columns;
+	columns = (FFTerm_GetConsoleWidth()-1) / (SD_GetMaxFileName(Dir) + 1);
+
+	if(columns > 5) {
+		columns = 5;
+	}
+
+	columnWidth = (FFTerm_GetConsoleWidth()-1)/ columns;
 	
 	if(!columns) {
 		columns++;
@@ -278,16 +294,29 @@ int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL 
 		do {
 			for(i = 0; i < columns; i++) {
 				if(bShowHidden) {
+					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
+						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
+					}
 					printf("%-*s", columnWidth, Dirent.szFileName);
 				} else {
+					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
+						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
+					}
 					if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
 						printf("%-*s", columnWidth, Dirent.szFileName);
+					} else {
+						i--;	// Make sure hidden items don't cause unequal wrapping!
 					}
 				}
+				
+				FFTerm_SetConsoleColour(FFT_FOREGROUND_GREY);
 				RetVal = SD_FindNext(Dir, &Dirent);
 				if(RetVal) {
 					break;
 				}
+			}
+			if(!RetVal) {
+				printf("\n");
 			}
 		} while(!RetVal);
 
