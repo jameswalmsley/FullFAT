@@ -246,6 +246,7 @@ FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tok
 	This is a better Wild-card compare function, that works perfectly, and is much more efficient.
 	This function was contributed by one of our commercial customers.
 */
+
 FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
     register const FF_T_INT8 *pszWc 	= NULL;
 	register const FF_T_INT8 *pszStr 	= NULL;	// Encourage the string pointers to be placed in memory.
@@ -281,4 +282,5 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
 
 	return FF_FALSE;	// If not, then return FF_FALSE!
 }
+
 #endif

@@ -11,7 +11,7 @@ const char *FF_getarg(int argc, const char **argv, int idx) {
 	int argCount = 0;
 
 	for(i = 0; i < argc; i++) {
-		if(argv[i][0] != '-' && argv[i][1] != '-') {
+		if(argv[i][0] != '-') {
 			if(argCount == idx) {
 				return argv[i];
 			}

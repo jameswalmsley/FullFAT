@@ -71,7 +71,7 @@
 #define FF_WILDCARD_CASE_INSENSITIVE	// Alter the case insensitivity of the Wild-card checking behaviour.
 
 //---------- PATH CACHE
-//#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
+#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 										// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
