@@ -162,6 +162,8 @@ int FF_getopt_long_only(int argc, const char **argv, const char *optstring, FF_G
 			return '?';
 		}
 	}
+
+	return EOF;
 }
 
 
@@ -241,4 +243,16 @@ int FF_getopt_long(int argc, const char **argv, const char *optstring, FF_GETOPT
 	ctx->optind = 0;
 
 	return EOF;
+}
+
+int	append_filename(char *path, char *filename) {
+	int i = strlen(path);
+
+	while(path[i] != '\\' && path[i] != '/') {
+		i--;
+	}
+
+	strcpy(&path[i+1], filename);
+
+	return 0;
 }

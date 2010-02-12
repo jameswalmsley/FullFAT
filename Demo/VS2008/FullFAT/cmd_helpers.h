@@ -2,6 +2,9 @@
 	Provides a library to help command lines!
 */
 
+#ifndef _CMD_HELPERS_
+#define _CMD_HELPERS_
+
 #define no_argument			0
 #define required_argument 	1
 #define optional_argument	2
@@ -34,3 +37,6 @@ int FF_getopt			(int argc, const char **argv, const char *optstring, FF_GETOPT_C
 int FF_getopt_long		(int argc, const char **argv, const char *optstring, FF_GETOPTLONG_CONTEXT *ctx);
 int FF_getopt_long_only	(int argc, const char **argv, const char *optstring, FF_GETOPTLONG_CONTEXT *ctx);
 const char *FF_getarg	(int argc, const char **argv, int argindex);
+int	append_filename(char *path, char *filename);
+
+#endif
