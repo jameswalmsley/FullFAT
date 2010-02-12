@@ -78,6 +78,7 @@ typedef struct _FF_FILE {
 FF_FILE		*FF_Open		(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ERROR *pError);
 FF_ERROR	 FF_Close		(FF_FILE *pFile);
 FF_T_SINT32	 FF_GetC		(FF_FILE *pFile);
+FF_T_SINT32  FF_GetLine		(FF_FILE *pFile, FF_T_INT8 *szLine, FF_T_UINT32 ulLimit);
 FF_T_SINT32	 FF_Read		(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_SINT32	 FF_Write		(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, FF_T_UINT8 *buffer);
 FF_T_BOOL	 FF_isEOF		(FF_FILE *pFile);

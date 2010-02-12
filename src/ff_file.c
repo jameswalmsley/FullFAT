@@ -1051,6 +1051,45 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	return (FF_T_INT32) retChar;
 }
 
+
+/**
+ * @public
+ * @brief	Gets a Line from a Text File, but no more than ulLimit charachters. The line will be NULL terminated.
+ *
+ *			The behaviour of this function is undefined when called on a binary file.
+ *			It should just read in ulLimit bytes of binary, and ZERO terminate the line.
+ *
+ *			This function works for both UNIX line feeds, and Windows CRLF type files.
+ *
+ * @param	pFile	The FF_FILE object pointer.
+ * @param	szLine	The charachter buffer where the line should be stored.
+ * @param	ulLimit	This should be the max number of charachters that szLine can hold.
+ *
+ * @return	The number of charachters read from the line, on success.
+ * @return	0 when no more lines are available, or when ulLimit is 0.
+ * @return	FF_ERR_NULL_POINTER if pFile or szLine are NULL;
+ *
+ **/
+FF_T_SINT32 FF_GetLine(FF_FILE *pFile, FF_T_INT8 *szLine, FF_T_UINT32 ulLimit) {
+	FF_T_SINT32 c;
+	FF_T_UINT32 i;
+
+	if(!pFile || !szLine) {
+		return FF_ERR_NULL_POINTER;
+	}
+
+	for(i = 0; i < (ulLimit - 1) && (c=FF_GetC(pFile)) >= 0 && c != '\n'; ++i) {
+		if(c == '\r') {
+			i--;
+		} else {
+			szLine[i] = (FF_T_INT8) c;
+		}
+	}
+
+	szLine[i] = '\0';
+	return i;
+}
+
 FF_T_UINT32 FF_Tell(FF_FILE *pFile) {
 	return pFile->FilePointer;
 }
