@@ -1304,6 +1304,22 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
  *	All values recorded in pDirent must be preserved to and between calls to
  *	FF_FindNext().
  *
+ *	If FF_FINDAPI_ALLOW_WILDCARDS is defined, then path will have the following behaviour:
+ *
+ *	path = "/" 					- Open the root dir, and iterate through all items.
+ *	path = "/*.c"				- Open the root dir, showing only files matching *.c wildcard.
+ *	path = "/sub1/newdir"		- Get the DIRENT for the newdir directory in /sub1/ if one exists.
+ *	path = "/sub1/newdir/"		- Open the directory /sub1/newdir/ and iterate through all items.
+ *	path = "/sub1/newdir/*.c"	- Open the directory /sub1/newdir/ and iterate through all items matching the *.c wildcard.
+ *
+ *	It is important to distinguish the differences in behaviour between opening a Find operation
+ *	on a path like /sub1 and /sub1/. (/sub1 gets the sub1 dirent from the / dir, whereas /sub/ opens the sub1 dir).
+ *
+ *	Note, as compatible with other similar APIs, FullFAT also accepts /sub1/* for the same behaviour as
+ *	/sub1/.
+ *
+ *	For more up-to-date information please see the FullFAT wiki pages.
+ *
  *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
  *	@param	pDirent		FF_DIRENT object to store the entry information.
  *	@param	path		String to of the path to the Dir being listed.
@@ -1328,26 +1344,27 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 	}
 
 	// Detect a Wild-Card on the End, or Filename, as apposed to a complete path.
+#ifndef FF_FINDAPI_ALLOW_WILDCARDS
 	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen);	// Get the directory cluster, if it exists.
+#endif
 
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
 	pDirent->szWildCard[0] = '\0';	// WildCard blank if its not a wildCard.
-	if(!pDirent->DirCluster) {
-		// Possibly not a complete path! -- Try and open without final token of the path.
-		szWildCard = &path[PathLen - 1];
-		while(*szWildCard != '\\' && *szWildCard != '/') {
-			i++;
-			szWildCard--;
-			if(!(PathLen - i)) {
-				break;
-			}
+
+	szWildCard = &path[PathLen - 1];
+
+	while(*szWildCard != '\\' && *szWildCard != '/') {	// Open the dir of the last token.
+		i++;
+		szWildCard--;
+		if(!(PathLen - i)) {
+			break;
 		}
-				
-		pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen - i);
-		if(pDirent->DirCluster) {
-			// Valid Dir found, copy the wildCard to filename!
-			strncpy(pDirent->szWildCard, ++szWildCard, FF_MAX_FILENAME);
-		}
+	}
+			
+	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen - i);
+	if(pDirent->DirCluster) {
+		// Valid Dir found, copy the wildCard to filename!
+		strncpy(pDirent->szWildCard, ++szWildCard, FF_MAX_FILENAME);
 	}
 #endif
 
@@ -1443,10 +1460,10 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
  *	@brief	Get's the next Entry based on the data recorded in the FF_DIRENT object.
  *
  *	All values recorded in pDirent must be preserved to and between calls to
- *	FF_FindNext().
+ *	FF_FindNext(). Please see @see FF_FindFirst() for find initialisation.
  *
  *	@param	pIoman		FF_IOMAN object that was created by FF_CreateIOMAN().
- *	@param	pDirent		FF_DIRENT object to store the entry information.
+ *	@param	pDirent		FF_DIRENT object to store the entry information. (As initialised by FF_FindFirst()).
  *
  *	@return FF_ERR_DEVICE_DRIVER_FAILED is device access failed.
  *
