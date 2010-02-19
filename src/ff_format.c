@@ -84,6 +84,8 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 	FF_ERROR	Error = FF_ERR_NONE;
 
+	ulClusterSize = 0;
+
 	// Get Partition Metrics, and pass on to FF_Format() function
 
 	pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_READ);

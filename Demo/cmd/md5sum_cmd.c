@@ -44,7 +44,7 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv);
  **/
 int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	int option;
-	FF_GETOPT_CONTEXT	optionContext;
+	FFT_GETOPT_CONTEXT	optionContext;
 	FF_T_BOOL			bBinary = FF_FALSE, bCheck = FF_FALSE, bWarn = FF_FALSE;
 	FF_DIRENT			findData;
 	FF_FILE				*pfOut;
@@ -58,9 +58,9 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	const char			*szargOutputFile = NULL;
 	int i;
 
-	memset(&optionContext, 0, sizeof(FF_GETOPT_CONTEXT));
+	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
 
-	option = FF_getopt(argc, argv, "bctwo:", &optionContext);
+	option = FFTerm_getopt(argc, argv, "bctwo:", &optionContext);
 
 	if(option != EOF) {
 		do {
@@ -85,12 +85,12 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					break;
 			}
 
-			option = FF_getopt(argc, argv, "bctw", &optionContext);
+			option = FFTerm_getopt(argc, argv, "bctw", &optionContext);
 		} while(option != EOF);
 	}
 
-	szargPath = FF_getarg(argc, argv, 1);
-	
+	szargPath = FFTerm_getarg(argc, argv, 0, &optionContext);	// Get the available non-option arguments remaining.
+		
 	if(szargPath) {
 		ProcessPath(path, szargPath, pEnv);
 		
@@ -105,7 +105,7 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			ProcessPath(outfilepath, szargOutputFile, pEnv);
 			pfOut = FF_Open(pEnv->pIoman, outfilepath, FF_MODE_WRITE | FF_MODE_TRUNCATE | FF_MODE_CREATE, &ffError);
 			if(!pfOut) {
-				printf("$s: Error opening %s for writing: %s\n", argv[0], szargOutputFile, FF_GetErrMessage(ffError));
+				printf("%s: Error opening %s for writing: %s\n", argv[0], szargOutputFile, FF_GetErrMessage(ffError));
 				return 0;
 			}
 		}
@@ -205,8 +205,7 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
 	char		chkFilename[FF_MAX_FILENAME];
 	char		chkLineBuffer[33 + 2 + FF_MAX_FILENAME + 2];
 	char		*c, *d;
-	int i = 0;
-
+	
 	pFile = FF_Open(pEnv->pIoman, path, FF_MODE_READ, &ffError);
 
 	if(pFile) {
@@ -216,28 +215,29 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
 
 			if(chkLineBuffer[32] != ' ' || chkLineBuffer[33] != ' ') {
 				printf("Not a properly formatted md5sum file\n");
-			}
-
-			c = &chkLineBuffer[34];
-			d = chkFilename;
-			
-			while(*c) {
-				*d++ = *c++;			
-			}
-
-			*d = '\0';
-
-			ProcessPath(filePath, chkFilename, pEnv);
-
-			if(!md5_getHash(filePath, fileHash, pEnv)) {
-
-				if(!strcmp(chkHash, fileHash)) {
-					printf("%s: OK\n", chkFilename);
-				} else {
-					printf("%s: FAILED\n", chkFilename);
-				}
 			} else {
-				printf("%s: %s: No such file or directory\n", "md5sum", chkFilename);
+
+				c = &chkLineBuffer[34];
+				d = chkFilename;
+				
+				while(*c) {
+					*d++ = *c++;			
+				}
+
+				*d = '\0';
+
+				ProcessPath(filePath, chkFilename, pEnv);
+
+				if(!md5_getHash(filePath, fileHash, pEnv)) {
+
+					if(!strcmp(chkHash, fileHash)) {
+						printf("%s: OK\n", chkFilename);
+					} else {
+						printf("%s: FAILED\n", chkFilename);
+					}
+				} else {
+					printf("%s: %s: No such file or directory\n", "md5sum", chkFilename);
+				}
 			}
 		}
 

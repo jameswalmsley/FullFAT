@@ -36,53 +36,80 @@
 	It behaves similar to the GNU cp command.
 */
 
+static int copy_dir	(const char *srcPath, const char *destPath, FF_T_BOOL bRecursive, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
+static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
+
 int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	FF_DIRENT 			findData;
-	FF_GETOPT_CONTEXT	optionContext;
-	FF_T_BOOL			bRecursive = FF_FALSE, bVerbose = FF_FALSE;
+	const char			*szpSource, *szpDestination, *szpWildCard;
+	char				szsrcPath[FF_MAX_PATH], szdestPath[FF_MAX_PATH];
+	FF_DIRENT			findData;
+	
+	FFT_GETOPT_CONTEXT	optionContext;	// CommandLine processing
+	FF_T_BOOL			bRecursive = FF_FALSE, bVerbose = FF_FALSE;	// Option Flags.
+	int 				option;
 
-	const char				*szpSource, *szpDestination;
+	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));			// Initialise the option context to zero.
 
-	int option;
+	option = FFTerm_getopt(argc, argv, "rRv", &optionContext);		// Get the command line option charachters.
 
-	memset(&optionContext, 0, sizeof(FF_GETOPT_CONTEXT));
-	option = FF_getopt(argc, argv, "rRv", &optionContext);
-
-	while(option != EOF) {						// Process Commandline options
+	while(option != EOF) {											// Process Commandline options
 		switch(option) {
 			case 'r':
 			case 'R':
-				bRecursive = FF_TRUE;
+				bRecursive = FF_TRUE;								// Set recursive flag if -r or -R appears on the commandline.
 				break;
 
 			case 'v':
-				bVerbose = FF_TRUE;
+				bVerbose = FF_TRUE;									// Set verbose flag if -v appears on the commandline.
 				break;
 
 			default:
 				break;
 		}
 
-		option = FF_getopt(argc, argv, "rRv", &optionContext);
+		option = FFTerm_getopt(argc, argv, "rRv", &optionContext);	// Get the next option.
 	}
 
-	if(optionContext.optind + 0 < argc) {
-		szpSource = argv[optionContext.optind + 0];
-	}
-
-	if(optionContext.optind + 1 < argc) {
-		szpDestination = argv[optionContext.optind + 1];
-	}
+	szpSource 		= FFTerm_getarg(argc, argv, 0, &optionContext);	// The remaining options or non optional arguments.
+	szpDestination 	= FFTerm_getarg(argc, argv, 1, &optionContext);	// getarg() retrieves them intelligently.
 	
 	if(!szpSource) {
-		printf("%s: No source file argument\n", argv[0]);
+		printf("%s: No source file argument.\n", argv[0]);			// No source file provided.
 		return 0;
 	}
 
 	if(!szpDestination) {
-		printf("%s: No destination file argument\n", argv[0]);
+		printf("%s: No destination file argument.\n", argv[0]);		// No destination provided.
 		return 0;
 	}
+
+	ProcessPath(szsrcPath, szpSource, pEnv);						// Process the paths into absolute paths.
+	ProcessPath(szdestPath, szpDestination, pEnv);
+
+	szpWildCard = getWildcard(szpSource);							// Get the last token of the source path. (This may include a wildCard).
+
+	if(strchr(szpWildCard, '*')) {									// If the 'WildCard' contains a * then its a wild card, otherwise its a file or directory.
+		// WildCard Copying!
+		//copy_wild();
+		return 0;
+	}
+
+	if(FF_FindFirst(pEnv->pIoman, &findData, szsrcPath)) {			// Get the dirent for the file or directory, to detect if its a directory.
+		// Not found!
+		printf("%s: %s: no such file or directory.\n", argv[0], szpSource);
+		return 0;
+	}
+
+	if(!strcmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+		if(!bRecursive) {											// Its a dir!
+			printf("%s: omitting directory '%s'\n", argv[0], szsrcPath);
+			return 0;
+		}
+		copy_dir(szsrcPath, szdestPath, bRecursive, bVerbose, pEnv);// Start the copying!
+		return 0;
+	}
+
+	copy_file(szsrcPath, szdestPath, bVerbose, pEnv);				// Final option, its simply a file to file copy
 	
 	return 0;
 }
@@ -92,3 +119,120 @@ const FFT_ERR_TABLE cpInfo[] =
 	{"Copies the specified file to the specified location.",			FFT_COMMAND_DESCRIPTION},
 	{ NULL }
 };
+
+
+static int copy_dir(const char *srcPath, const char *destPath, FF_T_BOOL bRecursive, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv) {
+	FF_DIRENT	findData;
+	FF_ERROR	RetVal;
+	FF_T_INT8	szsrcFile[FF_MAX_PATH], szdestFile[FF_MAX_PATH];
+
+	//const char	*szpWildCard;
+	int i;
+
+	strcpy(szsrcFile, srcPath);
+	strcpy(szdestFile, destPath);
+
+	// Ensure the paths both end in a '/' charachter
+	i = strlen(szsrcFile);
+	if(szsrcFile[i - 1] != '\\' || szsrcFile[i - 1] != '/') {
+		strcat(szsrcFile, "\\");
+	}
+	i = strlen(szdestFile);
+	if(szdestFile[i - 1] != '\\' || szdestFile[i - 1] != '/') {
+		strcat(szdestFile, "\\");
+	}
+
+	RetVal = FF_FindFirst(pEnv->pIoman, &findData, szsrcFile);
+
+	if(RetVal) {
+		printf("cp: %s: No such file or directory.\n", srcPath);
+		return 0;
+	}
+
+	while(!RetVal) {
+		append_filename(szsrcFile, findData.FileName);
+		append_filename(szdestFile, findData.FileName);
+
+		if(!strcmp(szsrcFile, szdestFile)) {
+			printf("cp: Source and Destination files are identical: illegal operation.\n");
+			return 0;
+		}
+
+		if((findData.Attrib & FF_FAT_ATTR_DIR)) {
+			if(!(findData.FileName[0] == '.' && !findData.FileName[1]) && !(findData.FileName[0] == '.' && findData.FileName[1] == '.' && !findData.FileName[2])) {
+				// Add the wild card onto the end!
+				if(bRecursive) {
+					strcat(szsrcFile, "\\");
+					//szpWildCard = getWildcard(srcPath);
+					//strcat(szsrcFile, szpWildCard);
+					
+					strcat(szdestFile, "\\");
+					//szpWildCard = getWildcard(destPath);
+					//strcat(szdestFile, szpWildCard);
+					
+
+					// Make the dir if it doesn't already exist!
+					copy_dir(szsrcFile, szdestFile, bRecursive, bVerbose, pEnv);
+
+					strcpy(szsrcFile, srcPath);		// Reset the path.
+				}
+			}
+		} else {
+			copy_file(szsrcFile, szdestFile, bVerbose, pEnv);
+		}
+
+		RetVal = FF_FindNext(pEnv->pIoman, &findData);
+	}
+
+	return 0;
+}
+
+static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv) {
+	
+	FF_FILE *pfSource;
+	FF_FILE	*pfDestination;
+	FF_ERROR ffError;
+	FF_T_SINT32	slBytesRead, slBytesWritten;
+	unsigned char	buffer[8192];
+
+	if(!strcmp(szsrcPath, szdestPath)) {							// Ensure that source and destination are not the same file.
+		printf("cp: Source and Destination files are identical: illegal operation.\n");
+		return 0;
+	}
+
+	pfSource = FF_Open(pEnv->pIoman, szsrcPath, FF_MODE_READ, &ffError);	// Attempt to open the source.
+
+	if(!pfSource) {
+		printf("cp: %s: open failed: %s\n", szsrcPath, FF_GetErrMessage(ffError));	// Display a meaningful error message.
+		return 0;
+	}
+
+	pfDestination = FF_Open(pEnv->pIoman, szdestPath, (FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE), &ffError);
+
+	if(!pfDestination) {
+		printf("cp: %s: open failed: %s\n", szdestPath, FF_GetErrMessage(ffError));
+		FF_Close(pfSource);													// Don't forget to close the Source file.
+		return 0;
+	}
+
+	// Source and Destination files are open, copy the data from Source to Dest!
+	do {
+		slBytesRead 	= FF_Read(pfSource, 1, 8192, buffer);
+		slBytesWritten 	= FF_Write(pfDestination, 1, slBytesRead, buffer);
+		
+		if(slBytesWritten != slBytesRead) {
+			printf("cp: write error: %s\n", FF_GetErrMessage(slBytesWritten));
+			break;
+		}
+
+	} while(slBytesRead);
+
+	FF_Close(pfSource);
+	FF_Close(pfDestination);
+
+	if(bVerbose) {
+		printf("'%s' -> '%s'\n", szsrcPath, szdestPath);
+	}
+
+	return 0;
+}

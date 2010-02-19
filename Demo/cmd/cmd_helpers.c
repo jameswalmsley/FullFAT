@@ -7,311 +7,40 @@
 #include "cmd_helpers.h"
 #include "../../../ffterm/src/ffterm.h"
 
-/*
-	Gets an argument from the commandline (not an option with -option or --long-option).
-	Returns NULL is the idx is out of range, or an argument is not available.
-*/
-const char *FF_getarg(int argc, const char **argv, int argindex) {
-	int i = 0;
-	int argCount = 0;
 
-	for(i = 0; i < argc; i++) {
-		if(argv[i][0] != '-') {
-			if(argCount == argindex) {
-				return argv[i];
-			}
-			argCount++;
-		}
+/*
+	Gets the last token of a path.
+	String must be a fully qualified path e.g.:
+*/
+const char *getWildcard(const char *String) {
+	int i = strlen(String);
+
+	while(String[i] != '\\' && String[i] != '/') {
+		i--;
 	}
 
-	return NULL;
+	return &String[i+1];
 }
 
 
 /*
-	Iterates through commandline Arguments.
-	See the documentation for GNU's getopt() function. This has the same behaviour,
-	except all information is provided in the ctx pointer, and not globally.
+	Replaces
 */
-int FF_getopt(int argc, const char **argv, const char *optstring, FF_GETOPT_CONTEXT *ctx) {
-	int i, swaps;
-	const char *pc;
-	const char *argvSwap;
-
-	// Sort through the commandline arguments, and re-arrange them. So all options come first.
-	do {
-		swaps = 0;
-		for(i = 1; i < argc; i++) {
-			// Ensure we skip past option arguments!
-			if(!swaps && argv[i][0] == '-') {
-				pc = strchr(optstring, argv[i][1]);	// argv[i] is now the option string, lets see if it had a compulsory argument?
-				if(pc) {
-					if(*(pc + 1) == ':') {
-						if(!argv[i][2] && (i + 1) < argc && argv[i + 1][0] != '-') { // If argv[i][3] is no \0 then do nothing! The param is connected.
-							// Swap the next param's
-							i++;	// Ensure we don't swap an -option back over this argument!
-						}
-					}
-				}
-			} else {
-			
-				if(argv[i][0] != '-' && ((i + 1) < argc)) {
-					if(argv[i + 1][0] == '-') {
-						// Swap Option!
-						argvSwap = argv[i];
-						argv[i] = argv[i + 1];
-						argv[i + 1] = argvSwap;
-
-						// Detect if option has an argument, this must be swapped too!
-						pc = strchr(optstring, argv[i][1]);	// argv[i] is now the option string, lets see if it had a compulsory argument?
-						if(pc) {
-							if(*(pc + 1) == ':') {
-								if(!argv[i][2] && (i + 2) < argc && argv[i + 2][0] != '-') { // If argv[i][3] is no \0 then do nothing! The param is connected.
-									// Swap the next param's
-									argvSwap = argv[i + 1];
-									argv[i + 1] = argv[i + 2];
-									argv[i + 2] = argvSwap;
-									i++;	// Ensure we don't swap an -option back over this argument!
-								}
-							}
-						}
-						swaps++;
-
-					}
-				}
-			}
-		}
-	} while(swaps);
-
-	if(ctx->optind == 0) {
-		ctx->optind = 1;	// argv[0] is of no interest!
-	}
-	
-	for(i = ctx->optind; i < argc; i++) {
-
-		if(ctx->nextchar) {
-			if(argv[i][ctx->nextchar+1] == '\0') {
-				i++;
-				ctx->optind = i;
-				ctx->nextchar = 0;
-			}
-		}
-
-		if(i >= argc) {
-			break;
-		}
-
-		if(argv[i][0] == '-' && !(argv[i][1] == '-' || argv[i][1] == '\0')) {
-			// A single option argument was found, now process!
-
-			pc = strchr(optstring, argv[i][ctx->nextchar + 1]);
-			if(pc) {
-				if(*(pc + 1) == ':') {
-					if(ctx->nextchar) {	// This kind of option must come on its own
-						ctx->optopt = argv[i][ctx->nextchar + 1];
-						ctx->nextchar++;
-						return '?';
-					}
-					// Option Argument
-					if(argv[i][2]) {
-						ctx->optarg = &argv[i][2];
-						if(ctx->optarg[0] == '-') {
-							ctx->optarg = NULL;
-							ctx->nextchar = 0;
-							ctx->optind = i+1;
-							return ':';
-						}
-					} else {
-						ctx->optarg = argv[i + 1];
-						if((i+1) >= argc) {
-							ctx->optarg = NULL;
-							ctx->nextchar = 0;
-							ctx->optind = i+1;
-							return ':';
-						}
-						ctx->optind = i+2; // Skip over this argument next time.
-						ctx->nextchar = 0;
-						return argv[i][1];
-					}
-					ctx->optind = i+1;
-					ctx->nextchar = 0;
-
-					return argv[i][1];
-
-				} else {
-					ctx->optarg = NULL;
-				}
-				//ctx->optind = i+1;
-				ctx->nextchar++;
-				return argv[i][ctx->nextchar];
-			} else {
-				//ctx->optind += 1;
-				ctx->optopt = argv[i][ctx->nextchar + 1];
-				ctx->nextchar++;
-				return '?';
-			}
-		} else if(argv[i][0] != '-') {
-			// End of optional arguments, simply return EOF, with optind set to i;
-			ctx->optind = i;
-			return EOF;
-		}
-
-		ctx->optind += 1;
-	}
-
-	if(ctx->optind >= argc) {
-		ctx->optind = 0;
-	}
-
-	return EOF;
-}
-
-
-/**
-	Only process long options!
-**/
-int FF_getopt_long_only(int argc, const char **argv, const char *optstring, FF_GETOPTLONG_CONTEXT *ctx) {
-	int i;
-	struct option *pOptions = ctx->longopts;
-	
-	for(i = ctx->optind; i < argc; i++) {
-		if(argv[i][0] == '-' && argv[i][1] == '-') {	// Identified a long option!
-			// Does this long option match one in the options list?
-			while(pOptions) {
-				if(!strcmp(pOptions->name, &argv[i][2])) {	// Matches this item!
-					ctx->longindex_val = (int) ((pOptions - ctx->longopts) / sizeof(struct option));
-					if(ctx->longindex) {
-						*ctx->longindex = (int) (pOptions - ctx->longopts);
-					}
-
-					// Check for parameters
-					switch(pOptions->has_arg) {
-						case 0:	// No argument
-							ctx->optind = i;
-							if(!pOptions->flag) {
-								return pOptions->val;
-							} else {
-								*pOptions->flag = pOptions->val;
-								return 0;
-							}
-							break;
-						case 1:	// Compulsory argument
-							if(argv[i][3] == '=') {
-								ctx->optarg = &argv[i][4];							
-							} else {
-								ctx->optarg = argv[i + 1];
-								ctx->optind = i+1;
-							}
-							break;
-						case 2:	// Optional argument
-							break;
-					}
-
-
-				} else {
-					// Unrecognised Long option!
-					ctx->optind = i;
-					return '?';
-				}
-
-				pOptions++;
-			}
-
-			// Option unrecognised!
-			return '?';
-		}
-	}
-
-	return EOF;
-}
-
-
-/**
-	As above, except we process long arguments as well!
-**/
-int FF_getopt_long(int argc, const char **argv, const char *optstring, FF_GETOPTLONG_CONTEXT *ctx) {
-	int i;
-	const char *pc;
-
-	for(i = ctx->optind; i < argc; i++) {
-
-		if(ctx->nextchar) {
-			if(argv[i][ctx->nextchar + 1] == '\0') {
-				i++;
-				ctx->optind = i;
-				ctx->nextchar = 0;
-			}
-		}
-
-		if(i >= argc) {
-			break;
-		}
-
-		if(argv[i][0] == '-' && !(argv[i][1] == '-' || argv[i][1] == '\0')) {
-			// A single option argument was found, now process!
-
-			pc = strchr(optstring, argv[i][ctx->nextchar + 1]);
-			if(pc) {
-				if(*(pc + 1) == ':') {
-					if(ctx->nextchar) {	// This kind of option must come on its own
-						ctx->optopt = argv[i][ctx->nextchar + 1];
-						ctx->nextchar++;
-						return '?';
-					}
-					// Option Argument
-					if(argv[i][2]) {
-						ctx->optarg = &argv[i][2];
-						if(ctx->optarg[0] == '-') {
-							ctx->optarg = NULL;
-							ctx->nextchar = 0;
-							ctx->optind = i+1;
-							return ':';
-						}
-					} else {
-						ctx->optarg = argv[i + 1];
-						if((i+1) >= argc) {
-							ctx->optarg = NULL;
-							ctx->nextchar = 0;
-							ctx->optind = i+1;
-							return ':';
-						}
-					}
-					ctx->optind = i+1;
-					ctx->nextchar = 0;
-
-					return argv[i][1];
-
-				} else {
-					ctx->optarg = NULL;
-				}
-				//ctx->optind = i+1;
-				ctx->nextchar++;
-				return argv[i][ctx->nextchar];
-			} else {
-				//ctx->optind += 1;
-				ctx->optopt = argv[i][ctx->nextchar + 1];
-				ctx->nextchar++;
-				return '?';
-			}
-		}
-
-		ctx->optind += 1;
-	}
-
-	//ctx->bDone 	= 1;
-	ctx->optind = 0;
-
-	return EOF;
-}
-
 int	append_filename(char *path, char *filename) {
 	int i = strlen(path);
 
 	while(path[i] != '\\' && path[i] != '/') {
 		i--;
+		if(!i) {
+			break;
+		}
 	}
-
-	strcpy(&path[i+1], filename);
+	
+	if(path[i] == '\\' || path[i] == '/') {
+		strcpy(&path[i+1], filename);
+	} else {
+		strcpy(&path[i], filename);
+	}
 
 	return 0;
 }
@@ -337,7 +66,6 @@ void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
 		} else {
 			sprintf(dest, "%s\\%s", pEnv->WorkingDir, src);
 		}
-
 	} else {
 		sprintf(dest, "%s", src);
 	}
@@ -453,3 +181,147 @@ void ExpandPath(char *acPath) {
 		pRel = strstr(acPath, "..");
 	}
 }
+
+
+
+/*
+	FindFirstFile() / FindNextFile() wrapper for Linux opendir() etc.
+*/
+
+#ifndef WIN32
+#include <sys/types.h>
+#include <dirent.h>
+#include <ctype.h>
+#include <limits.h>
+
+void ProcessLinuxPath(char *dest, const char *src) {
+	
+	char path[PATH_MAX + 1];
+
+	getcwd(path, PATH_MAX);
+	
+	if(src[0] != '\\' && src[0] != '/') {
+		if(strlen(path) == 1) {
+			sprintf(dest, "/%s", src);
+		} else {
+			sprintf(dest, "%s/%s", path, src);
+		}
+	} else {
+		sprintf(dest, "%s", src);
+	}
+}
+
+static int wildcompare(const char *pszWildCard, const char *pszString) {
+    register const char *pszWc 	= NULL;
+	register const char *pszStr 	= NULL;	// Encourage the string pointers to be placed in memory.
+    do {
+        if ( *pszWildCard == '*' ) {
+			while(*(1 + pszWildCard++) == '*'); // Eat up multiple '*''s
+			pszWc = (pszWildCard - 1);
+            pszStr = pszString;
+        }
+		if (*pszWildCard == '?' && !*pszString) {
+			return 0;	// False when the string is ended, yet a ? charachter is demanded.
+		}
+//#ifdef FF_WILDCARD_CASE_INSENSITIVE
+        if (*pszWildCard != '?' && tolower(*pszWildCard) != tolower(*pszString)) {
+//#else
+//		if (*pszWildCard != '?' && *pszWildCard != *pszString) {
+//#endif
+			if (pszWc == NULL) {
+				return 0;
+			}
+            pszWildCard = pszWc;
+            pszString = pszStr++;
+        }
+    } while ( *pszWildCard++ && *pszString++ );
+
+	while(*pszWildCard == '*') {
+		pszWildCard++;
+	}
+
+	if(!*(pszWildCard - 1)) {	// WildCard is at the end. (Terminated)
+		return 1;	// Therefore this must be a match.
+	}
+
+	return 0;	// If not, then return FF_FALSE!
+}
+
+DIR	*FindFirstFile(const char *szpPath, DIRENT *pFindData) {
+	DIR 			*pDir;
+	struct dirent 	*pDirent;
+	const char		*szpWildCard;
+	char			path[PATH_MAX];
+
+	strcpy(pFindData->szWildCard, "");
+	szpWildCard = getWildcard(szpPath);
+	strcpy(pFindData->szWildCard, szpWildCard);
+
+	strncpy(path, szpPath, (szpWildCard - szpPath));
+	path[(szpWildCard - szpPath)] = '\0';
+
+	pDir = opendir(path);
+
+	if(!pDir) {
+		return NULL;
+	}
+
+	pDirent = readdir(pDir);
+
+	strcpy(pFindData->szItemPath, path);
+	
+	while(pDirent) {
+		if(!strcmp(pFindData->szWildCard, "")) {
+			append_filename(pFindData->szItemPath, pDirent->d_name);
+			lstat(pFindData->szItemPath, &pFindData->itemInfo);
+			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
+			return pDir;
+		}
+		
+		if(pDirent->d_name[0] == 'P') {
+			printf(" ");
+		}
+
+		if(wildcompare(szpWildCard, pDirent->d_name)) {
+			append_filename(pFindData->szItemPath, pDirent->d_name);
+			lstat(pFindData->szItemPath, &pFindData->itemInfo);
+			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
+			return pDir;			
+		}
+		pDirent = readdir(pDir);
+	}
+
+	closedir(pDir);
+
+	return NULL;
+}
+
+int	FindNextFile(DIR *pDir, DIRENT *pFindData) {
+	struct dirent *pDirent = readdir(pDir);
+
+	while(pDirent) {
+		if(!strcmp(pFindData->szWildCard, "")) {
+			append_filename(pFindData->szItemPath, pDirent->d_name);
+			lstat(pFindData->szItemPath, &pFindData->itemInfo);
+			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
+			return 1;
+		}		
+		if(wildcompare(pFindData->szWildCard, pDirent->d_name)) {
+			append_filename(pFindData->szItemPath, pDirent->d_name);
+			lstat(pFindData->szItemPath, &pFindData->itemInfo);
+			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
+			return 1;			
+		}
+		pDirent = readdir(pDir);
+	}
+
+	return 0;
+}
+
+int FindClose(DIR *pDir) {
+	return closedir(pDir);
+}
+
+#endif
+
+

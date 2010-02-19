@@ -48,7 +48,7 @@ int cmd_prompt(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		printf("This is the command prompt application. \nIt cannot be executed directly from the command line.\n");
 		printf("For more information about FullFAT or the FFTerm software, see:\nwww.worm.me.uk/fullfat/\n");
 	} else {
-		printf("FF:%s>", pEnv->WorkingDir);
+		printf("%s>", pEnv->WorkingDir);
 	}
 	if(argv) {
 
@@ -69,5 +69,5 @@ const FFT_ERR_TABLE cmdpromptInfo[] =
 	{"Unknown or Generic Error",						-1},						// Generic Error (always the first entry).
 	{"This message is displayed when -2 is returned",	-2},						// Error Message for a -2 return code.
 	{"The command prompt!",								FFT_COMMAND_DESCRIPTION},	// Command Description.
-	{ NULL }				// Always terminated with NULL. 
+	{ NULL }																		// Always terminated with NULL.
 };

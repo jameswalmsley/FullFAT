@@ -31,26 +31,23 @@
 #include "ls_cmd.h"
 
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
-int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
+static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
 
 int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	FF_T_INT8	path[FF_MAX_PATH];
-	const char 		*szPath;
-	FF_T_BOOL	bRecursive = FF_FALSE, bList = FF_FALSE, bShowHidden = FF_FALSE;
-	FF_GETOPT_CONTEXT	Ctx;
+	FF_T_INT8			path[FF_MAX_PATH];
+	const char 			*szPath;
+	FF_T_BOOL			bRecursive = FF_FALSE, bList = FF_FALSE, bShowHidden = FF_FALSE;
+	FFT_GETOPT_CONTEXT	optionContext;
 
 	int RetVal;
 
 	int option;
 
-	Ctx.optind = 0;
-	Ctx.optarg = 0;
-	Ctx.optopt = 0;
-	Ctx.nextchar = 0;
+	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
 
 	// Process command line arguments
 
-	option = FF_getopt(argc, argv, "rRlLaA", &Ctx);
+	option = FFTerm_getopt(argc, argv, "rRlLaA", &optionContext);
 
 	if(option != EOF) {
 		do {
@@ -74,11 +71,11 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					break;
 			}
 
-			option = FF_getopt(argc, argv, "rRlLaA", &Ctx);
+			option = FFTerm_getopt(argc, argv, "rRlLaA", &optionContext);
 		} while(option != EOF);
 	}
 
-	szPath = FF_getarg(argc, argv, 1);	// The first non option argument is the path!
+	szPath = FFTerm_getarg(argc, argv, 0, &optionContext);
 
 	if(szPath) {
 		ProcessPath(path, szPath, pEnv);
@@ -89,7 +86,7 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	if(RetVal == -5) { // Not FounD!
 		if(szPath) {
-			printf("%s cannot access %s: no such file or directory\n", argv[0], szPath);
+			printf("%s: cannot access %s: no such file or directory\n", argv[0], szPath);
 		}
 	}
 
@@ -102,7 +99,11 @@ const FFT_ERR_TABLE lsInfo[] =
 	{ NULL }
 };
 
-
+/*
+	This function copies time and date info from FullFAT dirents, to 
+	the Sorted Dir dirents. (Simply it allows the LS command to provide a sorted
+	list).
+*/
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
 	pDest->tmCreated.cDay = (unsigned char) pSource->CreateTime.Day;
 	pDest->tmCreated.cMonth = (unsigned char) pSource->CreateTime.Month;
@@ -126,22 +127,44 @@ static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
 	pDest->tmCreated.cSecond = (unsigned char) pSource->CreateTime.Second;
 }
 
+/*
+	This function simply lists an entire directory, with specified wildCard.
+*/
 static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
 	FF_DIRENT	findData;
 	FF_ERROR	Result;
 	SD_ERROR	RetVal;
 	SD_DIR		Dir;
 	SD_DIRENT	Dirent;
+	char		path[FF_MAX_PATH];
 	char		recursivePath[FF_MAX_PATH];
+
+	const char	*szpWildCard;
 	
 	int columns, columnWidth;
 	int i;
+	
+	strcpy(path, szPath);	// Place szPath into a modifiable buffer so we can correctly format it.
 
 	// First Pass to calculate column widths!
-	Result = FF_FindFirst(pEnv->pIoman, &findData, szPath);
+	Result = FF_FindFirst(pEnv->pIoman, &findData, path);
 
 	if(Result) {
 		return -5; // No dirs;
+	}
+
+	szpWildCard = getWildcard(szPath);
+
+	// A directory should be opened with /path/to/dir/ or /path/to/dir/*, not /path/to/dir
+	// Check if entry is a dir, and the wildCard specified a specific dir.
+	// If so we should open that dir for iteration.
+	if(!stricmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+		//strcpy(recursivePath, szPath);	// Copy szPath, to recursivePath so \* can be added.
+		strcat(path, "\\*");	// Add a backslash to the end!
+		Result = FF_FindFirst(pEnv->pIoman, &findData, path);
+		if(Result) {
+			return -5;
+		}
 	}
 
 	// Create the Directory object.
@@ -248,13 +271,16 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 		do {
 			if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
 				if(!(Dirent.szFileName[0] == '.' && (Dirent.szFileName[1] == '.' || Dirent.szFileName[1] == '\0'))) {
-					strcpy(recursivePath, szPath);
+										
+					strcpy(recursivePath, path);
+
+					append_filename(recursivePath, Dirent.szFileName);
+
 					if(recursivePath[strlen(recursivePath) - 1] != '\\' && recursivePath[strlen(recursivePath) - 1] != '/') {
 						strcat(recursivePath, "\\");
 					}
 					
-					strcat(recursivePath, Dirent.szFileName);
-					printf("./%s:\n", recursivePath);
+					printf(".%s:\n", recursivePath);
 					ls_dir(recursivePath, bList, bRecursive, bShowHidden, pEnv);
 				}
 			}

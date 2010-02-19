@@ -30,25 +30,57 @@
  *****************************************************************************/
 
 
-#include "cmd.h"										// The Demo's Header File for shell commands.
+//#include "cmd.h"								// The Demo's Header File for shell commands.
 //#include "test_threads.h"
-#include "../../src/fullfat.h"						// Include everything required for FullFAT.
-#include "../../../FFTerm/src/FFTerm.h"				// Include the FFTerm project header.
-#include "../../Drivers/Linux/blkdev_linux.h"		// Prototypes for our Windows 32-bit driver.
+#include "../cmd/commands.h"					// Include the commands.
+#include "../cmd/cmd_helpers.h"
+#include "../../src/fullfat.h"					// Include everything required for FullFAT.
+#include "../../../ffterm/src/ffterm.h"			// Include the FFTerm project header.
+#include "../../Drivers/Linux/blkdev_linux.h"	// Prototypes for our Windows 32-bit driver.
 
-#define PARTITION_NUMBER	1							// FullFAT can mount primary partitions only. Specified at Runtime.
+#define PARTITION_NUMBER	1					// FullFAT can mount primary partitions only. Specified at Runtime.
+
+int lin_ls(int argc, char **argv) {
+	DIR				*pDir;
+	DIRENT			mydir;
+	int				ret;
+
+	if(argc != 2) {
+		return 0;
+	}
+
+	pDir = FindFirstFile(argv[1], &mydir);
+	
+	if(pDir) {
+		do {
+			printf("%s", mydir.dir.d_name);
+			if(S_ISDIR(mydir.itemInfo.st_mode)) {
+				printf("\t <DIR>");
+			}
+			printf("\n");
+			ret = FindNextFile(pDir, &mydir);
+		} while(ret);
+		FindClose(pDir);
+		return 0;
+	}
+
+	return 0;
+}
+
 
 int main(void) {
 	
-	FFT_CONSOLE		*pConsole;							// FFTerm Console Pointer.										
-	FF_ERROR		Error = FF_ERR_NONE;				// ERROR code value.
-	FF_IOMAN		*pIoman;							// FullFAT I/O Manager Pointer, to be created.
-	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
-	BLK_DEV_LINUX	hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
+	FFT_CONSOLE		*pConsole;					// FFTerm Console Pointer.										
+	FF_ERROR		Error = FF_ERR_NONE;		// ERROR code value.
+	FF_IOMAN		*pIoman;					// FullFAT I/O Manager Pointer, to be created.
+	FF_ENVIRONMENT	Env;						// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
+	BLK_DEV_LINUX	hDisk;						// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
+
+
 
 	//----------- Initialise the environment
-	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
-	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
+	Env.pIoman = NULL;							// Initialise the FullFAT I/O Manager to NULL.
+	strcpy(Env.WorkingDir, "\\");				// Reset the Working Directory to the root folder.
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
@@ -92,39 +124,17 @@ int main(void) {
 			if(pConsole) {
 				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
-				FFTerm_AddExCmd	(pConsole, "prompt",	(FFT_FN_COMMAND_EX) cmd_prompt,		promptInfo,		&Env);	// Dynamic command prompt (prompt is a reserved command name).
-				FFTerm_AddExCmd	(pConsole, "pwd",		(FFT_FN_COMMAND_EX) pwd_cmd,		pwdInfo,		&Env);	// See cmd.c for their implementations.
-				FFTerm_AddExCmd	(pConsole, "ls",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command.
-				FFTerm_AddExCmd	(pConsole, "dir",		(FFT_FN_COMMAND_EX) ls_cmd,			lsInfo,			&Env);	// Directory Listing Command.
-				FFTerm_AddExCmd	(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd,			cdInfo,			&Env);	// Change Directory Command.
-				FFTerm_AddExCmd	(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file).
-				FFTerm_AddExCmd	(pConsole, "copy",		(FFT_FN_COMMAND_EX) cp_cmd,			cpInfo,			&Env);	// Copy command (FullFAT file to FullFAT file).
-				FFTerm_AddExCmd	(pConsole, "icp",		(FFT_FN_COMMAND_EX) icp_cmd,		icpInfo,		&Env);	// Copy command (Windows file to FullFAT file).
-				FFTerm_AddExCmd	(pConsole, "xcp",		(FFT_FN_COMMAND_EX) xcp_cmd,		xcpInfo,		&Env);	// Copy command (FullFAT file to Windows file).
-				FFTerm_AddExCmd	(pConsole, "md5",		(FFT_FN_COMMAND_EX) md5_cmd,		md5Info,		&Env);	// MD5 Data Hashing command.
-				FFTerm_AddExCmd	(pConsole, "mkdir",		(FFT_FN_COMMAND_EX) mkdir_cmd,		mkdirInfo,		&Env);	// Make directory command.
-				FFTerm_AddExCmd	(pConsole, "info",		(FFT_FN_COMMAND_EX) info_cmd,		infoInfo,		&Env);	// Information command.
-				FFTerm_AddExCmd	(pConsole, "view",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
-				FFTerm_AddExCmd	(pConsole, "type",		(FFT_FN_COMMAND_EX) view_cmd,		viewInfo,		&Env);	// View command, (types a file).
-				FFTerm_AddExCmd	(pConsole, "rm",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
-				FFTerm_AddExCmd	(pConsole, "del",		(FFT_FN_COMMAND_EX) rm_cmd,			rmInfo,			&Env);	// Remove file or dir command.
-				FFTerm_AddExCmd	(pConsole, "move",		(FFT_FN_COMMAND_EX) move_cmd,		moveInfo,		&Env);	// Move or rename a file or dir.
-				FFTerm_AddExCmd	(pConsole, "rename",	(FFT_FN_COMMAND_EX) move_cmd,		moveInfo,		&Env);	// Move or rename a file or dir.
-				FFTerm_AddExCmd	(pConsole, "mkimg",		(FFT_FN_COMMAND_EX) mkimg_cmd,		mkimgInfo,		&Env);	// Make image command, (makes a windows file image of the media).
-				FFTerm_AddExCmd	(pConsole, "mkfile",	(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		&Env);	// File generator command.
-				FFTerm_AddCmd	(pConsole, "mkwinfile",	(FFT_FN_COMMAND)	mkwinfile_cmd,	mkwinfileInfo);			// File generator command (windows version).
-				FFTerm_AddCmd	(pConsole, "md5win",	(FFT_FN_COMMAND)	md5win_cmd,		md5winInfo);			// Windows MD5 Command.
-				FFTerm_AddCmd	(pConsole, "run",		(FFT_FN_COMMAND)	run_cmd,		runInfo);				// Special Run Command.
-				FFTerm_AddCmd	(pConsole, "time",		(FFT_FN_COMMAND)	time_cmd,		timeInfo);				// Time Command.
-				FFTerm_AddCmd	(pConsole, "date",		(FFT_FN_COMMAND)	date_cmd,		dateInfo);				// Date Command.
-				FFTerm_AddCmd	(pConsole, "exit",		(FFT_FN_COMMAND)	exit_cmd,		exitInfo);				// Special Exit Command.
-				FFTerm_AddCmd	(pConsole, "hexview",	(FFT_FN_COMMAND)	hexview_cmd,	hexviewInfo);			// File Hexviewer.
-				//FFTerm_AddCmd	(pConsole, "drivelist",	(FFT_FN_COMMAND)	drivelist_cmd,	drivelistInfo);			// List of available drives.
-				
-				// Special Thread IO commands
-				//FFTerm_AddExCmd(pConsole, "mkthread",	(FFT_FN_COMMAND_EX) createthread_cmd,	mkthreadInfo,	&Env);
-				//FFTerm_AddExCmd(pConsole, "tlist",		(FFT_FN_COMMAND_EX) listthreads_cmd,	listthreadsInfo,&Env);
-				//FFTerm_AddExCmd(pConsole, "tkill",		(FFT_FN_COMMAND_EX) killthread_cmd,		killthreadInfo,	&Env);
+				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
+				FFTerm_AddExCmd(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd, 	cpInfo,			&Env);
+				FFTerm_AddExCmd(pConsole, "ls", 	(FFT_FN_COMMAND_EX) ls_cmd, 	lsInfo, 		&Env);
+				FFTerm_AddExCmd(pConsole, "md5sum", (FFT_FN_COMMAND_EX) md5sum_cmd, md5sumInfo, 	&Env);
+				FFTerm_AddCmd(pConsole, "md5lin",	(FFT_FN_COMMAND)	md5sum_lin_cmd, md5sum_lin_Info);
+				FFTerm_AddExCmd(pConsole, "mkdir", 	(FFT_FN_COMMAND_EX) mkdir_cmd, 	mkdirInfo,		&Env);
+				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
+				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
+				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
+
+				FFTerm_AddCmd(pConsole, "lslin", 	(FFT_FN_COMMAND) lin_ls, NULL);
 				
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).

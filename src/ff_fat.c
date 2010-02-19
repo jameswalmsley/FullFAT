@@ -538,11 +538,15 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman) {
 	FF_lockFAT(pIoman);
 	{
 		iStartCluster = FF_FindFreeCluster(pIoman);
-		FF_putFatEntry(pIoman, iStartCluster, 0xFFFFFFFF); // Mark the cluster as EOC
+		if(iStartCluster) {
+			FF_putFatEntry(pIoman, iStartCluster, 0xFFFFFFFF); // Mark the cluster as EOC
+		}
 	}
 	FF_unlockFAT(pIoman);
 
-	FF_DecreaseFreeClusters(pIoman, 1);
+	if(iStartCluster) {
+		FF_DecreaseFreeClusters(pIoman, 1);
+	}
 
 	return iStartCluster;
 }

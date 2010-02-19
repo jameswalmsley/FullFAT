@@ -103,7 +103,7 @@
 //---------- Inline Memory Independence Routines for better performance, but bigger codesize.
 //#define FF_INLINE_MEMORY_ACCESS
 //---------- Inline Block Calculation Routines for slightly better performance in critical sections.
-#define FF_INLINE_BLOCK_CALCULATIONS
+//#define FF_INLINE_BLOCK_CALCULATIONS
 
 //---------- 64-Bit Number Support
 #define FF_64_NUM_SUPPORT				// This helps to give information about the FreeSpace and VolumeSize of a partition or volume.

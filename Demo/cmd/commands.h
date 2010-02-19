@@ -6,9 +6,14 @@
 #include "cp_cmd.h"
 #include "ls_cmd.h"
 #include "md5sum_cmd.h"
+#include "mkdir_cmd.h"
+#include "more_cmd.h"
 #include "pwd_cmd.h"
 
-
-
+#ifdef WIN32
+#include "cmd_Windows/md5sum_win_cmd.h"
+#else
+#include "cmd_Linux/md5sum_lin_cmd.h"
+#endif
 
 #endif

@@ -801,7 +801,7 @@ void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *En
 	FF_AddDirentHash(pIoman, pDirent->DirCluster, (FF_T_UINT32)FF_GetCRC8((FF_T_UINT8 *) pDirent->FileName, strlen(pDirent->FileName)));
 #endif*/
 #else
-	//pIoman = NULL;
+	pIoman = NULL;	// Silence a compiler warning, about not referencing pIoman.
 #endif
 
 	FF_tolower(pDirent->FileName, (FF_T_UINT32)strlen(pDirent->FileName));
@@ -1306,16 +1306,16 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
  *
  *	If FF_FINDAPI_ALLOW_WILDCARDS is defined, then path will have the following behaviour:
  *
- *	path = "/" 					- Open the root dir, and iterate through all items.
- *	path = "/*.c"				- Open the root dir, showing only files matching *.c wildcard.
- *	path = "/sub1/newdir"		- Get the DIRENT for the newdir directory in /sub1/ if one exists.
- *	path = "/sub1/newdir/"		- Open the directory /sub1/newdir/ and iterate through all items.
- *	path = "/sub1/newdir/*.c"	- Open the directory /sub1/newdir/ and iterate through all items matching the *.c wildcard.
+ *	path = "\" 					- Open the root dir, and iterate through all items.
+ *	path = "\*.c"				- Open the root dir, showing only files matching *.c wildcard.
+ *	path = "\sub1\newdir"		- Get the DIRENT for the newdir directory in /sub1/ if one exists.
+ *	path = "\sub1\newdir\"		- Open the directory /sub1/newdir/ and iterate through all items.
+ *	path = "\sub1\newdir\*.c"	- Open the directory /sub1/newdir/ and iterate through all items matching the *.c wildcard.
  *
  *	It is important to distinguish the differences in behaviour between opening a Find operation
  *	on a path like /sub1 and /sub1/. (/sub1 gets the sub1 dirent from the / dir, whereas /sub/ opens the sub1 dir).
  *
- *	Note, as compatible with other similar APIs, FullFAT also accepts /sub1/* for the same behaviour as
+ *	Note, as compatible with other similar APIs, FullFAT also accepts \sub1\* for the same behaviour as
  *	/sub1/.
  *
  *	For more up-to-date information please see the FullFAT wiki pages.
@@ -2058,7 +2058,12 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 		MyDir.Filesize		= 0;
 		MyDir.Attrib		= FF_FAT_ATTR_DIR;
 		MyDir.ObjectCluster	= FF_CreateClusterChain(pIoman);
-		FF_ClearCluster(pIoman, MyDir.ObjectCluster);
+		if(MyDir.ObjectCluster) {
+			FF_ClearCluster(pIoman, MyDir.ObjectCluster);
+		} else {
+			// Couldn't allocate any space for the dir!
+			return FF_ERR_DIR_EXTEND_FAILED;
+		}
 
 		RetVal = FF_CreateDirent(pIoman, DirCluster, &MyDir);
 

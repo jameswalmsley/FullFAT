@@ -8,6 +8,12 @@
 #include <string.h>
 #include "dir.h"
 
+#ifdef WIN32
+#define stricmp	_stricmp
+#else
+#define	stricmp strcasecmp
+#endif
+
 struct _SD_DIR {
 	unsigned long	ulTotalItems;
 	unsigned long	ulMaxNameLength;
@@ -98,7 +104,7 @@ SD_ERROR SD_AddDirent(SD_DIR Dir, SD_DIRENT *pDirent) {
 	int i;
 
 	if(!myDirent) {
-		return -1; // Return error
+		return 1; // Return error
 	}
 
 	memcpy(myDirent, pDirent, sizeof(SD_DIRENT));
@@ -157,16 +163,18 @@ SD_ERROR SD_FindFirst(SD_DIR Dir, SD_DIRENT *pFindData) {
 		return 0;
 	}
 
-	return -1;
+	return 1;
 }
 
 SD_ERROR SD_FindNext(SD_DIR Dir, SD_DIRENT *pFindData) {
+	Dir = NULL;
+	
 	if(pFindData->pNextEntry) {
 		memcpy(pFindData, pFindData->pNextEntry, sizeof(SD_DIRENT));
 		return 0;
 	}
 
-	return -1;
+	return 1;
 }
 
 unsigned long SD_GetMaxFileName(SD_DIR Dir) {

@@ -1017,7 +1017,11 @@ FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 	{
 		if(!FF_ActiveHandles(pIoman)) {
 			if(pIoman->FirstFile == NULL) {
+				// Release Semaphore to call this function!
+				FF_ReleaseSemaphore(pIoman->pSemaphore);
 				FF_FlushCache(pIoman);			// Flush any unwritten sectors to disk.
+				// Reclaim Semaphore
+				FF_PendSemaphore(pIoman->pSemaphore);
 				pIoman->pPartition->PartitionMounted = FF_FALSE;
 			} else {
 				RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;

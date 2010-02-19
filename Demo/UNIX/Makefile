@@ -1,36 +1,31 @@
 CC=gcc -g -Wall
 AR=ar
 
-FullFAT: main.o cmd.o md5.o libfullfat.a libffterm.a
-	$(CC) main.o cmd.o md5.o libfullfat.a libffterm.a -lpthread -o FullFAT
+FullFAT: main.o md5.o libfullfat.a libffterm.a libcmd.a
+	$(CC) main.o md5.o libcmd.a libfullfat.a libffterm.a -lpthread -o FullFAT
     
     
 # Compilation commands:
 main.o: main.c
 	$(CC) -c main.c -o main.o
-	
-cmd.o: cmd.c cmd.h
-	$(CC) -c cmd.c -o cmd.o
-	
-md5.o: ../VS2008/FullFAT/md5.c ../VS2008/FullFAT/md5.h
-	$(CC) -c ../VS2008/FullFAT/md5.c -o md5.o
+
 
 # FFTerm
 
-libffterm.a: FFTerm.o FFTerm-Commands.o FFTerm-Error.o FFTerm-Platform.o
-	$(AR) rvs libffterm.a FFTerm.o FFTerm-Commands.o FFTerm-Error.o FFTerm-Platform.o
+libffterm.a: ffterm.o ffterm-commands.o ffterm-error.o ffterm-platform.o
+	$(AR) rvs libffterm.a ffterm.o ffterm-commands.o ffterm-error.o ffterm-platform.o
 	
-FFTerm.o: ../../../FFTerm/src/FFTerm.c ../../../FFTerm/src/FFTerm.h
-	$(CC) -c ../../../FFTerm/src/FFTerm.c -o FFTerm.o
+ffterm.o: ../../../ffterm/src/ffterm.c ../../../ffterm/src/ffterm.h
+	$(CC) -c ../../../ffterm/src/ffterm.c -o ffterm.o
 
-FFTerm-Commands.o: ../../../FFTerm/src/FFTerm-Commands.c ../../../FFTerm/src/FFTerm-Commands.h
-	$(CC) -c ../../../FFTerm/src/FFTerm-Commands.c -o FFTerm-Commands.o
+ffterm-commands.o: ../../../ffterm/src/ffterm-commands.c ../../../ffterm/src/ffterm-commands.h
+	$(CC) -c ../../../ffterm/src/ffterm-commands.c -o ffterm-commands.o
 
-FFTerm-Error.o: ../../../FFTerm/src/FFTerm-Error.c ../../../FFTerm/src/FFTerm-Error.h
-	$(CC) -c ../../../FFTerm/src/FFTerm-Error.c -o FFTerm-Error.o
+ffterm-error.o: ../../../ffterm/src/ffterm-error.c ../../../ffterm/src/ffterm-error.h
+	$(CC) -c ../../../ffterm/src/ffterm-error.c -o ffterm-error.o
 	
-FFTerm-Platform.o: ../../../FFTerm/Drivers/Linux/FFTerm-Platform.c ../../../FFTerm/Drivers/Linux/FFTerm-Platform.h
-	$(CC) -c ../../../FFTerm/src/FFTerm-Platform.c -o FFTerm-Platform.o
+ffterm-platform.o: ../../../ffterm/drivers/linux/ffterm-platform.c ../../../ffterm/drivers/linux/ffterm-platform.h
+	$(CC) -c ../../../ffterm/drivers/linux/ffterm-platform.c -o ffterm-platform.o
 
 # FullFAT Stuff
 
@@ -66,6 +61,44 @@ ff_memory.o: ../../src/ff_memory.c ../../src/ff_memory.h
 	
 ff_string.o: ../../src/ff_string.c ../../src/ff_string.h
 	$(CC) -c ../../src/ff_string.c -o ff_string.o
+
+
+# Commands
+libcmd.a: cd_cmd.o cmd_helpers.o cmd_prompt.o cp_cmd.o dir.o ls_cmd.o md5.o md5sum_cmd.o md5sum_lin_cmd.o mkdir_cmd.o pwd_cmd.o
+	$(AR) rvs libcmd.a cd_cmd.o cmd_helpers.o cmd_prompt.o cp_cmd.o dir.o ls_cmd.o md5.o md5sum_cmd.o md5sum_lin_cmd.o mkdir_cmd.o pwd_cmd.o
+
+cd_cmd.o: ../cmd/cd_cmd.c ../cmd/cd_cmd.h
+	$(CC) -c ../cmd/cd_cmd.c -o cd_cmd.o
+
+cmd_helpers.o: ../cmd/cmd_helpers.c ../cmd/cmd_helpers.h
+	$(CC) -c ../cmd/cmd_helpers.c -o cmd_helpers.o
+
+cmd_prompt.o: ../cmd/cmd_prompt.c ../cmd/cmd_prompt.h
+	$(CC) -c ../cmd/cmd_prompt.c -o cmd_prompt.o
+
+cp_cmd.o: ../cmd/cp_cmd.c ../cmd/cp_cmd.h
+	$(CC) -c ../cmd/cp_cmd.c -o cp_cmd.o
+
+dir.o: ../cmd/dir.c ../cmd/dir.h
+	$(CC) -c ../cmd/dir.c -o dir.o
+
+ls_cmd.o: ../cmd/ls_cmd.c ../cmd/ls_cmd.h
+	$(CC) -c ../cmd/ls_cmd.c -o ls_cmd.o
+
+md5.o: ../cmd/md5.c ../cmd/md5.h
+	$(CC) -c ../cmd/md5.c -o md5.o
+
+md5sum_cmd.o: ../cmd/md5sum_cmd.c ../cmd/md5sum_cmd.h
+	$(CC) -c ../cmd/md5sum_cmd.c -o md5sum_cmd.o
+
+md5sum_lin_cmd.o: ../cmd/cmd_Linux/md5sum_lin_cmd.c ../cmd/cmd_Linux/md5sum_lin_cmd.h
+	$(CC) -c ../cmd/cmd_Linux/md5sum_lin_cmd.c -o md5sum_lin_cmd.o
+
+mkdir_cmd.o: ../cmd/mkdir_cmd.c ../cmd/mkdir_cmd.h
+	$(CC) -c ../cmd/mkdir_cmd.c -o mkdir_cmd.o
+
+pwd_cmd.o: ../cmd/pwd_cmd.c ../cmd/pwd_cmd.h
+	$(CC) -c ../cmd/pwd_cmd.c -o pwd_cmd.o
 
 	
 # Platform Specific Stuff!

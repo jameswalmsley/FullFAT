@@ -28,49 +28,31 @@
  *  See http://worm.me.uk/fullfat for more information.                      *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
-#include "cd_cmd.h"
+#include "mkdir_cmd.h"
 
 /**
- *	@public
- *	@brief	Changes the Current Working Directory
- *
- *	To change the directory, we simply check the provided path, if it exists,
- *	then we change the environment's working directory to that path.
- *
+ *	@brief	A simple command for making dirs.
  **/
-int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	FF_DIRENT	findData;
+int mkdir_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
+	
 	FF_T_INT8	path[FF_MAX_PATH];
-	int			i;
+	FF_ERROR	Error;
 
 	if(argc == 2) {
-		ProcessPath(path, argv[1], pEnv);	// Make path absolute if relative.
-		ExpandPath(path);	// Remove any relativity from the path (../ or ..\).
-
-		i = strlen(path);
-
-		if(path[i - 1] == '\\' || path[i - 1] == '/') {	// Get rid of the trailing slash, or FindFirst() will open that dir.
-			path[i - 1] = '\0';
-		}
-		
-		if(!FF_FindFirst(pEnv->pIoman, &findData, path)) {
-			if(findData.Attrib & FF_FAT_ATTR_DIR) {
-				// Found a directory, change working dir!
-				strcpy(pEnv->WorkingDir, path);
-			} else {
-				printf("%s: %s: Not a directory.\n", argv[0], path);
-			}
-		} else {
-			printf("%s: %s: No such file or directory.\n", argv[0], path);
+		ProcessPath(path, argv[1], pEv);
+		Error = FF_MkDir(pEv->pIoman, path);
+		if(Error) {
+			printf("Could not mkdir - %s\n", FF_GetErrMessage(Error));
 		}
 	} else {
 		printf("Usage: %s [path]\n", argv[0]);
 	}
 	return 0;
 }
-const FFT_ERR_TABLE cdInfo[] =
+
+const FFT_ERR_TABLE mkdirInfo[] =
 {
-	{"Unknown or Generic Error",		-1},							// Generic Error (always the first entry).
-	{"Changes the current working directory to the specified path.",			FFT_COMMAND_DESCRIPTION},
+	{"Generic or Unknown Error",							-1},
+	{"Creates directories.",	FFT_COMMAND_DESCRIPTION},
 	{ NULL }
 };

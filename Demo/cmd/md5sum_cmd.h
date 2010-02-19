@@ -2,7 +2,7 @@
 #define _MD5SUM_CMD_H_
 
 #include "cmd_helpers.h"
-#include "../../src/FullFAT.h"
+#include "../../src/fullfat.h"
 #include "../../../ffterm/src/ffterm.h"
 #include "md5.h"
 

@@ -86,6 +86,7 @@
 #define FF_ERR_DIR_NOT_EMPTY					-53	///< Cannot delete a directory that contains files or folders.
 #define FF_ERR_DIR_INVALID_PATH					-54 ///< Could not find the directory specified by the path.
 #define FF_ERR_DIR_CANT_EXTEND_ROOT_DIR			-55	///< Can't extend the root dir.
+#define FF_ERR_DIR_EXTEND_FAILED				-56	///< Not enough space to extend the directory.
 
 // Fat Error Codes								-70 +
 #define FF_ERR_FAT_NO_FREE_CLUSTERS				-70	///< No more free space is available on the disk.
