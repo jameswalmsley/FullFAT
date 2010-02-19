@@ -2,8 +2,7 @@
 #include <windows.h>
 
 void *FF_CreateSemaphore(void) {
-	HANDLE hSem = CreateMutex(NULL, FALSE, NULL);//CreateSemaphore(NULL, 1, 1, NULL);
-
+	HANDLE hSem = CreateSemaphore(NULL, 1, 1, NULL);
 	return (void *) hSem;
 }
 
@@ -11,14 +10,14 @@ void FF_PendSemaphore(void *pSemaphore) {
 	// Call your OS's PendSemaphore with the provided pSemaphore pointer.
 	
 	HANDLE hSem = (HANDLE) pSemaphore;
-	WaitForSingleObject(hSem, INFINITE);
+	WaitForSingleObject(hSem, INFINITE);	// Take the semaphore, reducing its count to 0.
 }
 
 void FF_ReleaseSemaphore(void *pSemaphore) {
 	// Call your OS's ReleaseSemaphore with the provided pSemaphore pointer.
 	//
 	HANDLE hSem = (HANDLE) pSemaphore;
-	ReleaseMutex(hSem);
+	ReleaseSemaphore(hSem, 1, NULL);	// Reduce Sem count by 1.
 }
 
 void FF_DestroySemaphore(void *pSemaphore) {
