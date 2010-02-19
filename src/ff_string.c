@@ -276,7 +276,7 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
 		pszWildCard++;
 	}
 
-	if(!*pszWildCard) {	// WildCard is at the end. (Terminated)
+	if(!*(pszWildCard - 1)) {	// WildCard is at the end. (Terminated)
 		return FF_TRUE;	// Therefore this must be a match.
 	}
 
