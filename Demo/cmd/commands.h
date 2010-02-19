@@ -7,7 +7,7 @@
 #include "ls_cmd.h"
 #include "md5sum_cmd.h"
 #include "mkdir_cmd.h"
-#include "more_cmd.h"
+//#include "more_cmd.h"
 #include "pwd_cmd.h"
 
 #ifdef WIN32

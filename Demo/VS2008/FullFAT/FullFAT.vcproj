@@ -174,10 +174,6 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\cmd.c"
-				>
-			</File>
-			<File
 				RelativePath=".\fullfat.c"
 				>
 			</File>
@@ -187,10 +183,6 @@
 			</File>
 			<File
 				RelativePath=".\Readme.txt"
-				>
-			</File>
-			<File
-				RelativePath=".\test_threads.c"
 				>
 			</File>
 			<Filter
@@ -277,16 +269,68 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="Commands"
+				>
+				<File
+					RelativePath="..\..\cmd\cd_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cmd_prompt.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cp_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\dir.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\ls_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\md5.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\md5sum_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\mkdir_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\pwd_cmd.c"
+					>
+				</File>
+				<Filter
+					Name="Helpers"
+					>
+					<File
+						RelativePath="..\..\cmd\cmd_helpers.c"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="cmd_Windows"
+					>
+					<File
+						RelativePath="..\..\cmd\cmd_Windows\md5sum_win_cmd.c"
+						>
+					</File>
+				</Filter>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath=".\cmd.h"
-				>
-			</File>
 			<File
 				RelativePath="..\..\..\src\ff_format.h"
 				>
@@ -394,6 +438,70 @@
 					RelativePath="..\..\..\Drivers\Windows\blkdev_win32.h"
 					>
 				</File>
+			</Filter>
+			<Filter
+				Name="Commands"
+				>
+				<File
+					RelativePath="..\..\cmd\cd_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cmd_prompt.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\commands.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cp_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\dir.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\ls_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\md5.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\md5sum_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\mkdir_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\more_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\pwd_cmd.h"
+					>
+				</File>
+				<Filter
+					Name="Helpers"
+					>
+					<File
+						RelativePath="..\..\cmd\cmd_helpers.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="cmd_Windows"
+					>
+					<File
+						RelativePath="..\..\cmd\cmd_Windows\md5sum_win_cmd.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter
