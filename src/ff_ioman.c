@@ -58,7 +58,7 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
  *	@brief	Creates an FF_IOMAN object, to initialise FullFAT
  *
  *	@param	pCacheMem		Pointer to a buffer for the cache. (NULL if ok to Malloc).
- *	@param	Size			The size of the provided buffer, or size of the cache to be created.
+ *	@param	Size			The size of the provided buffer, or size of the cache to be created. (Must be atleast 2 * BlkSize). Always a multiple of BlkSize.
  *	@param	BlkSize			The block size of devices to be attached. If in doubt use 512.
  *	@param	pError			Pointer to a signed byte for error checking. Can be NULL if not required.
  *	@param	pError			To be checked when a NULL pointer is returned.
@@ -78,14 +78,14 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		*pError = FF_ERR_NONE;
 	}
 
-	if((BlkSize % 512) != 0 || Size == 0) {
+	if((BlkSize % 512) != 0 || BlkSize == 0) {
 		if(pError) {
 			*pError = FF_ERR_IOMAN_BAD_BLKSIZE;
 		}
 		return NULL;	// BlkSize Size not a multiple of 512 > 0
 	}
 
-	if((Size % BlkSize) != 0 || Size == 0) {
+	if((Size % BlkSize) != 0 || Size == 0 || Size == BlkSize) {  // Size must now be atleast 2 * BlkSize (or a deadlock will occur).
 		if(pError) {
 			*pError = FF_ERR_IOMAN_BAD_MEMSIZE;
 		}

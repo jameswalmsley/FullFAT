@@ -191,11 +191,25 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	}
 	
 
-	DirCluster = FF_FindDir(pIoman, path, i);
+	DirCluster = FF_FindDir(pIoman, path, i, &Error);
+	if(Error) {
+		if(pError) {
+			*pError = Error;
+		}
+		FF_FREE(pFile);
+		return (FF_FILE *) NULL;
+	}
 
 	if(DirCluster) {
 
-		FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object);
+		FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object, &Error);
+		if(Error) {
+			if(pError) {
+				*pError = Error;	
+			}
+			FF_FREE(pFile);
+			return (FF_FILE *) NULL;
+		}
 
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 			if(strlen(filename) == strlen(Object.FileName)) {
@@ -612,7 +626,12 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 		}
 		
 
-		DirCluster = FF_FindDir(pIoman, szDestinationFile, i);
+		DirCluster = FF_FindDir(pIoman, szDestinationFile, i, &Error);
+		if(Error) {
+			FF_Close(pSrcFile);
+			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			return Error;
+		}
 		
 		if(DirCluster) {
 

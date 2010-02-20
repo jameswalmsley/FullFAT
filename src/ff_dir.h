@@ -110,7 +110,7 @@ void		FF_CleanupEntryFetch		(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext);
 FF_T_SINT8	FF_PushEntry				(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pParam);
 FF_T_BOOL	FF_isEndOfDir				(FF_T_UINT8 *EntryBuffer);
 FF_ERROR	FF_FindNextInDir			(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT *pFetchContext);
-FF_T_SINT32 FF_FindEntryInDir			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent);
+FF_T_UINT32 FF_FindEntryInDir			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent, FF_ERROR *pError);
 FF_ERROR	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName);
 
 void		FF_lockDIR			(FF_IOMAN *pIoman);
@@ -120,7 +120,7 @@ FF_T_UINT32		FF_CreateFile	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 
 
 FF_ERROR		FF_CreateDirent		(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 FF_ERROR		FF_ExtendDirectory	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
-FF_T_UINT32		FF_FindDir			(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen);
+FF_T_UINT32		FF_FindDir			(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen, FF_ERROR *pError);
 
 #ifdef FF_HASH_CACHE
 FF_T_BOOL FF_CheckDirentHash		(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash);

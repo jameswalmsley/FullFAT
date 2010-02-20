@@ -56,7 +56,7 @@ const struct _FFERRTAB
     {"Not enough memory (malloc() returned NULL).",									FF_ERR_NOT_ENOUGH_MEMORY},
     {"Device Driver returned a FATAL error!.",										FF_ERR_DEVICE_DRIVER_FAILED},
     {"The blocksize is not 512 multiple.",											FF_ERR_IOMAN_BAD_BLKSIZE},
-    {"The provided memory size, is not a multiple of the blocksize.",				FF_ERR_IOMAN_BAD_MEMSIZE},
+    {"The memory size, is not a multiple of the blocksize. (Atleast 2 Blocks).",	FF_ERR_IOMAN_BAD_MEMSIZE},
     {"Device is already registered, use FF_UnregisterBlkDevice() first.",			FF_ERR_IOMAN_DEV_ALREADY_REGD},
     {"No mountable partition was found on the specified device.",					FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION},
     {"The format of the MBR was unrecognised.",										FF_ERR_IOMAN_INVALID_FORMAT},

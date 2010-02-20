@@ -192,9 +192,8 @@ static FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, 
     return FF_FALSE;
 }
 
-FF_T_SINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
+FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent, FF_ERROR *pError) {
 
-	FF_ERROR		Error;
 	FF_T_UINT16		fnameLen;
 	//FF_T_UINT16		compareLength;
 	FF_T_UINT16		nameLen;
@@ -202,18 +201,22 @@ FF_T_SINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_T_INT8		MyFname[FF_MAX_FILENAME];
 	FF_T_BOOL		bBreak = FF_FALSE;
 	FF_FETCH_CONTEXT FetchContext;
+
+	*pError = FF_ERR_NONE;
 	
 	pDirent->CurrentItem = 0;
 	nameLen = (FF_T_UINT16) strlen(name);
 
-	Error = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
-	if(Error) {
-		return Error;
+	*pError = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
+	if(*pError) {
+		return 0;
 	}
 
-	while(!bBreak) {	
-		if(FF_FindNextInDir(pIoman, pDirent, &FetchContext)) {
-			break;	// end of dir, file not found!
+	while(!bBreak) {
+		*pError = FF_FindNextInDir(pIoman, pDirent, &FetchContext);
+		if(*pError) {
+			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			return 0;	// end of dir, file not found!
 		}
 
 		if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
@@ -240,300 +243,16 @@ FF_T_SINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 
 	FF_CleanupEntryFetch(pIoman, &FetchContext);
 	
-	return 0;	// Cluster Number of 0 is invalid.
+	return 0;	// Cluster Number of 0 is invalid.	-- End of Dir
 }
 
-/*
-#define FF_DIR_LFN_TRAVERSED	0x01
-#define FF_DIR_LFN_DELETED		0x02
-
-FF_T_SINT8 FF_PopulateLongBufEntry(FF_IOMAN *pIoman, FF_BUFFER **ppBuffer, FF_DIRENT *pDirent) {
-	// Relative positions!
-	FF_T_UINT32	RelBlockNum;
-	FF_T_UINT32 RelBlockPos = FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
-	FF_T_UINT32	iItemLBA;
-	FF_T_INT8	*DirBuffer	= ((*ppBuffer)->pBuffer + (RelBlockPos * 32));
-	FF_T_UINT8	numLFNs		= (FF_getChar(DirBuffer, (FF_T_UINT16) 0) & ~0x40);
-	FF_T_UINT16	x,i,y,myShort, lenlfn = 0;
-	FF_T_UINT32	CurrentCluster;
-	FF_T_SINT8	RetVal	= FF_ERR_NONE;
-	FF_T_INT8	ShortName[13];
-	FF_T_UINT8	CheckSum = FF_getChar(DirBuffer, FF_FAT_LFN_CHECKSUM);
-
-	while(numLFNs > 0) {
-		
-		for(i = 0, y = 0; i < 5; i++, y += 2) {
-			pDirent->FileName[i + ((numLFNs - 1) * 13)] = DirBuffer[FF_FAT_LFN_NAME_1 + y];
-			lenlfn++;
-		}
-
-		for(i = 0, y = 0; i < 6; i++, y += 2) {
-			pDirent->FileName[i + ((numLFNs - 1) * 13) + 5] = DirBuffer[FF_FAT_LFN_NAME_2 + y];
-			lenlfn++;
-		}
-
-		for(i = 0, y = 0; i < 2; i++, y += 2) {
-			pDirent->FileName[i + ((numLFNs - 1) * 13) + 11] = DirBuffer[FF_FAT_LFN_NAME_3 + y];
-			lenlfn++;
-		}
-		numLFNs--;
-		pDirent->CurrentItem += 1;
-		
-		CurrentCluster	= FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32);
-		RelBlockNum		= FF_getMajorBlockNumber(pIoman, pDirent->CurrentItem, 32);
-		RelBlockPos		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
-		iItemLBA		= FF_Cluster2LBA(pIoman, pDirent->AddrCurrentCluster) + RelBlockNum;
-		
-		if(CurrentCluster > pDirent->CurrentCluster) {
-			pDirent->AddrCurrentCluster = FF_TraverseFAT(pIoman, pDirent->AddrCurrentCluster, 1);
-			pDirent->CurrentCluster += 1;
-			iItemLBA = FF_Cluster2LBA(pIoman, pDirent->AddrCurrentCluster) + RelBlockNum;
-			FF_ReleaseBuffer(pIoman, *ppBuffer);
-			*ppBuffer = FF_GetBuffer(pIoman, iItemLBA, FF_MODE_READ);
-			RetVal |= FF_DIR_LFN_TRAVERSED;
-		} else if(iItemLBA > ((*ppBuffer)->Sector)) {
-			FF_ReleaseBuffer(pIoman, *ppBuffer);
-			*ppBuffer = FF_GetBuffer(pIoman, iItemLBA, FF_MODE_READ);
-			RetVal |= FF_DIR_LFN_TRAVERSED;
-		}
-
-		DirBuffer = ((*ppBuffer)->pBuffer + (RelBlockPos * 32));
-	}
-
-	if(FF_getChar(DirBuffer, (FF_T_UINT16) 0) == FF_FAT_DELETED) {
-		RetVal |= FF_DIR_LFN_DELETED;
-		return RetVal;
-	}
-
-	pDirent->FileName[lenlfn] = '\0';
-	
-	// Process the ShortName Entry
-	memcpy(ShortName, DirBuffer, 11);
-	if(CheckSum != FF_CreateChkSum(ShortName)) {
-		FF_ProcessShortName(ShortName);
-		strcpy(pDirent->FileName, ShortName);
-	} else {
-		FF_ProcessShortName(ShortName);
-	}
-	
-	myShort = FF_getShort(DirBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
-	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
-	myShort = FF_getShort(DirBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
-	pDirent->ObjectCluster |= myShort;
-
-	// Get the filesize.
-	pDirent->Filesize = FF_getLong(DirBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
-	// Get the attribute.
-	pDirent->Attrib = FF_getChar(DirBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
-
-	return RetVal;
-}*/
-
-/*
-FF_T_SINT8 FF_FindEntry(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_DIRENT *pDirent, FF_T_BOOL LFNs) {
-	
-	FF_T_UINT32		iItemLBA;
-	FF_BUFFER		*pBuffer;
-	FF_T_INT8		*DirBuffer;
-	FF_T_UINT32		fatEntry = DirCluster;
-	FF_T_UINT32		i,x;
-	FF_T_UINT32		numLFNs;
-	FF_T_UINT16		NameLen, DirentNameLen;
-	FF_T_BOOL		Compare = FF_FALSE;
-	FF_T_SINT8		RetVal = 0;
-	FF_T_UINT16		RelEntry;
-
-	pDirent->CurrentItem = 0;
-	pDirent->AddrCurrentCluster = DirCluster;
-	pDirent->CurrentCluster = 0;
-	pDirent->DirCluster = DirCluster;
-
-	do {
-		
-		pDirent->AddrCurrentCluster = fatEntry;
-		iItemLBA = FF_Cluster2LBA(pIoman, pDirent->AddrCurrentCluster);
-
-		for(i = 0; i < pIoman->pPartition->SectorsPerCluster; i++) {
-			
-			if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
-				break;
-			}
-
-			pBuffer = FF_GetBuffer(pIoman, iItemLBA + i, FF_MODE_READ);
-			{
-				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED;
-				}
-				pBuffer->Persistance = 1;
-				RelEntry = FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
-				for(x = RelEntry; x < (pIoman->BlkSize / 32); x++) {
-					if(FF_getMajorBlockNumber(pIoman, pDirent->CurrentItem, 32) > i) {
-						break;
-					}
-					if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
-						break;
-					}
-					RelEntry = FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
-					x = RelEntry;
-					if(x >= (pIoman->BlkSize / 32)) {
-						break;
-					}
-					DirBuffer = (pBuffer->pBuffer + (32 * x));
-					// Process each entry and Compare to Name!
-					if(FF_getChar(DirBuffer, (FF_T_UINT16) 0) != FF_FAT_DELETED) {
-						if(DirBuffer[0] == 0x00) {
-							FF_ReleaseBuffer(pIoman, pBuffer);
-							return FF_ERR_DIR_END_OF_DIR;
-						}
-						pDirent->Attrib = FF_getChar(DirBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
-						if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
-							numLFNs = (FF_T_UINT8)(DirBuffer[0] & ~0x40);
-							if(LFNs) {
-								RetVal = FF_PopulateLongBufEntry(pIoman, &pBuffer, pDirent);
-								if((RetVal & FF_DIR_LFN_DELETED)) {
-									Compare = FF_FALSE;
-									RetVal &= ~FF_DIR_LFN_DELETED;
-								} else {
-									Compare = FF_TRUE;
-								}
-
-								pDirent->CurrentItem += 1;
-							} else {
-								pDirent->CurrentItem += numLFNs;
-							}
-							
-						} else {
-							FF_PopulateShortDirent(pDirent, DirBuffer);
-							Compare = FF_TRUE;
-							pDirent->CurrentItem += 1;
-						}
-
-						if(Compare) {
-							// Compare the Items
-							NameLen = strlen(Name);
-							DirentNameLen = strlen(pDirent->FileName);
-
-							if(NameLen == DirentNameLen) {	// Names are same length, possible match.
-								if(FF_StrMatch(Name, pDirent->FileName, NameLen)) {
-									FF_ReleaseBuffer(pIoman, pBuffer);
-									return FF_ERR_NONE;	// Success Item found!
-								}
-							}
-							Compare = FF_FALSE;
-						}
-
-						if((RetVal & FF_DIR_LFN_TRAVERSED)) {
-							break;		
-						}
-
-					} else {
-						pDirent->CurrentItem += 1;
-					}
-				}
-			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
-			if((RetVal & FF_DIR_LFN_TRAVERSED)) {
-				break;		
-			}
-		}
-
-		// Traverse!
-		
-		if((RetVal & FF_DIR_LFN_TRAVERSED)) {
-			RetVal = FF_ERR_NONE;
-			fatEntry = pDirent->AddrCurrentCluster;
-		} else {
-			if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
-				fatEntry = FF_getFatEntry(pIoman, pDirent->AddrCurrentCluster);
-				pDirent->AddrCurrentCluster = FF_TraverseFAT(pIoman, pDirent->AddrCurrentCluster, 1);
-				pDirent->CurrentCluster += 1;
-			}
-		}
-	} while(!FF_isEndOfChain(pIoman, fatEntry));
-
-	return FF_ERR_DIR_END_OF_DIR;
-}*/
 
 
 /**
  *	@private
  **/
-/*FF_T_UINT32 FF_FindEntry(FF_IOMAN *pIoman, FF_T_SINT8 *path, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent) {
-	
-	FF_T_INT32		retVal;
-	FF_T_INT8		name[FF_MAX_FILENAME];
-	FF_T_INT8		Filename[FF_MAX_FILENAME];
-	FF_T_UINT16		fnameLen;
-	FF_T_UINT16		compareLength;
-	FF_T_UINT16		nameLen;
-	FF_T_UINT16		i = strlen(path);
 
-
-	while(i != 0) {
-		if(path[i] == '\\' || path[i] == '/') {
-			break;
-		}
-		i--;
-	}
-	
-	if(i == 0) {
-		i = 1;
-	}
-
-	nameLen = strlen((path + i));
-	strncpy(name, (path + i), nameLen);
-	name[nameLen] = '\0';	
-	
-
-	if(FF_FindFirst(pIoman, pDirent, path)) {
-		return 0; // file not found.
-	}
-
-	if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
-		strcpy(Filename, pDirent->FileName);
-		fnameLen = (FF_T_UINT16) strlen(Filename);
-		FF_tolower(Filename, (FF_T_UINT32) fnameLen);
-		FF_tolower(name, (FF_T_UINT32) nameLen);
-		if(nameLen > fnameLen) {
-			compareLength = nameLen;
-		} else {
-			compareLength = fnameLen;
-		}
-		if(strncmp(name, Filename, (FF_T_UINT32) compareLength) == 0) {
-			// Object found!!
-			return pDirent->ObjectCluster;	// Return the cluster number
-		}
-	}
-
-	while(1) {	
-		if(FF_FindNext(pIoman, pDirent)) {
-			return 0;	// end of dir, file not found!
-		}
-
-		if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
-			strcpy(Filename, pDirent->FileName);
-			fnameLen = (FF_T_UINT16) strlen(Filename);
-			FF_tolower(Filename, (FF_T_UINT32) fnameLen);
-			FF_tolower(name, (FF_T_UINT32) nameLen);
-			if(nameLen > fnameLen) {
-				compareLength = nameLen;
-			} else {
-				compareLength = fnameLen;
-			}
-			if(strncmp(name, Filename, (FF_T_UINT32) compareLength) == 0) {
-				// Object found!
-				return pDirent->ObjectCluster;	// Return the cluster number
-			}
-		}
-	}
-	return 0;
-}*/
-
-/**
- *	@private
- **/
-
-FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen) {
+FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen, FF_ERROR *pError) {
     FF_T_UINT32     dirCluster = pIoman->pPartition->RootDirCluster;
     FF_T_INT8       mytoken[FF_MAX_FILENAME];
     FF_T_INT8       *token;
@@ -543,6 +262,8 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 #ifdef FF_PATH_CACHE
 	FF_T_UINT32		i;
 #endif
+
+	*pError = FF_ERR_NONE;
 
     if(pathLen == 1) {      // Must be the root dir! (/ or \)
 		return pIoman->pPartition->RootDirCluster;
@@ -570,9 +291,13 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
     token = FF_strtok(path, mytoken, &it, &last, pathLen);
 
      do{
-            //lastDirCluster = dirCluster;
             MyDir.CurrentItem = 0;
-            dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir);
+            dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir, pError);
+
+			if(*pError) {
+				return 0;
+			}
+
 			/*if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
 				dirCluster = pIoman->pPartition->RootDirCluster;
             }*/
@@ -603,124 +328,6 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
     return dirCluster;
 }
 
-/*
-FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, FF_T_INT8 *path, FF_T_UINT16 pathLen) {
-    FF_T_UINT32		dirCluster = pIoman->pPartition->RootDirCluster;
-    FF_T_INT8       mytoken[FF_MAX_FILENAME];
-    FF_T_INT8       *token;
-    FF_T_UINT16     it = 0;         // Re-entrancy Variables for FF_strtok()
-    FF_T_BOOL       last = FF_FALSE;
-    FF_DIRENT       MyDir;
-
-    if(pathLen == 1) {      // Must be the root dir! (/ or \)
-            return pIoman->pPartition->RootDirCluster;
-    }
-    
-    if(path[pathLen-1] == '\\' || path[pathLen-1] == '/') {
-            pathLen--;      
-    }
-
-    token = FF_strtok(path, mytoken, &it, &last, pathLen);
-
-     do{
-            //lastDirCluster = dirCluster;
-            MyDir.CurrentItem = 0;
-			if(FF_FindEntry(pIoman, dirCluster, token, &MyDir, FF_TRUE)) {
-				return 0;
-			} else {
-				dirCluster = MyDir.ObjectCluster;
-			}
-			if(MyDir.Attrib != FF_FAT_ATTR_DIR) {
-				return 0;
-			}
-			if(dirCluster == 0 && MyDir.CurrentItem == 2 && MyDir.FileName[0] == '.') { // .. Dir Entry pointing to root dir.
-				dirCluster = pIoman->pPartition->RootDirCluster;
-            }
-            token = FF_strtok(path, mytoken, &it, &last, pathLen);
-    }while(token != NULL);
-
-    return dirCluster;
-}
-*/
-
-#ifdef FF_LFN_SUPPORT
-/**
- *	@private
- **//*
-FF_T_SINT8 FF_getLFN(FF_IOMAN *pIoman, FF_BUFFER *pBuffer, FF_DIRENT *pDirent, FF_T_INT8 *filename) {
-
-	FF_T_UINT8	 	numLFNs;
-	FF_T_UINT16		lenlfn = 0;
-	FF_T_UINT8		tester;
-	FF_T_UINT16		i,y;
-	FF_T_UINT32		CurrentCluster;
-	FF_T_UINT32		fatEntry;
-	FF_T_UINT8		*buffer		= pBuffer->pBuffer;
-	FF_T_UINT32		Sector		= pBuffer->Sector;
-	FF_T_UINT32		Entry		= FF_getMinorBlockEntry(pIoman, pDirent->CurrentItem, 32);
-
-	tester = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16)(Entry * 32));
-	numLFNs = (FF_T_UINT8) (tester & ~0x40);
-
-	while(numLFNs > 0) {
-		if(FF_getClusterChainNumber(pIoman, pDirent->CurrentItem, 32) > pDirent->CurrentCluster) {
-			FF_ReleaseBuffer(pIoman, pBuffer);
-			fatEntry = FF_getFatEntry(pIoman, pDirent->DirCluster);
-			if(fatEntry == (FF_T_UINT32) FF_ERR_DEVICE_DRIVER_FAILED) {
-				return FF_ERR_DEVICE_DRIVER_FAILED;
-			}
-
-			if(FF_isEndOfChain(pIoman, fatEntry)) {
-				CurrentCluster = pDirent->DirCluster;
-				// ERROR THIS SHOULD NOT OCCUR!
-			} else {
-				CurrentCluster = fatEntry;
-			}
-
-			pBuffer = FF_GetBuffer(pIoman, FF_getRealLBA(pIoman, FF_Cluster2LBA(pIoman, CurrentCluster)), FF_MODE_READ);
-			if(!pBuffer) {
-				return FF_ERR_DEVICE_DRIVER_FAILED;
-			}
-			Entry = 0;	
-		}
-
-		if(Entry > 15) {
-			FF_ReleaseBuffer(pIoman, pBuffer);
-			Sector += 1;
-			pBuffer = FF_GetBuffer(pIoman, Sector, FF_MODE_READ);
-			if(!pBuffer) {
-				return FF_ERR_DEVICE_DRIVER_FAILED;
-			}
-			buffer = pBuffer->pBuffer;
-			Entry = 0;
-		}
-
-		for(i = 0, y = 0; i < 5; i++, y += 2) {
-			filename[i + ((numLFNs - 1) * 13)] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_1 + y];
-			lenlfn++;
-		}
-
-		for(i = 0, y = 0; i < 6; i++, y += 2) {
-			filename[i + ((numLFNs - 1) * 13) + 5] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_2 + y];
-			lenlfn++;
-		}
-
-		for(i = 0, y = 0; i < 2; i++, y += 2) {
-			filename[i + ((numLFNs - 1) * 13) + 11] = buffer[(Entry * 32) + FF_FAT_LFN_NAME_3 + y];
-			lenlfn++;
-		}
-
-		numLFNs--;
-
-		Entry++;
-		pDirent->CurrentItem += 1;
-	}
-
-	filename[lenlfn] = '\0';
-
-	return 0;
-}*/
-#endif
 
 /**
  *	@private
@@ -1353,7 +960,10 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 		}
 	}
 			
-	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen - i);
+	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen - i, &Error);
+	if(Error) {
+		return Error;
+	}
 	if(pDirent->DirCluster) {
 		// Valid Dir found, copy the wildCard to filename!
 		strncpy(pDirent->szWildCard, ++szWildCard, FF_MAX_FILENAME);
@@ -1675,19 +1285,6 @@ FF_ERROR FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster
 }
 
 
-/*static FF_T_BOOL FF_isShortName(const FF_T_UINT8 *Name, FF_T_UINT16 StrLen) {
-	FF_T_UINT16 i;
-	for(i = 0; i < StrLen; i++) {
-		if(Name[i] == '.') {
-			i--;
-		}
-	}
-	if(i < 11) {
-		return FF_TRUE;
-	}
-	return FF_FALSE;
-}*/
-
 FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName) {
 	FF_T_UINT16 i,x,y;
 	FF_T_INT8	TempName[FF_MAX_FILENAME];
@@ -1757,8 +1354,11 @@ FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 
 	memcpy(MyShortName, ShortName, 11);
 	FF_ProcessShortName(MyShortName);
 	
-	if(FitsShort && !FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir)) {
-		return 0;
+	if(FitsShort && !FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir, &Error)) {
+		if(Error) {
+			return Error;	// If there was an error report it.
+		}
+		return FF_ERR_NONE;	// Else return No Error.
 	} else {
 		if(FitsShort) {
 			return FF_ERR_DIR_OBJECT_EXISTS;
@@ -1781,7 +1381,7 @@ FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 
 				}
 
 				//FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32) FF_GetCRC16(MyShortName, strlen(MyShortName)));
-				return 0;
+				return FF_ERR_NONE;
 			}
 		}
 		// Add a tail and special number until we're happy :D
@@ -2132,11 +1732,19 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 		i = 1;
 	}
 
-	DirCluster = FF_FindDir(pIoman, Path, i);
+	DirCluster = FF_FindDir(pIoman, Path, i, &Error);
+
+	if(Error) {
+		return Error;
+	}
 
 	if(DirCluster) {
-		if(FF_FindEntryInDir(pIoman, DirCluster, DirName, 0x00, &MyDir)) {
+		if(FF_FindEntryInDir(pIoman, DirCluster, DirName, 0x00, &MyDir, &Error)) {
 			return FF_ERR_DIR_OBJECT_EXISTS;
+		}
+
+		if(Error) {
+			return Error;	
 		}
 
 		strncpy(MyDir.FileName, DirName, FF_MAX_FILENAME);
