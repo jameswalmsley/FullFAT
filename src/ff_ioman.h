@@ -87,8 +87,8 @@ typedef FF_T_SINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAd
  *	@brief	Describes the block device driver interface to FullFAT.
  **/
 typedef struct {
-	FF_WRITE_BLOCKS	fnWriteBlocks;	///< Function Pointer, to write a block(s) from a block device.
-	FF_READ_BLOCKS	fnReadBlocks;	///< Function Pointer, to read a block(s) from a block device.
+	FF_WRITE_BLOCKS	fnpWriteBlocks;	///< Function Pointer, to write a block(s) from a block device.
+	FF_READ_BLOCKS	fnpReadBlocks;	///< Function Pointer, to read a block(s) from a block device.
 	FF_T_UINT16		devBlkSize;		///< Block size that the driver deals with.
 	void			*pParam;		///< Pointer to some parameters e.g. for a Low-Level Driver Handle
 } FF_BLK_DEVICE;
@@ -234,6 +234,8 @@ FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman);
 #endif
 
 // PUBLIC  (To FullFAT Only):
+FF_T_SINT32 FF_BlockRead			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer);
+FF_T_SINT32 FF_BlockWrite			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer);
 FF_ERROR	FF_IncreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_ERROR	FF_DecreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);

@@ -86,6 +86,8 @@ const struct _FFERRTAB
 	{"Destination path (dir) was not found.",										FF_ERR_FILE_DIR_NOT_FOUND},
 	{"Failed to create the directory Entry.",										FF_ERR_FILE_COULD_NOT_CREATE_DIRENT},
 	{"Not enough free disk space to complete the disk transaction.",				FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE},
+	{"Attempted to Read a sector out of bounds.",									FF_ERR_IOMAN_OUT_OF_BOUNDS_READ},
+	{"Attempted to Write a sector out of bounds.",									FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE},
 };
 
 /**

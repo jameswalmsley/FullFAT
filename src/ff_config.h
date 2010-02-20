@@ -45,7 +45,7 @@
 										// FullFAT works great with LFNs and without. You choose, its your project!
 
 //---------- FAT12 SUPPORT
-//#define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
+#define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
 										// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
 										// therefore savings can be made by not having it.
 

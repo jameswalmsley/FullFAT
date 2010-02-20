@@ -49,8 +49,15 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		i = strlen(path);
 
-		if(path[i - 1] == '\\' || path[i - 1] == '/') {	// Get rid of the trailing slash, or FindFirst() will open that dir.
-			path[i - 1] = '\0';
+		if(i > 1) {
+			if(path[i - 1] == '\\' || path[i - 1] == '/') {	// Get rid of the trailing slash, or FindFirst() will open that dir.
+				path[i - 1] = '\0';
+			}
+		} else {
+			if(path[0] == '\\' || path[0] == '/') {	// Root Dir!
+				strcpy(pEnv->WorkingDir, path);
+				return 0;
+			}
 		}
 		
 		if(!FF_FindFirst(pEnv->pIoman, &findData, path)) {
