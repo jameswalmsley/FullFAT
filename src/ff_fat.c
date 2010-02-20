@@ -458,7 +458,7 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
  *	@return 0 on error.
  **/
 #ifdef FF_FAT12_SUPPORT
-FF_T_UINT32 FF_FindFreeClusterOLD(FF_IOMAN *pIoman, FF_ERROR *pError) {
+static FF_T_UINT32 FF_FindFreeClusterOLD(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_T_UINT32 nCluster;
 	FF_T_UINT32 fatEntry;
 

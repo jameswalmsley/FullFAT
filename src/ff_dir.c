@@ -1547,15 +1547,17 @@ FF_T_SINT8 FF_RewindFind(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	return 0;
 }
 
-
-FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 Sequential) {
+/*
+	Returns >= 0 for a free dirent entry.
+	Returns <  0 with and Error code if anything goes wrong.
+*/
+static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 Sequential) {
 
 	FF_T_UINT8	EntryBuffer[32];
 	FF_T_UINT16	i = 0;
 	FF_T_UINT16 nEntry;
 	FF_ERROR	Error = FF_ERR_NONE;
 	FF_T_UINT32	DirLength;
-//	FF_T_UINT32	iEndOfChain;
 	FF_FETCH_CONTEXT FetchContext;
 
 	FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
@@ -2003,11 +2005,13 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 					FF_unlockDIR(pIoman);
 					return RetVal;
 				}
-
+			} else {
+				FF_unlockDIR(pIoman);
+				return RetVal;
 			}
 		}else {
 			FF_unlockDIR(pIoman);
-			return RetVal;
+			return FreeEntry;
 		}
 	}
 	FF_unlockDIR(pIoman);
@@ -2025,21 +2029,22 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 
 FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *FileName, FF_DIRENT *pDirent, FF_ERROR *pError) {
 	FF_DIRENT	MyFile;
-	FF_ERROR	Error;
+	*pError	= FF_ERR_NONE;
 	strncpy(MyFile.FileName, FileName, FF_MAX_FILENAME);
 
 	MyFile.Attrib = 0x00;
 	MyFile.Filesize = 0;
-	MyFile.ObjectCluster = FF_CreateClusterChain(pIoman, &Error);
-	if(Error) {
-		*pError = Error;
+	MyFile.ObjectCluster = FF_CreateClusterChain(pIoman, pError);
+	if(*pError) {
 		FF_UnlinkClusterChain(pIoman, MyFile.ObjectCluster, 0);
 		FF_FlushCache(pIoman);
 		return 0;
 	}
 	MyFile.CurrentItem = 0;
 
-	if(FF_CreateDirent(pIoman, DirCluster, &MyFile)) {
+	*pError = FF_CreateDirent(pIoman, DirCluster, &MyFile);
+
+	if(*pError) {
 		FF_UnlinkClusterChain(pIoman, MyFile.ObjectCluster, 0);
 		FF_FlushCache(pIoman);
 		return 0;
