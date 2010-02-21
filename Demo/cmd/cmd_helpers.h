@@ -8,9 +8,12 @@
 #include "../../src/fullfat.h"
 #include "dir.h"
 
+#ifdef FF_UNICODE_SUPPORT
+#include <wchar.h>
+#endif
+
 #define DIR_COLOUR 			FFT_FOREGROUND_BLUE | FFT_FOREGROUND_GREEN | FFT_FOREGROUND_INTENSITY
 #define COPY_BUFFER_SIZE 	8192
-
 
 
 typedef struct {							// Provides an environment for the FullFAT commands.
@@ -23,17 +26,22 @@ typedef struct {							// Provides an environment for the FullFAT commands.
 } FF_ENVIRONMENT;
 
 #ifdef FF_UNICODE_SUPPORT
-int	append_filename(wchar_t *path, wchar_t *filename);
+int	wcsAppendFilename(wchar_t *path, wchar_t *filename);
+void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv);
+void wcsExpandPath(wchar_t *acPath);
+const wchar_t *wcsGetWildcard(const wchar_t *String);
 #else
-int	append_filename(char *path, char *filename);
-#endif
-const char *getWildcard(const char *String);
 void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv);
+#endif
+
+int	AppendFilename(char *path, char *filename);
+void ExpandPath(char *acPath);
+const char *GetWildcard(const char *String);
 
 void SD_PrintDirent(SD_DIRENT *pDirent);
 void FF_PrintDir(FF_DIRENT *pDirent);
 
-void ExpandPath(char *acPath);
+
 
 #ifndef WIN32
 #include <unistd.h>

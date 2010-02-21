@@ -31,11 +31,23 @@
 #include "ls_cmd.h"
 
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
+
+#ifdef FF_UNICODE_SUPPORT
+static int ls_dir(const wchar_t *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
+#else
 static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
+#endif
 
 int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR			path[FF_MAX_PATH];
+	FF_T_WCHAR			wcArgv[FF_MAX_PATH];
+#else
 	FF_T_INT8			path[FF_MAX_PATH];
+#endif
+
 	const char 			*szPath;
+
 	FF_T_BOOL			bRecursive = FF_FALSE, bList = FF_FALSE, bShowHidden = FF_FALSE;
 	FFT_GETOPT_CONTEXT	optionContext;
 
@@ -78,7 +90,12 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	szPath = FFTerm_getarg(argc, argv, 0, &optionContext);
 
 	if(szPath) {
+#ifdef FF_UNICODE_SUPPORT
+		FF_cstrtowcs(wcArgv, szPath);
+		ProcessPath(path, wcArgv, pEnv);
+#else
 		ProcessPath(path, szPath, pEnv);
+#endif
 		RetVal = ls_dir(path, bList, bRecursive, bShowHidden, pEnv);
 	} else {
 		RetVal = ls_dir(pEnv->WorkingDir, bList, bRecursive, bShowHidden, pEnv);
@@ -130,47 +147,64 @@ static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
 /*
 	This function simply lists an entire directory, with specified wildCard.
 */
+#ifdef FF_UNICODE_SUPPORT
+static int ls_dir(const wchar_t *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
+#else
 static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
+#endif
 	FF_DIRENT	findData;
 	FF_ERROR	Result;
-	SD_ERROR	RetVal;
+	SD_ERROR	RetVal; 
 	SD_DIR		Dir;
 	SD_DIRENT	Dirent;
+#ifdef FF_UNICODE_SUPPORT
+	wchar_t			path[FF_MAX_PATH];
+	//wchar_t			name[FF_MAX_FILENAME];
+	wchar_t			recursivePath[FF_MAX_PATH];
+	const wchar_t	*szpWildCard;
+#else
 	char		path[FF_MAX_PATH];
 	char		name[FF_MAX_FILENAME];
-	FF_T_WCHAR	wcPath[FF_MAX_PATH];
-	FF_T_WCHAR	wcName[FF_MAX_FILENAME];
 	char		recursivePath[FF_MAX_PATH];
-
 	const char	*szpWildCard;
+#endif
+
 	
 	int columns, columnWidth;
 	int i;
 	
+#ifdef FF_UNICODE_SUPPORT
+	wcscpy(path, szPath);	// Place szPath into a modifiable buffer so we can correctly format it.
+#else
 	strcpy(path, szPath);	// Place szPath into a modifiable buffer so we can correctly format it.
+#endif
 
 	// First Pass to calculate column widths!
-	FF_cstrtowcs(wcPath, path);
-	Result = FF_FindFirst(pEnv->pIoman, &findData, wcPath);
+	Result = FF_FindFirst(pEnv->pIoman, &findData, path);
 
 	if(Result) {
 		return -5; // No dirs;
 	}
 
-	szpWildCard = getWildcard(szPath);
+#ifdef FF_UNICODE_SUPPORT	
+	szpWildCard = wcsGetWildcard(szPath);
+#else
+	szpWildCard = GetWildcard(szPath);
+#endif
 
 	// A directory should be opened with /path/to/dir/ or /path/to/dir/*, not /path/to/dir
 	// Check if entry is a dir, and the wildCard specified a specific dir.
 	// If so we should open that dir for iteration.
 #ifdef FF_UNICODE_SUPPORT
-	FF_cstrtowcs(wcName, szpWildCard);
-	if(!wcsicmp(findData.FileName, wcName) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+	if(!wcsicmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+		wcscat(path, L"\\*");	// Add a backslash to the end!
 #else
 	if(!stricmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+		strcat(path, "\\*");	// Add a backslash to the end!
 #endif
 		//strcpy(recursivePath, szPath);	// Copy szPath, to recursivePath so \* can be added.
-		strcat(path, "\\*");	// Add a backslash to the end!
-		Result = FF_FindFirst(pEnv->pIoman, &findData, wcPath);
+		
+		Result = FF_FindFirst(pEnv->pIoman, &findData, path);
 		if(Result) {
 			return -5;
 		}
@@ -289,15 +323,29 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 			if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
 				if(!(Dirent.szFileName[0] == '.' && (Dirent.szFileName[1] == '.' || Dirent.szFileName[1] == '\0'))) {
 										
+#ifdef FF_UNICODE_SUPPORT
+					wcscpy(recursivePath, path);
+					wcsAppendFilename(recursivePath, Dirent.szFileName);
+
+#else
 					strcpy(recursivePath, path);
+					AppendFilename(recursivePath, Dirent.szFileName);
+#endif
 
-					append_filename(recursivePath, Dirent.szFileName);
 
+#ifdef FF_UNICODE_SUPPORT
+					if(recursivePath[wcslen(recursivePath) - 1] != '\\' && recursivePath[wcslen(recursivePath) - 1] != '/') {
+						wcscat(recursivePath, L"\\");
+					}
+					
+					printf(".%s:\n", recursivePath);
+#else
 					if(recursivePath[strlen(recursivePath) - 1] != '\\' && recursivePath[strlen(recursivePath) - 1] != '/') {
 						strcat(recursivePath, "\\");
 					}
 					
 					printf(".%s:\n", recursivePath);
+#endif
 					ls_dir(recursivePath, bList, bRecursive, bShowHidden, pEnv);
 				}
 			}

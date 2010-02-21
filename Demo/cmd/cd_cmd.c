@@ -40,16 +40,24 @@
  **/
 int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_DIRENT	findData;
+	int			i;
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	path[FF_MAX_PATH];
+	FF_T_WCHAR	wcargv[FF_MAX_PATH];
 #else
 	FF_T_INT8	path[FF_MAX_PATH];
 #endif
-	int			i;
+	
 
 	if(argc == 2) {
+#ifdef FF_UNICODE_SUPPORT
+		FF_cstrtowcs(wcargv, argv[1]);		// Convert argv[1] into a UTF-16 string.
+		ProcessPath(path, wcargv, pEnv);	// Make path absolute if relative.
+		wcsExpandPath(path);	// Remove any relativity from the path (../ or ..\).
+#else
 		ProcessPath(path, argv[1], pEnv);	// Make path absolute if relative.
 		ExpandPath(path);	// Remove any relativity from the path (../ or ..\).
+#endif
 
 #ifdef FF_UNICODE_SUPPORT
 		i = wcslen(path);
@@ -63,7 +71,11 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			}
 		} else {
 			if(path[0] == '\\' || path[0] == '/') {	// Root Dir!
+#ifdef FF_UNICODE_SUPPORT
+				wcscpy(pEnv->WorkingDir, path);
+#else
 				strcpy(pEnv->WorkingDir, path);
+#endif
 				return 0;
 			}
 		}
@@ -71,12 +83,25 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		if(!FF_FindFirst(pEnv->pIoman, &findData, path)) {
 			if(findData.Attrib & FF_FAT_ATTR_DIR) {
 				// Found a directory, change working dir!
+#ifdef FF_UNICODE_SUPPORT
+				wcscpy(pEnv->WorkingDir, path);
+#else
 				strcpy(pEnv->WorkingDir, path);
+#endif
 			} else {
+#ifdef FF_UNICODE_SUPPORT
+				wprintf(L"%s: %ls: Not a directory.\n", argv[0], path);
+#else
 				printf("%s: %s: Not a directory.\n", argv[0], path);
+#endif
 			}
 		} else {
+#ifdef FF_UNICODE_SUPPORT
+			wprintf(L"%s: %ls: No such file or directory.\n", argv[0], path);
+#else
 			printf("%s: %s: No such file or directory.\n", argv[0], path);
+#endif
+
 		}
 	} else {
 		printf("Usage: %s [path]\n", argv[0]);

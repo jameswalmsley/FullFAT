@@ -86,7 +86,7 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	ProcessPath(szsrcPath, szpSource, pEnv);						// Process the paths into absolute paths.
 	ProcessPath(szdestPath, szpDestination, pEnv);
 
-	szpWildCard = getWildcard(szpSource);							// Get the last token of the source path. (This may include a wildCard).
+	szpWildCard = GetWildcard(szpSource);							// Get the last token of the source path. (This may include a wildCard).
 
 	if(strchr(szpWildCard, '*')) {									// If the 'WildCard' contains a * then its a wild card, otherwise its a file or directory.
 		// WildCard Copying!
@@ -150,8 +150,8 @@ static int copy_dir(const char *srcPath, const char *destPath, FF_T_BOOL bRecurs
 	}
 
 	while(!RetVal) {
-		append_filename(szsrcFile, findData.FileName);
-		append_filename(szdestFile, findData.FileName);
+		AppendFilename(szsrcFile, findData.FileName);
+		AppendFilename(szdestFile, findData.FileName);
 
 		if(!strcmp(szsrcFile, szdestFile)) {
 			printf("cp: Source and Destination files are identical: illegal operation.\n");

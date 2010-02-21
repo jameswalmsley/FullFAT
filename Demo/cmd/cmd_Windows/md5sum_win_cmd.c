@@ -130,7 +130,7 @@ int md5sum_win_cmd(int argc, char **argv) {
 			if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				printf("%s: %s: Is a directory\n", argv[0], findData.cFileName);
 			} else {
-				append_filename(path, findData.cFileName);
+				AppendFilename(path, findData.cFileName);
 				if(!bCheck) {
 					if(!md5_getHash(path, hash)) {
 						printf("%s  %s\n", hash, findData.cFileName);

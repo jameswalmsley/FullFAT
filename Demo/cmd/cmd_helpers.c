@@ -13,7 +13,17 @@
 	Gets the last token of a path.
 	String must be a fully qualified path e.g.:
 */
-const char *getWildcard(const char *String) {
+#ifdef FF_UNICODE_SUPPORT
+const wchar_t *wcsGetWildcard(const wchar_t *String) {
+	int i = wcslen(String);
+		while(String[i] != '\\' && String[i] != '/') {
+		i--;
+	}
+
+	return &String[i+1];
+}
+#endif
+const char *GetWildcard(const char *String) {
 	int i = strlen(String);
 
 	while(String[i] != '\\' && String[i] != '/') {
@@ -28,12 +38,27 @@ const char *getWildcard(const char *String) {
 	Replaces
 */
 #ifdef FF_UNICODE_SUPPORT
-int	append_filename(wchar_t *path, wchar_t *filename) {
+int	wcsAppendFilename(wchar_t *path, wchar_t *filename) {
 	int i = wcslen(path);
-#else
-int	append_filename(char *path, char *filename) {
-	int i = strlen(path);
+	while(path[i] != '\\' && path[i] != '/') {
+		i--;
+		if(!i) {
+			break;
+		}
+	}
+
+	if(path[i] == '\\' || path[i] == '/') {
+		wcscpy(&path[i+1], filename);
+	} else {
+		wcscpy(&path[i], filename);
+	}
+
+	return 0;
+}
+
 #endif
+int	AppendFilename(char *path, char *filename) {
+	int i = strlen(path);
 
 	while(path[i] != '\\' && path[i] != '/') {
 		i--;
@@ -41,20 +66,12 @@ int	append_filename(char *path, char *filename) {
 			break;
 		}
 	}
-#ifdef FF_UNICODE_SUPPORT
-	if(path[i] == '\\' || path[i] == '/') {
-		wcscpy(&path[i+1], filename);
-	} else {
-		wcscpy(&path[i], filename);
-	}
-#else
+
 	if(path[i] == '\\' || path[i] == '/') {
 		strcpy(&path[i+1], filename);
 	} else {
 		strcpy(&path[i], filename);
 	}
-
-#endif
 
 	return 0;
 }
@@ -75,10 +92,19 @@ int	append_filename(char *path, char *filename) {
  **/
 #ifdef FF_UNICODE_SUPPORT
 void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv) {
+		if(src[0] != '\\' && src[0] != '/') {
+		if(wcslen(pEnv->WorkingDir) == 1) {
+			swprintf(dest, FF_MAX_PATH, L"\\%s", src);
+		} else {
+			swprintf(dest, FF_MAX_PATH, L"%s\\%s", pEnv->WorkingDir, src);
+		}
+	} else {
+		swprintf(dest, FF_MAX_PATH, L"%s", src);
+	}
+}
 #else
 void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
-#endif
-	if(src[0] != '\\' && src[0] != '/') {
+		if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
 			sprintf(dest, "\\%s", src);
 		} else {
@@ -88,6 +114,8 @@ void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
 		sprintf(dest, "%s", src);
 	}
 }
+#endif
+
 
 /**
  *	@public
@@ -147,20 +175,22 @@ void SD_PrintDirent(SD_DIRENT *pDirent) {
 
 	Its based on some old code I wrote a long time ago.
 */
-void ExpandPath(char *acPath) {
 
-	char 	*pRel 		= 0;
-	char	*pRelStart 	= 0;
-	char 	*pRelEnd 	= 0;
+#ifdef FF_UNICODE_SUPPORT
+void wcsExpandPath(wchar_t *acPath) {
+	wchar_t *pRel 		= 0;
+	wchar_t	*pRelStart 	= 0;
+	wchar_t *pRelEnd 	= 0;
+
 	int		charRef 	= 0;
 	int 	lenPath 	= 0;
 	int		lenRel		= 0;
 	int 	i 			= 0;
 	int 	remain 		= 0;
-	
 
-	lenPath = strlen(acPath);
-	pRel = strstr(acPath, "..");
+	lenPath = wcslen(acPath);
+	pRel = wcsstr(acPath, L"..");
+
 	while(pRel) {	// Loop removal of Relativity
 		charRef = pRel - acPath;
 
@@ -195,6 +225,67 @@ void ExpandPath(char *acPath) {
 		remain = lenPath - (pRelEnd - acPath);	// Remaining Chars on the end of the path
 		
 		if(lenRel) {
+			wcsncpy(pRelStart, pRelEnd, remain);
+			pRelStart[remain] = '\0';
+		}
+		
+		lenPath -= lenRel;
+		pRel = wcsstr(acPath, L"..");
+	}
+}
+#endif
+
+void ExpandPath(char *acPath) {
+
+	char 	*pRel 		= 0;
+	char	*pRelStart 	= 0;
+	char 	*pRelEnd 	= 0;
+
+	int		charRef 	= 0;
+	int 	lenPath 	= 0;
+	int		lenRel		= 0;
+	int 	i 			= 0;
+	int 	remain 		= 0;
+	
+
+	lenPath = strlen(acPath);
+	pRel = strstr(acPath, "..");
+
+	while(pRel) {	// Loop removal of Relativity
+		charRef = pRel - acPath;
+
+		/*
+			We have found some relativity in the Path, 
+		*/
+
+		// Where it ends:
+		
+		if(pRel[2] == '\\' || pRel[2] == '/') {
+			pRelEnd = pRel + 3;
+		} else {
+			pRelEnd = pRel + 2;	
+		}
+		
+		// Where it Starts:
+		
+		if(charRef == 1) {	// Relative Path comes after the root /
+			return;	// Fixed, returns false appropriately, as in the TODO: above!
+		} else {
+			for(i = (charRef - 2); i >= 0; i--) {
+				if(acPath[i] == '\\' || acPath[i] == '/') {
+					pRelStart = (acPath + (i + 1));
+					break;
+				}
+			}
+		}
+		
+		// The length of the relativity
+		lenRel = pRelEnd - pRelStart;
+		
+		remain = lenPath - (pRelEnd - acPath);	// Remaining Chars on the end of the path
+		
+		if(lenRel) {
+
 			strncpy(pRelStart, pRelEnd, remain);
 			pRelStart[remain] = '\0';
 		}

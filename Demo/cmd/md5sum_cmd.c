@@ -114,7 +114,7 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			if(findData.Attrib & FF_FAT_ATTR_DIR) {
 				printf("%s: %s: Is a directory\n", argv[0], findData.FileName);
 			} else {
-				append_filename(path, findData.FileName);
+				AppendFilename(path, findData.FileName);
 				if(!bCheck) {
 					if(!md5_getHash(path, hash, pEnv)) {
 						printf("%s  %s\n", hash, findData.FileName);

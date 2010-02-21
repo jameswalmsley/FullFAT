@@ -104,7 +104,11 @@ int main(void) {
 	
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
+#ifdef FF_UNICODE_SUPPORT
+	wcscpy(Env.WorkingDir, L"\\");
+#else
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
+#endif
 
 	//setlocale(LC_ALL,"");
 	wprintf(L"This is a Unicode String! Ich heiﬂe J‰mes!\n");

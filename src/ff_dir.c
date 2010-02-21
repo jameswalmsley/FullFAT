@@ -380,7 +380,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 		FF_PendSemaphore(pIoman->pSemaphore);
 		{
 			if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
+#ifdef FF_UNICODE_SUPPORT
+				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen * 2);
+#else
 				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen);
+#endif
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path[pathLen] = '\0';
 				pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].DirCluster = dirCluster;
 #ifdef FF_HASH_TABLE_SUPPORT				
@@ -494,8 +498,13 @@ static void FF_GetDate(FF_SYSTEMTIME *pTime, FF_T_UINT8 *EntryBuffer, FF_T_UINT3
 
 void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
 	FF_T_UINT16 myShort;
-	
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR UTF16EntryBuffer[12];
+	FF_cstrntowcs(UTF16EntryBuffer, (FF_T_INT8 *) EntryBuffer, 11);
+	memcpy(pDirent->FileName, UTF16EntryBuffer, 11*2);
+#else
 	memcpy(pDirent->FileName, EntryBuffer, 11);	// Copy the filename into the Dirent object.
+#endif
 	FF_ProcessShortName(pDirent->FileName);		// Format the shortname, for pleasant viewing.
 
 #ifdef FF_HASH_TABLE_SUPPORT
