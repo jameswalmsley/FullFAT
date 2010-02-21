@@ -115,7 +115,7 @@ SD_ERROR SD_AddDirent(SD_DIR Dir, SD_DIRENT *pDirent) {
 	// Handle Filename!
 #ifdef FF_UNICODE_SUPPORT
 	i = wcslen(myDirent->szFileName);
-	myDirent->szFileName = (wchar_t *) malloc((i + 1)*2);
+	myDirent->szFileName = (wchar_t *) malloc((i + 1)*sizeof(wchar_t));
 	wcscpy(myDirent->szFileName, pDirent->szFileName);
 #else
 	i = strlen(myDirent->szFileName);

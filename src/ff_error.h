@@ -93,6 +93,12 @@
 // Fat Error Codes								-70 +
 #define FF_ERR_FAT_NO_FREE_CLUSTERS				-70	///< No more free space is available on the disk.
 
+// UNICODE Error Codes							-100 +
+#define FF_ERR_UNICODE_INVALID_CODE				-100 ///< An invalid Unicode charachter was provided!
+#define FF_ERR_UNICODE_DEST_TOO_SMALL			-101 ///< Not enough space in the UTF-16 buffer to encode the entire sequence as UTF-16.
+#define FF_ERR_UNICODE_INVALID_SEQUENCE			-102 ///< An invalid UTF-16 sequence was encountered.
+#define FF_ERR_UNICODE_CONVERSION_EXCEEDED		-103 ///< Filename exceeds MAX long-filename length when converted to UTF-16.
+
 #ifdef FF_DEBUG
 const FF_T_INT8 *FF_GetErrMessage(FF_ERROR iErrorCode);
 #else

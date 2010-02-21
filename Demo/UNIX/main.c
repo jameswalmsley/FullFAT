@@ -38,6 +38,8 @@
 #include "../../../ffterm/src/ffterm.h"			// Include the FFTerm project header.
 #include "../../Drivers/Linux/blkdev_linux.h"	// Prototypes for our Windows 32-bit driver.
 
+#include <locale.h>
+
 #define PARTITION_NUMBER	1					// FullFAT can mount primary partitions only. Specified at Runtime.
 
 int lin_ls(int argc, char **argv) {
@@ -76,7 +78,7 @@ int main(void) {
 	FF_ENVIRONMENT	Env;						// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 	BLK_DEV_LINUX	hDisk;						// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
 
-
+	int i;
 
 	//----------- Initialise the environment
 	Env.pIoman = NULL;							// Initialise the FullFAT I/O Manager to NULL.
@@ -85,6 +87,8 @@ int main(void) {
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
 	//hDisk = fnOpen("c:\\FullFAT.img", 512);
+
+	// Test unicode conversion routines!
 	
 	hDisk = fnOpen("/home/james/ImageFile1.img", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
 

@@ -113,7 +113,7 @@ int main(void) {
 	//setlocale(LC_ALL,"");
 	wprintf(L"This is a Unicode String! Ich heiﬂe J‰mes!\n");
 
-	FF_wildcompare(L"*s?.c", L"test.c");
+	//FF_wildcompare(L"*s?.c", L"test.c");
 	
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,

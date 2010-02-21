@@ -94,12 +94,12 @@ int	AppendFilename(char *path, char *filename) {
 void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv) {
 		if(src[0] != '\\' && src[0] != '/') {
 		if(wcslen(pEnv->WorkingDir) == 1) {
-			swprintf(dest, FF_MAX_PATH, L"\\%s", src);
+			swprintf(dest, FF_MAX_PATH, L"\\%ls", src);
 		} else {
-			swprintf(dest, FF_MAX_PATH, L"%s\\%s", pEnv->WorkingDir, src);
+			swprintf(dest, FF_MAX_PATH, L"%ls\\%ls", pEnv->WorkingDir, src);
 		}
 	} else {
-		swprintf(dest, FF_MAX_PATH, L"%s", src);
+		swprintf(dest, FF_MAX_PATH, L"%ls", src);
 	}
 }
 #else
@@ -136,9 +136,17 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 	if(pDirent->Attrib & FF_FAT_ATTR_DIR)
 		attr[3] = 'D';
 #ifdef FF_TIME_SUPPORT	// Different Print formats dependent on if Time support is built-in.
+#ifdef FF_UNICODE_SUPPORT
+	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu  %ls\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
+#else
 	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu  %s\n", pDirent->CreateTime.Day, pDirent->CreateTime.Month, pDirent->CreateTime.Year, pDirent->CreateTime.Hour, pDirent->CreateTime.Minute, attr, pDirent->Filesize, pDirent->FileName);
+#endif
+#else
+#ifdef FF_UNICODE_SUPPORT
+	printf(" %s %12lu    %ls\n", attr, pDirent->Filesize, pDirent->FileName);
 #else
 	printf(" %s %12lu    %s\n", attr, pDirent->Filesize, pDirent->FileName);
+#endif
 #endif
 }
 
@@ -161,7 +169,7 @@ void SD_PrintDirent(SD_DIRENT *pDirent) {
 	}
 	
 #ifdef FF_UNICODE_SUPPORT
-	wprintf(L"  %s\n",  pDirent->szFileName);
+	printf("  %ls\n",  pDirent->szFileName);
 #else
 	printf("  %s\n",  pDirent->szFileName);
 #endif
@@ -367,7 +375,7 @@ DIR	*FindFirstFile(const char *szpPath, DIRENT *pFindData) {
 	char			path[PATH_MAX];
 
 	strcpy(pFindData->szWildCard, "");
-	szpWildCard = getWildcard(szpPath);
+	szpWildCard = GetWildcard(szpPath);
 	strcpy(pFindData->szWildCard, szpWildCard);
 
 	strncpy(path, szpPath, (szpWildCard - szpPath));
@@ -385,7 +393,7 @@ DIR	*FindFirstFile(const char *szpPath, DIRENT *pFindData) {
 	
 	while(pDirent) {
 		if(!strcmp(pFindData->szWildCard, "")) {
-			append_filename(pFindData->szItemPath, pDirent->d_name);
+			AppendFilename(pFindData->szItemPath, pDirent->d_name);
 			lstat(pFindData->szItemPath, &pFindData->itemInfo);
 			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
 			return pDir;
@@ -396,7 +404,7 @@ DIR	*FindFirstFile(const char *szpPath, DIRENT *pFindData) {
 		}
 
 		if(wildcompare(szpWildCard, pDirent->d_name)) {
-			append_filename(pFindData->szItemPath, pDirent->d_name);
+			AppendFilename(pFindData->szItemPath, pDirent->d_name);
 			lstat(pFindData->szItemPath, &pFindData->itemInfo);
 			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
 			return pDir;			
@@ -414,13 +422,13 @@ int	FindNextFile(DIR *pDir, DIRENT *pFindData) {
 
 	while(pDirent) {
 		if(!strcmp(pFindData->szWildCard, "")) {
-			append_filename(pFindData->szItemPath, pDirent->d_name);
+			AppendFilename(pFindData->szItemPath, pDirent->d_name);
 			lstat(pFindData->szItemPath, &pFindData->itemInfo);
 			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
 			return 1;
 		}		
 		if(wildcompare(pFindData->szWildCard, pDirent->d_name)) {
-			append_filename(pFindData->szItemPath, pDirent->d_name);
+			AppendFilename(pFindData->szItemPath, pDirent->d_name);
 			lstat(pFindData->szItemPath, &pFindData->itemInfo);
 			memcpy(&pFindData->dir, pDirent, sizeof(struct dirent));
 			return 1;			

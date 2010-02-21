@@ -164,7 +164,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	const wchar_t	*szpWildCard;
 #else
 	char		path[FF_MAX_PATH];
-	char		name[FF_MAX_FILENAME];
+//	char		name[FF_MAX_FILENAME];
 	char		recursivePath[FF_MAX_PATH];
 	const char	*szpWildCard;
 #endif
@@ -265,7 +265,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 					}
 #ifdef FF_UNICODE_SUPPORT
-					wprintf(L"%-*s", columnWidth, Dirent.szFileName);
+					printf("%-*ls", columnWidth, Dirent.szFileName);
 #else
 					printf("%-*s", columnWidth, Dirent.szFileName);
 #endif
@@ -275,7 +275,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 					}
 					if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
 #ifdef FF_UNICODE_SUPPORT
-						wprintf(L"%-*s", columnWidth, Dirent.szFileName);
+						printf("%-*ls", columnWidth, Dirent.szFileName);
 #else
 						printf("%-*s", columnWidth, Dirent.szFileName);
 #endif

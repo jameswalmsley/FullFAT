@@ -33,14 +33,25 @@
 /**
  *	@brief	A simple command for making dirs.
  **/
-int mkdir_cmd(int argc, char **argv, FF_ENVIRONMENT *pEv) {
+int mkdir_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
-	FF_T_INT8	path[FF_MAX_PATH];
 	FF_ERROR	Error;
 
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	path[FF_MAX_PATH];
+	FF_T_WCHAR	wcargv[FF_MAX_PATH];
+#else
+	FF_T_INT8	path[FF_MAX_PATH];
+#endif
+
 	if(argc == 2) {
-		ProcessPath(path, argv[1], pEv);
-		Error = FF_MkDir(pEv->pIoman, path);
+#ifdef FF_UNICODE_SUPPORT
+		FF_cstrtowcs(wcargv, argv[1]);
+		ProcessPath(path, wcargv, pEnv);
+#else
+		ProcessPath(path, argv[1], pEnv);
+#endif
+		Error = FF_MkDir(pEnv->pIoman, path);
 		if(Error) {
 			printf("Could not mkdir - %s\n", FF_GetErrMessage(Error));
 		}

@@ -178,7 +178,7 @@ static FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, 
 
 	*pError = FF_InitEntryFetch(pIoman, ulDirCluster, &FetchContext);
 	if(*pError) {
-		FF_FALSE;
+		return FF_FALSE;
 	}
 
 	for(i = 0; i < 0xFFFF; i++) {
@@ -269,13 +269,13 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 			FF_tolower(Filename, (FF_T_UINT32) fnameLen);
 			if(nameLen < FF_MAX_FILENAME) {
 #ifdef FF_UNICODE_SUPPORT
-				memcpy(MyFname, name, (nameLen + 1) * 2);
+				memcpy(MyFname, name, (nameLen + 1) * sizeof(FF_T_WCHAR));
 #else
 				memcpy(MyFname, name, nameLen + 1);
 #endif
 			} else {
 #ifdef FF_UNICODE_SUPPORT
-				memcpy(MyFname, name, FF_MAX_FILENAME * 2);
+				memcpy(MyFname, name, FF_MAX_FILENAME * sizeof(FF_T_WCHAR));
 #else
 				memcpy(MyFname, name, FF_MAX_FILENAME);
 #endif
@@ -313,9 +313,9 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_WCHAR *path, FF_T_UINT16 pat
 FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen, FF_ERROR *pError) {
 #endif
     FF_T_UINT32     dirCluster = pIoman->pPartition->RootDirCluster;
-	FF_T_WCHAR		*token;
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR		mytoken[FF_MAX_FILENAME];
+	FF_T_WCHAR		*token;
 #else
 	FF_T_INT8		mytoken[FF_MAX_FILENAME];
 	FF_T_INT8       *token;
@@ -381,7 +381,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
 		{
 			if(pathLen < FF_MAX_PATH) {	// Ensure the PATH won't cause a buffer overrun.
 #ifdef FF_UNICODE_SUPPORT
-				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen * 2);
+				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen * sizeof(FF_T_WCHAR));
 #else
 				memcpy(pIoman->pPartition->PathCache[pIoman->pPartition->PCIndex].Path, path, pathLen);
 #endif
@@ -417,7 +417,7 @@ static void FF_ProcessShortName(FF_T_INT8 *name) {
 	
 	FF_T_UINT8	i;
 #ifdef FF_UNICODE_SUPPORT
-	memcpy(shortName, name, 11 * 2);
+	memcpy(shortName, name, 11 * sizeof(FF_T_WCHAR));
 #else
 	memcpy(shortName, name, 11);
 #endif
@@ -501,7 +501,7 @@ void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *En
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR UTF16EntryBuffer[12];
 	FF_cstrntowcs(UTF16EntryBuffer, (FF_T_INT8 *) EntryBuffer, 11);
-	memcpy(pDirent->FileName, UTF16EntryBuffer, 11*2);
+	memcpy(pDirent->FileName, UTF16EntryBuffer, 11 * sizeof(FF_T_WCHAR));
 #else
 	memcpy(pDirent->FileName, EntryBuffer, 11);	// Copy the filename into the Dirent object.
 #endif
@@ -900,15 +900,17 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	UTF16EntryBuffer[32];
 	FF_T_WCHAR	ShortName[13];
+#if WCHAR_MAX > 0xFFFF
+	FF_T_UINT16 i,y;
+#endif
 #else
 	FF_T_INT8	ShortName[13];
+	FF_T_UINT16 i,y;
 #endif
 	FF_T_UINT8 numLFNs;
 	FF_T_UINT8 x;
 	FF_T_UINT8 CheckSum = 0;
-#ifndef FF_UNICODE_SUPPORT
-	FF_T_UINT16 i,y;
-#endif
+
 	FF_T_UINT16 lenlfn = 0;
 	FF_T_UINT16 myShort;
 	FF_ERROR	Error;
@@ -924,12 +926,34 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 
 	x = numLFNs;
 	while(numLFNs) {
+		if(numLFNs > 1) {
+			numLFNs = numLFNs;
+		}
+
 #ifdef FF_UNICODE_SUPPORT
 		// Simply fill the FileName buffer with UTF-16 Filename!
-		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * 2));
-		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * 2));
-		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * 2));
+#if WCHAR_MAX <= 0xFFFF
+		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * sizeof(FF_T_WCHAR)));
+		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * sizeof(FF_T_WCHAR)));
+		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * sizeof(FF_T_WCHAR)));
 		lenlfn += 13;
+#else
+		for(i = 0, y = 0; i < 5; i++, y += 2) {
+			FF_Utf16ctoUtf32c((FF_T_UINT32 *)&pDirent->FileName[i + ((numLFNs - 1) * 13)], (FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_1 + y]);
+			//pDirent->FileName[i + ((numLFNs - 1) * 13)] = (FF_T_WCHAR) ((FF_T_WCHAR) EntryBuffer[FF_FAT_LFN_NAME_1 + y] | ((FF_T_WCHAR) EntryBuffer[FF_FAT_LFN_NAME_1 + y + 1] >> 8));
+			lenlfn++;
+		}
+		for(i = 0, y = 0; i < 6; i++, y += 2) {
+			FF_Utf16ctoUtf32c((FF_T_UINT32 *)&pDirent->FileName[i + ((numLFNs - 1) * 13) + 5], (FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_2 + y]);
+			//pDirent->FileName[i + ((numLFNs - 1) * 13) + 5] = (FF_T_WCHAR) ((FF_T_WCHAR) EntryBuffer[FF_FAT_LFN_NAME_2 + y] | ((FF_T_WCHAR) EntryBuffer[FF_FAT_LFN_NAME_2 + y + 1] >> 8));
+			lenlfn++;
+		}
+		for(i = 0, y = 0; i < 2; i++, y += 2) {
+			FF_Utf16ctoUtf32c((FF_T_UINT32 *)&pDirent->FileName[i + ((numLFNs - 1) * 13) + 11], (FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_3 + y]);
+			//pDirent->FileName[i + ((numLFNs - 1) * 13) + 11] = (FF_T_WCHAR) ((FF_T_WCHAR) EntryBuffer[FF_FAT_LFN_NAME_3 + y] | ((FF_T_WCHAR)EntryBuffer[FF_FAT_LFN_NAME_3 + y + 1] >> 8));
+			lenlfn++;
+		}
+#endif
 		// Copy each part of the LFNS
 #else
 		// Attempts to pull ASCII from UTF-8 encoding. 
@@ -961,7 +985,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	// Process the ShortName Entry
 #ifdef FF_UNICODE_SUPPORT
 	FF_cstrntowcs(UTF16EntryBuffer, (FF_T_INT8 *) EntryBuffer, 32);
-	memcpy(ShortName, UTF16EntryBuffer, 11*2);
+	memcpy(ShortName, UTF16EntryBuffer, 11 * sizeof(FF_T_WCHAR));
 #else
 	memcpy(ShortName, EntryBuffer, 11);
 #endif
@@ -1519,7 +1543,7 @@ FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 
 
 	// Tail :
 #ifdef FF_UNICODE_SUPPORT
-	memcpy(MyShortName, ShortName, 11 * 2);
+	memcpy(MyShortName, ShortName, 11 * sizeof(FF_T_WCHAR));
 #else
 	memcpy(MyShortName, ShortName, 11);
 #endif
@@ -1549,7 +1573,7 @@ FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 
 				ShortName[x+y] = NumberBuf[y];
 			}
 #ifdef FF_UNICODE_SUPPORT
-			memcpy(MyShortName, ShortName, 11 * 2);
+			memcpy(MyShortName, ShortName, 11 * sizeof(FF_T_WCHAR));
 #else
 			memcpy(MyShortName, ShortName, 11);
 #endif
@@ -1591,7 +1615,7 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 
 #ifdef FF_UNICODE_SUPPORT
 	// Name_1
-	for(i = 0, x = 0; i < 5; i++, x += 2) {
+	for(i = 0, x = 0; i < 5; i++, x += sizeof(FF_T_WCHAR)) {
 		if(i < NameLen) {
 			*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
 		} else if (i == NameLen) {
@@ -1638,7 +1662,8 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 		if(i < NameLen) {
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x] = Name[i];
 		} else if (i == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x] = '\0';
+			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= '\0';
+			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= '\0';
 		}else {
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= 0xFF;
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= 0xFF;
@@ -1835,6 +1860,13 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	UTF16EntryBuffer[32];
+#if WCHAR_MAX > 0xFFFF
+	// Check that the filename won't exceed the max LFN length if converted to UTF-16.
+	if(FF_Utf32GetUtf16Len((FF_T_UINT32 *) pDirent->FileName) > FF_MAX_FILENAME) {
+		return FF_ERR_UNICODE_CONVERSION_EXCEEDED; 
+	}
+#endif
+
 #endif
 
 	FF_MakeNameCompliant(pDirent->FileName);	// Ensure we don't break the Dir tables.

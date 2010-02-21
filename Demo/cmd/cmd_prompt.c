@@ -49,7 +49,7 @@ int cmd_prompt(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		printf("For more information about FullFAT or the FFTerm software, see:\nwww.worm.me.uk/fullfat/\n");
 	} else {
 #ifdef FF_UNICODE_SUPPORT
-		wprintf(L"%ls>", pEnv->WorkingDir);
+		printf("%ls>", pEnv->WorkingDir);
 #else
 		printf("%s>", pEnv->WorkingDir);
 #endif

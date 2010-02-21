@@ -126,7 +126,7 @@ int md5sum_lin_cmd(int argc, char **argv) {
 			if(S_ISDIR(findData.itemInfo.st_mode)) {
 				printf("%s: %s: Is a directory\n", argv[0], findData.dir.d_name);
 			} else {
-				append_filename(path, findData.dir.d_name);
+				AppendFilename(path, findData.dir.d_name);
 				if(!bCheck) {
 					if(!md5_getHash(path, hash)) {
 						printf("%s  %s\n", hash, findData.dir.d_name);
