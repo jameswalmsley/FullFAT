@@ -42,6 +42,11 @@
 
 #include "ff_file.h"
 #include "ff_string.h"
+#include "ff_config.h"
+
+#ifdef FF_UNICODE_SUPPORT
+#include <wchar.h>
+#endif
 
 /**
  *	@public
@@ -143,13 +148,21 @@ FF_T_UINT8 FF_GetModeBits(FF_T_INT8 *Mode) {
  *	@return	NULL pointer on Error, in which case pError should be checked for more information.
  *	@return	pError can be:
  **/
+#ifdef FF_UNICODE_SUPPORT
+FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_WCHAR *path, FF_T_UINT8 Mode, FF_ERROR *pError) {
+#else
 FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ERROR *pError) {
+#endif
 	FF_FILE		*pFile;
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
 	FF_T_UINT32 DirCluster, FileCluster;
 	FF_T_UINT32	nBytesPerCluster;
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	filename[FF_MAX_FILENAME];
+#else
 	FF_T_INT8	filename[FF_MAX_FILENAME];
+#endif
 	FF_ERROR	Error;
 
 	FF_T_UINT16	i;
@@ -175,7 +188,11 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	// Get the Mode Bits.
 	pFile->Mode = Mode;
 
+#ifdef FF_UNICODE_SUPPORT
+	i = (FF_T_UINT16) wcslen(path);
+#else 
 	i = (FF_T_UINT16) strlen(path);
+#endif
 
 	while(i != 0) {
 		if(path[i] == '\\' || path[i] == '/') {
@@ -183,8 +200,11 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		}
 		i--;
 	}
-
+#ifdef FF_UNICODE_SUPPORT
+	wcsncpy(filename, (path + i + 1), FF_MAX_FILENAME);
+#else
 	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
+#endif
 
 	if(i == 0) {
 		i = 1;
@@ -212,8 +232,13 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		}
 
 		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
+#ifdef FF_UNICODE_SUPPORT
+			if(wcslen(filename) == wcslen(Object.FileName)) {
+				if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) wcslen(filename)) == FF_TRUE) {
+#else
 			if(strlen(filename) == strlen(Object.FileName)) {
 				if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) strlen(filename)) == FF_TRUE) {
+#endif
 					// The file really was found!
 					FileCluster = 1;
 				} 
@@ -334,7 +359,11 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
  *	@param	pIoman	FF_IOMAN object returned from the FF_CreateIOMAN() function.
  *
  **/
+#ifdef FF_UNICODE_SUPPORT
+FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_WCHAR *Path) {
+#else
 FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
+#endif
 	
 	FF_DIRENT	MyDir;
 	FF_ERROR	RetVal = FF_ERR_NONE;
@@ -356,7 +385,11 @@ FF_T_BOOL FF_isDirEmpty(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	return FF_TRUE;
 }
 
+#ifdef FF_UNICODE_SUPPORT
+FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_WCHAR *path) {
+#else
 FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
+#endif
 	FF_FILE 			*pFile;
 	FF_ERROR 			Error = FF_ERR_NONE;
 	FF_T_UINT8 			EntryBuffer[32];
@@ -429,7 +462,11 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_PendSemaphore(pIoman->pSemaphore);	// Thread safety on shared object!
 			{
 				for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
+#ifdef FF_UNICODE_SUPPORT
+					if(FF_strmatch(pIoman->pPartition->PathCache[i].Path, path, (FF_T_UINT16)wcslen(path))) {
+#else
 					if(FF_strmatch(pIoman->pPartition->PathCache[i].Path, path, (FF_T_UINT16)strlen(path))) {
+#endif
 						pIoman->pPartition->PathCache[i].Path[0] = '\0';
 						pIoman->pPartition->PathCache[i].DirCluster = 0;
 						FF_ReleaseSemaphore(pIoman->pSemaphore);
@@ -470,7 +507,11 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	return RetVal;
 }
 
+#ifdef FF_UNICODE_SUPPORT
+FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_WCHAR *path) {
+#else
 FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
+#endif
 	FF_FILE *pFile;
 	FF_ERROR Error = FF_ERR_NONE;
 	FF_T_UINT8 EntryBuffer[32];
@@ -559,7 +600,11 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
  *	@return FF_ERR_FILE_SOURCE_NOT_FOUND if the source file was not found.
  *
  **/
+#ifdef FF_UNICODE_SUPPORT
+FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_WCHAR *szSourceFile, const FF_T_WCHAR *szDestinationFile) {
+#else
 FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT8 *szDestinationFile) {
+#endif
 	FF_ERROR	Error;
 	FF_FILE		*pSrcFile, *pDestFile;
 	FF_DIRENT	MyFile;
@@ -610,7 +655,11 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 		MyFile.ObjectCluster	= pSrcFile->ObjectCluster;
 		MyFile.CurrentItem		= 0;
 
+#ifdef FF_UNICODE_SUPPORT
+		i = (FF_T_UINT16) wcslen(szDestinationFile);
+#else
 		i = (FF_T_UINT16) strlen(szDestinationFile);
+#endif
 
 		while(i != 0) {
 			if(szDestinationFile[i] == '\\' || szDestinationFile[i] == '/') {
@@ -619,7 +668,11 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 			i--;
 		}
 
+#ifdef FF_UNICODE_SUPPORT
+		wcsncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
+#else
 		strncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
+#endif
 
 		if(i == 0) {
 			i = 1;

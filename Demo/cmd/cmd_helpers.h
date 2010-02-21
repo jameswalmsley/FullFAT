@@ -15,10 +15,18 @@
 
 typedef struct {							// Provides an environment for the FullFAT commands.
 	FF_IOMAN	*pIoman;
+#ifdef FF_UNICODE_SUPPORT	
+	FF_T_WCHAR	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
+#else
 	FF_T_INT8	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
+#endif
 } FF_ENVIRONMENT;
 
+#ifdef FF_UNICODE_SUPPORT
+int	append_filename(wchar_t *path, wchar_t *filename);
+#else
 int	append_filename(char *path, char *filename);
+#endif
 const char *getWildcard(const char *String);
 void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv);
 

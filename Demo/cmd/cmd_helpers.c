@@ -6,6 +6,7 @@
 #include <string.h>
 #include "cmd_helpers.h"
 #include "../../../ffterm/src/ffterm.h"
+#include "../../src/ff_config.h"
 
 
 /*
@@ -26,8 +27,13 @@ const char *getWildcard(const char *String) {
 /*
 	Replaces
 */
+#ifdef FF_UNICODE_SUPPORT
+int	append_filename(wchar_t *path, wchar_t *filename) {
+	int i = wcslen(path);
+#else
 int	append_filename(char *path, char *filename) {
 	int i = strlen(path);
+#endif
 
 	while(path[i] != '\\' && path[i] != '/') {
 		i--;
@@ -35,12 +41,20 @@ int	append_filename(char *path, char *filename) {
 			break;
 		}
 	}
-	
+#ifdef FF_UNICODE_SUPPORT
+	if(path[i] == '\\' || path[i] == '/') {
+		wcscpy(&path[i+1], filename);
+	} else {
+		wcscpy(&path[i], filename);
+	}
+#else
 	if(path[i] == '\\' || path[i] == '/') {
 		strcpy(&path[i+1], filename);
 	} else {
 		strcpy(&path[i], filename);
 	}
+
+#endif
 
 	return 0;
 }
@@ -59,7 +73,11 @@ int	append_filename(char *path, char *filename) {
  *	@param	pEnv	Pointer to an FF_ENVIRONMENT object.
  *
  **/
+#ifdef FF_UNICODE_SUPPORT
+void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv) {
+#else
 void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
+#endif
 	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
 			sprintf(dest, "\\%s", src);
@@ -114,7 +132,11 @@ void SD_PrintDirent(SD_DIRENT *pDirent) {
 		FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 	}
 	
+#ifdef FF_UNICODE_SUPPORT
+	wprintf(L"  %s\n",  pDirent->szFileName);
+#else
 	printf("  %s\n",  pDirent->szFileName);
+#endif
 	
 	FFTerm_SetConsoleColour(FFT_FOREGROUND_GREY);
 }

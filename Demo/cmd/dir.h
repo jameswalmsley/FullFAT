@@ -1,6 +1,12 @@
 #ifndef _DIR_H_
 #define _DIR_H_
 
+#include "../../src/ff_config.h"
+
+#ifdef FF_UNICODE_SUPPORT
+#include <wchar.h>
+#endif
+
 typedef unsigned int	SD_ERROR;
 
 #define SD_ATTRIBUTE_DIR		0x01
@@ -21,7 +27,11 @@ typedef struct {
 typedef struct _SD_DIRENT {
 	unsigned long		ulFileSize;
 	unsigned long		ulAttributes;
+#ifdef FF_UNICODE_SUPPORT
+	wchar_t				*szFileName;
+#else
 	char 				*szFileName;
+#endif
 	struct _SD_DIRENT	*pNextEntry;
 
 	SD_DATETIME			tmLastAccessed;

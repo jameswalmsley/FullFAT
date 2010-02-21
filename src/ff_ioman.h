@@ -110,14 +110,12 @@ typedef struct {
 } FF_BUFFER;
 
 typedef struct {
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	Path[FF_MAX_PATH];
+#else
 	FF_T_INT8	Path[FF_MAX_PATH];
-	FF_T_UINT32	DirCluster;
-	/*
-#ifdef FF_HASH_TABLE_SUPPORT
-	FF_HASH_TABLE pHashTable;
-	FF_T_BOOL	bHashed;
 #endif
-	*/
+	FF_T_UINT32	DirCluster;
 } FF_PATHCACHE;
 
 #ifdef FF_HASH_CACHE
@@ -194,6 +192,9 @@ typedef struct {
 	FF_PARTITION	*pPartition;		///< Pointer to a partition description.
 	FF_BUFFER		*pBuffers;			///< Pointer to the first buffer description.
 	void			*pSemaphore;		///< Pointer to a Semaphore object. (For buffer description modifications only!).
+#ifdef FF_BLKDEV_USES_SEM
+	void			*pBlkDevSemaphore;	///< Semaphore to guarantee Atomic access to the underlying block device, if required.
+#endif
 	void			*FirstFile;			///< Pointer to the first File object.
 	FF_T_UINT8		*pCacheMem;			///< Pointer to a block of memory for the cache.
 	FF_T_UINT32		LastReplaced;		///< Marks which sector was last replaced in the cache.

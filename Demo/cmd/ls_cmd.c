@@ -137,6 +137,9 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	SD_DIR		Dir;
 	SD_DIRENT	Dirent;
 	char		path[FF_MAX_PATH];
+	char		name[FF_MAX_FILENAME];
+	FF_T_WCHAR	wcPath[FF_MAX_PATH];
+	FF_T_WCHAR	wcName[FF_MAX_FILENAME];
 	char		recursivePath[FF_MAX_PATH];
 
 	const char	*szpWildCard;
@@ -147,7 +150,8 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	strcpy(path, szPath);	// Place szPath into a modifiable buffer so we can correctly format it.
 
 	// First Pass to calculate column widths!
-	Result = FF_FindFirst(pEnv->pIoman, &findData, path);
+	FF_cstrtowcs(wcPath, path);
+	Result = FF_FindFirst(pEnv->pIoman, &findData, wcPath);
 
 	if(Result) {
 		return -5; // No dirs;
@@ -158,10 +162,15 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	// A directory should be opened with /path/to/dir/ or /path/to/dir/*, not /path/to/dir
 	// Check if entry is a dir, and the wildCard specified a specific dir.
 	// If so we should open that dir for iteration.
+#ifdef FF_UNICODE_SUPPORT
+	FF_cstrtowcs(wcName, szpWildCard);
+	if(!wcsicmp(findData.FileName, wcName) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+#else
 	if(!stricmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+#endif
 		//strcpy(recursivePath, szPath);	// Copy szPath, to recursivePath so \* can be added.
 		strcat(path, "\\*");	// Add a backslash to the end!
-		Result = FF_FindFirst(pEnv->pIoman, &findData, path);
+		Result = FF_FindFirst(pEnv->pIoman, &findData, wcPath);
 		if(Result) {
 			return -5;
 		}
@@ -221,13 +230,21 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
 						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 					}
+#ifdef FF_UNICODE_SUPPORT
+					wprintf(L"%-*s", columnWidth, Dirent.szFileName);
+#else
 					printf("%-*s", columnWidth, Dirent.szFileName);
+#endif
 				} else {
 					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
 						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 					}
 					if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
+#ifdef FF_UNICODE_SUPPORT
+						wprintf(L"%-*s", columnWidth, Dirent.szFileName);
+#else
 						printf("%-*s", columnWidth, Dirent.szFileName);
+#endif
 					} else {
 						i--;	// Make sure hidden items don't cause unequal wrapping!
 					}

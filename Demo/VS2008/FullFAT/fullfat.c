@@ -36,6 +36,9 @@
 #include "../../../../FFTerm/src/FFTerm.h"				// Include the FFTerm project header.
 #include "../../../Drivers/Windows/blkdev_win32.h"		// Prototypes for our Windows 32-bit driver.
 
+#include <locale.h>
+#include <wchar.h>
+
 #define PARTITION_NUMBER	1							// FullFAT can mount primary partitions only. Specified at Runtime.
 
 int fds[3] = { 0, 1, 2 };
@@ -103,6 +106,10 @@ int main(void) {
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 
+	//setlocale(LC_ALL,"");
+	wprintf(L"This is a Unicode String! Ich heiﬂe J‰mes!\n");
+
+	FF_wildcompare(L"*s?.c", L"test.c");
 	
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,

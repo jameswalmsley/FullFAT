@@ -40,14 +40,22 @@
  **/
 int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_DIRENT	findData;
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	path[FF_MAX_PATH];
+#else
 	FF_T_INT8	path[FF_MAX_PATH];
+#endif
 	int			i;
 
 	if(argc == 2) {
 		ProcessPath(path, argv[1], pEnv);	// Make path absolute if relative.
 		ExpandPath(path);	// Remove any relativity from the path (../ or ..\).
 
+#ifdef FF_UNICODE_SUPPORT
+		i = wcslen(path);
+#else
 		i = strlen(path);
+#endif
 
 		if(i > 1) {
 			if(path[i - 1] == '\\' || path[i - 1] == '/') {	// Get rid of the trailing slash, or FindFirst() will open that dir.

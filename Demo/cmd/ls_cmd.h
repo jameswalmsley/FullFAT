@@ -10,7 +10,9 @@ extern const FFT_ERR_TABLE lsInfo[];
 
 #ifdef WIN32	// Windows has none compliant name for strcasecmp
 #define stricmp _stricmp
+#define wcsicmp _wcsicmp
 #else
 #define stricmp strcasecmp
+#define wcsicmp	wcscasecmp
 #endif
 #endif

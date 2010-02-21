@@ -7,11 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dir.h"
+#include "../../src/ff_config.h"
 
 #ifdef WIN32
 #define stricmp	_stricmp
+#define wcsicmp _wcsicmp
 #else
 #define	stricmp strcasecmp
+#define wcsicmp wcscasecmp
 #endif
 
 struct _SD_DIR {
@@ -52,7 +55,7 @@ SD_ERROR SD_CleanupDir(SD_DIR Dir) {
 	return 0;
 }
 
-
+/*
 SD_ERROR SD_SortDirents(SD_DIR Dir) {
 	SD_DIRENT	*pDirent; //= Dir->pFirstEntry;
 	SD_DIRENT	*pDir1, *pDir2;
@@ -95,7 +98,7 @@ SD_ERROR SD_SortDirents(SD_DIR Dir) {
 	} while(iSwaps);
 	
 	return 0;
-}
+}*/
 
 SD_ERROR SD_AddDirent(SD_DIR Dir, SD_DIRENT *pDirent) {
 	SD_DIRENT *myDirent = (SD_DIRENT *) malloc(sizeof(SD_DIRENT));
@@ -110,25 +113,38 @@ SD_ERROR SD_AddDirent(SD_DIR Dir, SD_DIRENT *pDirent) {
 	memcpy(myDirent, pDirent, sizeof(SD_DIRENT));
 
 	// Handle Filename!
+#ifdef FF_UNICODE_SUPPORT
+	i = wcslen(myDirent->szFileName);
+	myDirent->szFileName = (wchar_t *) malloc((i + 1)*2);
+	wcscpy(myDirent->szFileName, pDirent->szFileName);
+#else
 	i = strlen(myDirent->szFileName);
 	myDirent->szFileName = (char *) malloc(i + 1);
 	strcpy(myDirent->szFileName, pDirent->szFileName);
+#endif
 	
-	/*myDirent->pNextEntry = Dir->pFirstEntry;
-	Dir->pFirstEntry = myDirent;*/
 
 	if(!Dir->pFirstEntry) {
 		Dir->pFirstEntry = myDirent;
 		myDirent->pNextEntry = NULL;
 	} else {
 		pSortDirent = Dir->pFirstEntry;
+#ifdef FF_UNICODE_SUPPORT
+		while(pSortDirent->pNextEntry && wcsicmp(pSortDirent->szFileName, myDirent->szFileName) < 0) {
+#else
 		while(pSortDirent->pNextEntry && stricmp(pSortDirent->szFileName, myDirent->szFileName) < 0) {
+#endif
+
 			pSortDirent = pSortDirent->pNextEntry;
 		}
 
 		if(pSortDirent == Dir->pFirstEntry) {
 			// Sort out a first entry swap?
+#ifdef FF_UNICODE_SUPPORT
+			if(wcsicmp(myDirent->szFileName, pSortDirent->szFileName) < 0) {
+#else
 			if(stricmp(myDirent->szFileName, pSortDirent->szFileName) < 0) {
+#endif
 				myDirent->pNextEntry = pSortDirent;
 				Dir->pFirstEntry = myDirent;
 			} else {

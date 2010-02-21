@@ -70,5 +70,8 @@ typedef signed long long	FF_T_SINT64;	// > 4GB in bytes if you cannot support 64
 #endif
 
 typedef FF_T_SINT32			FF_ERROR;		///< A special error code type to ease some inconsistencies in Error reporting.
+#ifdef FF_UNICODE_SUPPORT
+typedef FF_T_UINT16			FF_T_WCHAR;		///< Unicode UTF-16 Charachter type, for FullFAT when UNICODE is enabled.
+#endif
 
 #endif // end of include guard

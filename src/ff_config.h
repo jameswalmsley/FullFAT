@@ -41,8 +41,12 @@
 										// See ff_memory.c for more information.
 
 //---------- LFN (Long File-name) SUPPORT
-#define FF_LFN_SUPPORT				// Comment this out if you don't want to worry about Patent Issues.
+#define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
 										// FullFAT works great with LFNs and without. You choose, its your project!
+
+#define FF_UNICODE_SUPPORT				// If this is defined, then FF_FindFirst() and FF_FindNext() will return the original
+										// UTF-16 FileNames.
+										
 
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
@@ -85,7 +89,7 @@
 
 
 //---------- BLKDEV USES SEMAPHORE
-//#define FF_BLKDEV_USES_SEM				// When defined, each call to fnReadBlocks and fnWriteBlocks will be done while semaphore is locked
+#define FF_BLKDEV_USES_SEM				// When defined, each call to fnReadBlocks and fnWriteBlocks will be done while semaphore is locked
 										// See also ff_safety.c
 										// (HT addition) - Thanks to Hein Tibosch
 

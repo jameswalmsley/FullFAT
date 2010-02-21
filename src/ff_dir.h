@@ -78,10 +78,18 @@ typedef struct {
 #endif
 
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	szWildCard[FF_MAX_FILENAME];
+#else
 	FF_T_INT8	szWildCard[FF_MAX_FILENAME];
 #endif
+#endif
 
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	FileName[FF_MAX_FILENAME];
+#else
 	FF_T_INT8	FileName[FF_MAX_FILENAME];
+#endif
 	FF_T_UINT8	Attrib;
 	FF_FETCH_CONTEXT FetchContext;
 } FF_DIRENT;
@@ -89,9 +97,15 @@ typedef struct {
 
 
 // PUBLIC API
+#ifdef FF_UNICODE_SUPPORT
+FF_ERROR	FF_FindFirst		(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_WCHAR *path);
+FF_ERROR	FF_MkDir			(FF_IOMAN *pIoman, const FF_T_WCHAR *Path);
+#else
 FF_ERROR	FF_FindFirst		(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *path);
-FF_ERROR	FF_FindNext			(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
 FF_ERROR	FF_MkDir			(FF_IOMAN *pIoman, const FF_T_INT8 *Path);
+#endif
+
+FF_ERROR	FF_FindNext			(FF_IOMAN *pIoman, FF_DIRENT *pDirent);
 
 
 // INTERNAL API
@@ -110,17 +124,33 @@ void		FF_CleanupEntryFetch		(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext);
 FF_T_SINT8	FF_PushEntry				(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pParam);
 FF_T_BOOL	FF_isEndOfDir				(FF_T_UINT8 *EntryBuffer);
 FF_ERROR	FF_FindNextInDir			(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT *pFetchContext);
+
+#ifdef FF_UNICODE_SUPPORT
+FF_T_UINT32 FF_FindEntryInDir			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_WCHAR *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent, FF_ERROR *pError);
+FF_ERROR	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *ShortName, FF_T_WCHAR *LongName);
+#else
 FF_T_UINT32 FF_FindEntryInDir			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent, FF_ERROR *pError);
 FF_ERROR	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName);
+#endif
+
 
 void		FF_lockDIR			(FF_IOMAN *pIoman);
 void		FF_unlockDIR		(FF_IOMAN *pIoman);
 
-FF_T_UINT32		FF_CreateFile	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *FileName, FF_DIRENT *pDirent, FF_ERROR *pError);
+#ifdef FF_UNICODE_SUPPORT
+FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *FileName, FF_DIRENT *pDirent, FF_ERROR *pError);
+#else
+FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *FileName, FF_DIRENT *pDirent, FF_ERROR *pError);
+#endif
 
 FF_ERROR		FF_CreateDirent		(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent);
 FF_ERROR		FF_ExtendDirectory	(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster);
+
+#ifdef FF_UNICODE_SUPPORT
+FF_T_UINT32		FF_FindDir			(FF_IOMAN *pIoman, const FF_T_WCHAR *path, FF_T_UINT16 pathLen, FF_ERROR *pError);
+#else
 FF_T_UINT32		FF_FindDir			(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 pathLen, FF_ERROR *pError);
+#endif
 
 #ifdef FF_HASH_CACHE
 FF_T_BOOL FF_CheckDirentHash		(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT32 nHash);

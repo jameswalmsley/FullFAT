@@ -197,6 +197,10 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	// Finally create a Semaphore for Buffer Description modifications.
 	pIoman->pSemaphore = FF_CreateSemaphore();
 
+#ifdef FF_BLKDEV_USES_SEM
+	pIoman->pBlkDevSemaphore = FF_CreateSemaphore();
+#endif
+
 	return pIoman;	// Sucess, return the created object.
 }
 
@@ -244,6 +248,11 @@ FF_ERROR FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 	if(pIoman->pSemaphore) {
 		FF_DestroySemaphore(pIoman->pSemaphore);
 	}
+#ifdef FF_BLKDEV_USES_SEM
+	if(pIoman->pBlkDevSemaphore) {
+		FF_DestroySemaphore(pIoman->pBlkDevSemaphore);
+	}
+#endif
 
 	// Destroy HashCache
 #ifdef FF_HASH_CACHE
@@ -513,11 +522,11 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 	
 	if(pIoman->pBlkDevice->fnpReadBlocks) {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_PendSemaphore(pIoman->pSemaphore);
+		FF_PendSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		slRetVal = pIoman->pBlkDevice->fnpReadBlocks(pBuffer, ulSectorLBA, ulNumSectors, pIoman->pBlkDevice->pParam);
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_ReleaseSemaphore(pIoman->pSemaphore);
+		FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		if(slRetVal == FF_ERR_DRIVER_BUSY) {
 			FF_Sleep(FF_DRIVER_BUSY_SLEEP);
@@ -538,11 +547,11 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 	
 	if(pIoman->pBlkDevice->fnpWriteBlocks) {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_PendSemaphore(pIoman->pSemaphore);
+		FF_PendSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		slRetVal = pIoman->pBlkDevice->fnpWriteBlocks(pBuffer, ulSectorLBA, ulNumSectors, pIoman->pBlkDevice->pParam);
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_ReleaseSemaphore(pIoman->pSemaphore);
+		FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		if(slRetVal == FF_ERR_DRIVER_BUSY) {
 			FF_Sleep(FF_DRIVER_BUSY_SLEEP);
