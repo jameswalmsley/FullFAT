@@ -56,6 +56,7 @@ typedef struct {
 	char szItemPath[PATH_MAX];
 } DIRENT;
 
+void ProcessLinuxPath(char *dest, const char *src);
 DIR	*FindFirstFile(const char *szpPath, DIRENT *pFindData);
 int	FindNextFile(DIR *pDir, DIRENT *pFindData);
 int FindClose(DIR *pDir);

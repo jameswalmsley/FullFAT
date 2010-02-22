@@ -120,7 +120,7 @@ int main(void) {
 	// and is only used in conjunction with DriveImage files.
 	hDisk = fnOpen("c:\\ImageFile1.img", 512);
 	
-	//hDisk = fnOpen("\\\\.\\F:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	//hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
@@ -152,7 +152,7 @@ int main(void) {
 
 			Env.pIoman = pIoman;
 
-//			FF_MkDir(pIoman, L"\\Grüßen");
+			//FF_MkDir(pIoman, L"\\Grüßen_Windows_FF_Proper");
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.

@@ -36,11 +36,14 @@
 	It behaves similar to the GNU cp command.
 */
 
-static int copy_dir	(const char *srcPath, const char *destPath, FF_T_BOOL bRecursive, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
-static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
+//static int copy_dir	(const char *srcPath, const char *destPath, FF_T_BOOL bRecursive, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
+//static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
 
 int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	const char			*szpSource, *szpDestination, *szpWildCard;
+	argv = NULL;
+	argc = 0;
+	pEnv = NULL;
+	/*const char			*szpSource, *szpDestination, *szpWildCard;
 	char				szsrcPath[FF_MAX_PATH], szdestPath[FF_MAX_PATH];
 	FF_DIRENT			findData;
 	
@@ -110,7 +113,7 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	}
 
 	copy_file(szsrcPath, szdestPath, bVerbose, pEnv);				// Final option, its simply a file to file copy
-	
+	*/
 	return 0;
 }
 const FFT_ERR_TABLE cpInfo[] =
@@ -120,8 +123,13 @@ const FFT_ERR_TABLE cpInfo[] =
 	{ NULL }
 };
 
-
+/*
 static int copy_dir(const char *srcPath, const char *destPath, FF_T_BOOL bRecursive, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv) {
+	srcPath = NULL;
+	destPath = NULL;
+	bRecursive = 0;
+	bVerbose = 0;
+	pEnv = NULL;
 	FF_DIRENT	findData;
 	FF_ERROR	RetVal;
 	FF_T_INT8	szsrcFile[FF_MAX_PATH], szdestFile[FF_MAX_PATH];
@@ -186,8 +194,13 @@ static int copy_dir(const char *srcPath, const char *destPath, FF_T_BOOL bRecurs
 
 	return 0;
 }
-
+*/
+/*
 static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv) {
+	szsrcPath = NULL;
+	szdestPath = NULL;
+	bVerbose = 0;
+	pEnv = NULL;
 	
 	FF_FILE *pfSource;
 	FF_FILE	*pfDestination;
@@ -236,3 +249,4 @@ static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bV
 
 	return 0;
 }
+*/

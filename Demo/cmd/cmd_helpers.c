@@ -2,11 +2,18 @@
 	Provides a library to help command lines!
 */
 
+#ifdef FF_UNICODE_SUPPORT
+#include <wchar.h>
+int swprintf(wchar_t *wcs, size_t maxlen, const wchar_t *format, ...);
+
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include "cmd_helpers.h"
 #include "../../../ffterm/src/ffterm.h"
 #include "../../src/ff_config.h"
+
 
 
 /*

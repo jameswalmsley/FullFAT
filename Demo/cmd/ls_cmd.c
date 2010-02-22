@@ -338,7 +338,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 						wcscat(recursivePath, L"\\");
 					}
 					
-					printf(".%s:\n", recursivePath);
+					printf(".%ls:\n", recursivePath);
 #else
 					if(recursivePath[strlen(recursivePath) - 1] != '\\' && recursivePath[strlen(recursivePath) - 1] != '/') {
 						strcat(recursivePath, "\\");

@@ -30,8 +30,13 @@
  *****************************************************************************/
 #include "md5sum_cmd.h"
 
+#ifdef FF_UNICODE_SUPPORT
+static int md5_getHash(const wchar_t *path, char *szpHash, FF_ENVIRONMENT *pEnv);
+static int md5_checkHash(const wchar_t *path, FF_ENVIRONMENT *pEnv);
+#else
 static int md5_getHash(const char *path, char *szpHash, FF_ENVIRONMENT *pEnv);
 static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv);
+#endif
 
 /**
  *	@public
@@ -50,12 +55,20 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_FILE				*pfOut;
 
 	FF_ERROR			RetVal, ffError;
+#ifdef FF_UNICODE_SUPPORT
+	wchar_t				path[FF_MAX_PATH];
+	wchar_t				outfilepath[FF_MAX_PATH];
+	wchar_t				argvwc[FF_MAX_PATH];
+#else
 	char				path[FF_MAX_PATH];
 	char				outfilepath[FF_MAX_PATH];
+#endif
+
 	const char			*szargPath;
+	const char			*szargOutputFile = NULL;
+	
 	char				hash[33];
 
-	const char			*szargOutputFile = NULL;
 	int i;
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
@@ -85,14 +98,20 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					break;
 			}
 
-			option = FFTerm_getopt(argc, argv, "bctw", &optionContext);
+			option = FFTerm_getopt(argc, argv, "bctwo:", &optionContext);
 		} while(option != EOF);
 	}
 
 	szargPath = FFTerm_getarg(argc, argv, 0, &optionContext);	// Get the available non-option arguments remaining.
 		
 	if(szargPath) {
+
+#ifdef FF_UNICODE_SUPPORT
+		FF_cstrtowcs(argvwc, szargPath);
+		ProcessPath(path, argvwc, pEnv);
+#else
 		ProcessPath(path, szargPath, pEnv);
+#endif
 		
 		RetVal = FF_FindFirst(pEnv->pIoman, &findData, path);
 
@@ -102,7 +121,12 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		}
 
 		if(szargOutputFile) {
+#ifdef FF_UNICODE_SUPPORT
+			FF_cstrtowcs(argvwc, szargOutputFile);
+			ProcessPath(outfilepath, argvwc, pEnv);
+#else
 			ProcessPath(outfilepath, szargOutputFile, pEnv);
+#endif
 			pfOut = FF_Open(pEnv->pIoman, outfilepath, FF_MODE_WRITE | FF_MODE_TRUNCATE | FF_MODE_CREATE, &ffError);
 			if(!pfOut) {
 				printf("%s: Error opening %s for writing: %s\n", argv[0], szargOutputFile, FF_GetErrMessage(ffError));
@@ -112,22 +136,40 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 		do {
 			if(findData.Attrib & FF_FAT_ATTR_DIR) {
+#ifdef FF_UNICODE_SUPPORT
+				printf("%s: %ls: Is a directory\n", argv[0], findData.FileName);
+#else
 				printf("%s: %s: Is a directory\n", argv[0], findData.FileName);
+#endif
 			} else {
+#ifdef FF_UNICODE_SUPPORT
+				wcsAppendFilename(path, findData.FileName);
+#else
 				AppendFilename(path, findData.FileName);
+#endif
 				if(!bCheck) {
 					if(!md5_getHash(path, hash, pEnv)) {
+#ifdef FF_UNICODE_SUPPORT
+						printf("%s  %ls\n", hash, findData.FileName);
+#else
 						printf("%s  %s\n", hash, findData.FileName);
+#endif
 					}
-
+#ifdef FF_UNICODE_SUPPORT
+					if(szargOutputFile) {
+						FF_cstrtowcs(argvwc, szargOutputFile);
+					}
+					if(szargOutputFile && wcscmp(argvwc, findData.FileName)) {
+#else
 					if(szargOutputFile && strcmp(szargOutputFile, findData.FileName)) {
+#endif
 						for(i = 0; i < 32; i++) {
 							FF_PutC(pfOut, hash[i]);
 						}
 						FF_PutC(pfOut, ' ');
 						FF_PutC(pfOut, ' ');
 						for(i = 0; findData.FileName[i] != '\0'; i++) {
-							FF_PutC(pfOut, findData.FileName[i]);
+							FF_PutC(pfOut, (FF_T_UINT8) findData.FileName[i]);
 						}
 						FF_PutC(pfOut, '\n'); // Nextline!
 					}
@@ -159,8 +201,11 @@ const FFT_ERR_TABLE md5sumInfo[] =
 };
 
 
-
+#ifdef FF_UNICODE_SUPPORT
+static int md5_getHash(const wchar_t *path, char *szpHash, FF_ENVIRONMENT *pEnv) {
+#else
 static int md5_getHash(const char *path, char *szpHash, FF_ENVIRONMENT *pEnv) {
+#endif
 	FF_T_UINT8			readBuf[8192];
 	FF_FILE				*pFile;
 	FF_ERROR			ffError;
@@ -197,10 +242,20 @@ static int md5_getHash(const char *path, char *szpHash, FF_ENVIRONMENT *pEnv) {
 	return -1;
 }
 
+#ifdef FF_UNICODE_SUPPORT
+static int md5_checkHash(const wchar_t *path, FF_ENVIRONMENT *pEnv) {
+#else
 static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
+#endif
+
 	FF_FILE		*pFile;
 	FF_ERROR	ffError;
+#ifdef FF_UNICODE_SUPPORT
+	wchar_t		filePath[FF_MAX_PATH];
+	wchar_t		wctemp[FF_MAX_PATH];
+#else
 	char		filePath[FF_MAX_PATH];
+#endif
 	char		chkHash[33], fileHash[33];
 	char		chkFilename[FF_MAX_FILENAME];
 	char		chkLineBuffer[33 + 2 + FF_MAX_FILENAME + 2];
@@ -226,7 +281,12 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
 
 				*d = '\0';
 
+#ifdef FF_UNICODE_SUPPORT
+				FF_cstrtowcs(wctemp, chkFilename);
+				ProcessPath(filePath, wctemp, pEnv);
+#else
 				ProcessPath(filePath, chkFilename, pEnv);
+#endif
 
 				if(!md5_getHash(filePath, fileHash, pEnv)) {
 
@@ -246,4 +306,3 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
 
 	return 0;
 }
-

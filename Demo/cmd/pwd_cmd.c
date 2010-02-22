@@ -41,7 +41,11 @@
 int pwd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	if(argc == 1) {
 		//printf("Current directory:\n");							// Simply print WorkingDir from pEnv object.
+#ifdef FF_UNICODE_SUPPORT
+		printf("%ls\n", pEnv->WorkingDir);
+#else
 		printf("%s\n", pEnv->WorkingDir);
+#endif
 	} else {
 		printf("Usage: %s\n", argv[0]);							// argv[0] is always the name of the command.
 	}

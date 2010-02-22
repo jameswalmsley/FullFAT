@@ -40,7 +40,7 @@
 
 #include <locale.h>
 
-#define PARTITION_NUMBER	1					// FullFAT can mount primary partitions only. Specified at Runtime.
+#define PARTITION_NUMBER	0					// FullFAT can mount primary partitions only. Specified at Runtime.
 
 int lin_ls(int argc, char **argv) {
 	DIR				*pDir;
@@ -89,11 +89,12 @@ int main(void) {
 	//hDisk = fnOpen("c:\\FullFAT.img", 512);
 
 	// Test unicode conversion routines!
+	setlocale(LC_ALL, NULL);
 	
-	hDisk = fnOpen("/home/james/ImageFile1.img", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	//hDisk = fnOpen("/home/james/ImageFile1.img", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
-	//hDisk = fnOpen("/dev/sdb", 512);
+	hDisk = fnOpen("/dev/sdc", 512);
 
 	if(hDisk) {
 		//---------- Create FullFAT IO Manager
@@ -122,7 +123,9 @@ int main(void) {
 
 			Env.pIoman = pIoman;
 
-			FF_MkDir(pIoman, L"\\Grüßen");
+			if(FF_MkDir(pIoman, L"\\Grüßen3_FF_lin")) {
+				printf("Cannot create dir!\n");
+			}
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
