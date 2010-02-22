@@ -30,43 +30,32 @@
  *****************************************************************************/
 
 /**
- *	@file		ff_string.c
+ *	@file		ff_unicode.c
  *	@author		James Walmsley
- *	@ingroup	STRING
- *
- *	@defgroup	STRING	FullFAT String Library
- *	@brief		Portable String Library for FullFAT
- *
+ *	@ingroup	UNICODE
  *
  **/
 
-#ifndef _FF_STRING_H_
-#define _FF_STRING_H_
+#ifndef _FF_UNICODE_H_
+#define _FF_UNICODE_H_
 
-#include "ff_types.h"
 #include "ff_config.h"
+#include "ff_types.h"
+#include "ff_error.h"
+
+// UTF8 / UTF16 Transformation Functions
+
+FF_T_UINT FF_GetUtf16SequenceLen	(FF_T_UINT16 usLeadChar);
+
+FF_T_SINT32 FF_Utf16GetUtf8Len		(const FF_T_UINT16 *utf16String);
+FF_T_SINT32 FF_Utf8GetUtf16Len		(const FF_T_UINT8 *utf8String);
+FF_T_SINT32 FF_Utf8ctoUtf16c		(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Source, FF_T_UINT32 ulSize);
+FF_T_SINT32 FF_Utf16ctoUtf8c		(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Source, FF_T_UINT32 ulSize);
+
+// UTF16 / UTF32 Transformation Functions
 
 
-#ifdef FF_UNICODE_SUPPORT
-void			FF_tolower		(FF_T_WCHAR *string, FF_T_UINT32 strLen);
-void			FF_toupper		(FF_T_WCHAR *string, FF_T_UINT32 strLen);
-FF_T_BOOL		FF_strmatch		(const FF_T_WCHAR *str1, const FF_T_WCHAR *str2, FF_T_UINT16 len);
-FF_T_WCHAR		*FF_strtok		(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length);
-FF_T_BOOL		FF_wildcompare	(const FF_T_WCHAR *pszWildCard, const FF_T_WCHAR *pszString);
 
-// ASCII to UTF16 and UTF16 to ASCII routines. -- These are lossy routines, and are only for converting ASCII to UTF-16
-// and the equivalent back to ASCII. Do not use them for international text.
-void FF_cstrtowcs(FF_T_WCHAR *wcsDest, const FF_T_INT8 *szpSource);
-void FF_wcstocstr(FF_T_INT8 *szpDest, const FF_T_WCHAR *wcsSource);
-void FF_cstrntowcs(FF_T_WCHAR *wcsDest, const FF_T_INT8 *szpSource, FF_T_UINT32 len);
-void FF_wcsntocstr(FF_T_INT8 *szpDest, const FF_T_WCHAR *wcsSource, FF_T_UINT32 len);
 
-#else
-void			FF_tolower		(FF_T_INT8 *string, FF_T_UINT32 strLen);
-void			FF_toupper		(FF_T_INT8 *string, FF_T_UINT32 strLen);
-FF_T_BOOL		FF_strmatch		(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 len);
-FF_T_INT8		*FF_strtok		(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tokenNumber, FF_T_BOOL *last, FF_T_UINT16 Length);
-FF_T_BOOL		FF_wildcompare	(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString);
-#endif
 
 #endif

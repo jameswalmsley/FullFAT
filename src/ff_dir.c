@@ -42,6 +42,7 @@
 
 #include "ff_dir.h"
 #include "ff_string.h"
+#include "ff_unicode.h"
 #include <stdio.h>
 
 #ifdef FF_UNICODE_SUPPORT
@@ -905,7 +906,16 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #endif
 #else
 	FF_T_INT8	ShortName[13];
-	FF_T_UINT16 i,y;
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	FF_T_SINT32 i, y;
+#else
+	FF_T_UINT16 i, y;
+#endif
+#endif
+
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	FF_T_UINT16	UTF16Name[FF_MAX_FILENAME];	// Read in the entire UTF-16 name into this buffer.
+	FF_T_UINT16 *UTF16cptr;
 #endif
 	FF_T_UINT8 numLFNs;
 	FF_T_UINT8 x;
@@ -933,9 +943,9 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #ifdef FF_UNICODE_SUPPORT
 		// Simply fill the FileName buffer with UTF-16 Filename!
 #if WCHAR_MAX <= 0xFFFF	// System works in UTF-16 so we can trust it if we just copy the UTF-16 strings directly.
-		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * sizeof(FF_T_WCHAR)));
-		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * sizeof(FF_T_WCHAR)));
-		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * sizeof(FF_T_WCHAR)));
+		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * 2));
+		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * 2));
+		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * 2));
 		lenlfn += 13;
 #else
 		for(i = 0, y = 0; i < 5; i++, y += 2) {
@@ -956,6 +966,12 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #endif
 		// Copy each part of the LFNS
 #else
+#ifdef FF_UNICODE_UTF8_SUPPORT
+		memcpy(UTF16Name + ((numLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * 2));
+		memcpy(UTF16Name + ((numLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * 2));
+		memcpy(UTF16Name + ((numLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * 2));
+		lenlfn += 13;
+#else
 		// Attempts to pull ASCII from UTF-8 encoding. 
 		for(i = 0, y = 0; i < 5; i++, y += 2) {
 			pDirent->FileName[i + ((numLFNs - 1) * 13)] = EntryBuffer[FF_FAT_LFN_NAME_1 + y];
@@ -972,6 +988,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 			lenlfn++;
 		}
 #endif
+#endif
 
 		Error = FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
 		if(Error) {
@@ -980,7 +997,21 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 		numLFNs--;
 	}
 
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	UTF16cptr = UTF16Name;
+	UTF16Name[lenlfn] = '\0';
+	i = 0;	// Keep tabs of the current char position in the UTF-8 sequence.
+	while(*UTF16cptr) {
+		y = FF_Utf16ctoUtf8c((FF_T_UINT8 *)&pDirent->FileName[i], UTF16cptr, (FF_MAX_FILENAME - i));
+		i += y;
+		if(FF_GetUtf16SequenceLen(*UTF16cptr++) == 2) {	// IF this is a surrogate, then bump the UTF16 Pointer.
+			UTF16cptr++;
+		}
+	}
+	pDirent->FileName[i] = '\0';
+#else
 	pDirent->FileName[lenlfn] = '\0';
+#endif
 	
 	// Process the ShortName Entry
 #ifdef FF_UNICODE_SUPPORT

@@ -34,54 +34,70 @@
 	Here you can change the configuration of FullFAT as appropriate to your
 	platform.
 */
-
 //---------- ENDIANESS
 #define FF_LITTLE_ENDIAN				// Choosing the Byte-order of your system is important.	
 //#define FF_BIG_ENDIAN					// You may be able to provide better Byte-order swapping routines to FullFAT.
 										// See ff_memory.c for more information.
 
+
 //---------- LFN (Long File-name) SUPPORT
 #define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
 										// FullFAT works great with LFNs and without. You choose, its your project!
 
-#define FF_UNICODE_SUPPORT				// If this is defined, then FF_FindFirst() and FF_FindNext() will return the original
-										// UTF-16 FileNames.
-										
+
+//---------- UNICODE SUPPORT
+//#define FF_UNICODE_SUPPORT			// If this is defined, then all of FullFAT's API's will expect to receive UTF-16 formatted strings.
+										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-16 format.
+
+#define FF_UNICODE_UTF8_SUPPORT			// If this is defined, then all of FullFAT's API's will expect to receive UTF-8 formatted strings.
+										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-8 format.
+
+										// Note the 2 UNICODE options are mutually exclusive. Only one can be enabled.
+
+//#define FF_UNICODE_UTF8_ENSURE_MAX_LEN	// Ensure that dirents are big enough to hold the maximum UTF-8 sequence.
+
 
 //---------- FAT12 SUPPORT
 #define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
 										// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
 										// therefore savings can be made by not having it.
 
+
 //---------- TIME SUPPORT
 #define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
 										// Note, by default ff_time.c is set-up for the Windows Demonstration. Please see ff_time.c to disable.
+
 
 //---------- FILE SPACE ALLOCATION PERFORMANCE
 										// Uncomment the prefered method. (Can only choose a single method).
 #define FF_ALLOC_DEFAULT				// Only allocate as much as is needed. (Provides good performance, without wasting space).
 //#define FF_ALLOC_DOUBLE				// Doubles the size of a file each time allocation is required. (When high-performance writing is required).
 
+
 //---------- Use Native STDIO.h
 //#define FF_USE_NATIVE_STDIO			// Makes FullFAT conform to values provided by your native STDIO.h file.
+
 
 //---------- FREE SPACE CALCULATION
 //#define FF_MOUNT_FIND_FREE			// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
 										// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
+
 
 //---------- FIND API WILD-CARD SUPPORT
 #define FF_FINDAPI_ALLOW_WILDCARDS		// Defined to enable Wild-cards in the API. Disabling this, makes the API consistent with 1.0.x series.
 
 #define FF_WILDCARD_CASE_INSENSITIVE	// Alter the case insensitivity of the Wild-card checking behaviour.
 
-//---------- PATH CACHE
+
+//---------- PATH CACHE ----------
 #define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 										// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
 #define FF_PATH_CACHE_DEPTH		5		// The Number of PATH's to Cache. (Memory Requirement ~= FF_PATH_CACHE_DEPTH * FF_MAX_PATH).
 
-//---------- Hash Table Support
+
+//---------- HASH CACHE					// Speed up File-creation with a HASH table. Provides up to 20x performance boost.
 //#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
 #define FF_HASH_CACHE_DEPTH		10		// Number of Directories to be Hashed. (For CRC16 memory is 8KB * DEPTH)
 #define FF_HASH_FUNCTION		CRC16	// Choose a 16-bit hash. 
@@ -93,14 +109,15 @@
 										// See also ff_safety.c
 										// (HT addition) - Thanks to Hein Tibosch
 
+
 //---------- MALLOC
 										// These should map on to platform specific memory allocators.
-#define	FF_MALLOC(aSize)		malloc(aSize)
-#define	FF_FREE(apPtr)	 		free(apPtr)
+#define	FF_MALLOC(aSize)				malloc(aSize)
+#define	FF_FREE(apPtr)	 				free(apPtr)
+
 
 //---------- IN-LINE FUNCTIONS
-
-//---------- Specify Compiler Inline keywords.
+//---------- INLINE KeyWord				// Define FF_INLINE as your compiler's inline keyword. This is placed before the type qualifier.
 #define FF_INLINE static __forceinline	// Keywords to inline functions (Windows)
 //#define FF_INLINE static inline		// Standard for GCC
 
@@ -109,18 +126,22 @@
 //---------- Inline Block Calculation Routines for slightly better performance in critical sections.
 //#define FF_INLINE_BLOCK_CALCULATIONS
 
+
 //---------- 64-Bit Number Support
 #define FF_64_NUM_SUPPORT				// This helps to give information about the FreeSpace and VolumeSize of a partition or volume.
 										// If you cannot support 64-bit integers, then FullFAT still works, its just that the functions:
 										// FF_GetFreeSize() and FF_GetVolumeSize() don't make sense when reporting sizes > 4GB.
 
+
 //---------- Driver Sleep Time
 #define FF_DRIVER_BUSY_SLEEP	20		// How long FullFAT should sleep the thread for in ms, if FF_ERR_DRIVER_BUSY is recieved.
 
-//---------- Debugging Features
+
+//---------- DEBUGGING FEATURES (HELPFUL ERROR MESSAGES)
 #define FF_DEBUG						// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
 										// Uncommenting this just stops FullFAT error strings being compiled.
-
+										// Further calls to FF_GetErrMessage() are safe, and simply returns a pointer to a NULL string. ("").
+										// This should be disabled to reduce code-size dramatically.
 
 
 //---------- AUTOMATIC SETTINGS DO NOT EDIT -- These configure your options from above, and check sanity!
@@ -153,7 +174,13 @@
 #endif
 #endif
 
-#ifndef FF_FAT_CHECK
+#ifdef FF_UNICODE_SUPPORT
+#ifdef FF_UNICODE_UTF8_SUPPORT
+#error FullFAT Invalid ff_config.h file: Must choose a single UNICODE support option. FF_UNICODE_SUPPORT for UTF-16, FF_UNICODE_UTF8_SUPPORT for UTF-8.
+#endif
+#endif
+
+#ifndef FF_FAT_CHECK	// FF_FAT_CHECK is now forced.
 #define FF_FAT_CHECK
 #endif
 
@@ -176,9 +203,11 @@
 #elif FF_HASH_FUNCTION == CRC8
 #define FF_HASH_TABLE_SIZE 32
 #else
-#error Invalid Hashing function selected. CRC16 or CRC8! 
+#error FullFAT Invalid ff_config.h file: Invalid Hashing function selected. CRC16 or CRC8! 
 #endif
 
 #endif
 
 #endif
+
+//---------- END-OF-CONFIGURATION
