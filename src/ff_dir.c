@@ -492,9 +492,6 @@ static void FF_GetDate(FF_SYSTEMTIME *pTime, FF_T_UINT8 *EntryBuffer, FF_T_UINT3
 	pTime->Month	= (((myShort & 0x01E0) >> 5) & 0x000F);
 	pTime->Day		= myShort & 0x01F;
 }
-
-
-
 #endif
 
 void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *EntryBuffer) {
@@ -1490,6 +1487,7 @@ FF_ERROR FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster
  
     return 0;
 }
+
 #ifdef FF_UNICODE_SUPPORT
 FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *ShortName, FF_T_WCHAR *LongName) {
 #else
@@ -1775,7 +1773,9 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 	
 	return FF_ERR_NONE;
 }
+#endif
 
+/*
 #ifdef FF_UNICODE_SUPPORT
 static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
 #else
@@ -1825,6 +1825,51 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	return FF_ERR_NONE;
 }
 #endif
+*/
+
+
+#ifdef FF_UNICODE_SUPPORT
+static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
+#else
+static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
+#endif
+	FF_T_UINT8	EntryBuffer[32];
+	FF_T_UINT16	usUtf16Name[FF_MAX_FILENAME + 1];
+	FF_T_UINT	i;
+
+#ifdef FF_UNICODE_SUPPORT
+#if WCHAR_MAX <= 0xFFFF
+	wcscpy(usUtf16Name, Name);
+#else
+	FF_Utf32ctoUtf16c();
+#endif
+#endif
+
+	// Convert the name into UTF-16 format.
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	// Simply convert the UTF8 to UTF16 and be done with it.
+	i = 0;
+
+	printf("Name is now %s\n", Name);
+
+	while(*Name) {
+		i += FF_Utf8ctoUtf16c(usUtf16Name, &Name[i], FF_MAX_FILENAME - i);
+	}
+
+#else
+#ifndef FF_UNICODE_SUPPORT
+	// Do the dumb conversion. (ASCII to UTF-16).
+	FF_cstrntowcs(usUtf16Name, Name, FF_MAX_FILENAME);
+#endif
+#endif
+
+	// Whole name is now in a valid UTF-16 format. Lets go make thos LFN's.
+	// i should at this point be the length of the name.
+
+
+
+	return FF_ERR_NONE;
+}
 
 FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	FF_T_UINT32 CurrentCluster;
@@ -1893,7 +1938,7 @@ FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 #ifdef FF_UNICODE_SUPPORT
 static void FF_MakeNameCompliant(FF_T_WCHAR *Name) {
 #else
-static void FF_MakeNameCompliant(FF_T_INT8 *Name) {
+static void FF_MakeNameCompliant(FF_T_UINT8 *Name) {
 #endif
 	
 	if((FF_T_UINT8) Name[0] == 0xE5) {	// Support Japanese KANJI symbol.
