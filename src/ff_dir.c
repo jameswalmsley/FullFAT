@@ -932,7 +932,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 
 #ifdef FF_UNICODE_SUPPORT
 		// Simply fill the FileName buffer with UTF-16 Filename!
-#if WCHAR_MAX <= 0xFFFF
+#if WCHAR_MAX <= 0xFFFF	// System works in UTF-16 so we can trust it if we just copy the UTF-16 strings directly.
 		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * sizeof(FF_T_WCHAR)));
 		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * sizeof(FF_T_WCHAR)));
 		memcpy(pDirent->FileName + ((numLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * sizeof(FF_T_WCHAR)));
@@ -1888,7 +1888,7 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 	{
 		if((FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, Entries)) >= 0) {
 #ifdef FF_UNICODE_SUPPORT
-			FF_cstrntowcs(UTF16EntryBuffer, (FF_T_INT8 *) EntryBuffer, 32);
+			//FF_cstrntowcs(UTF16EntryBuffer, (FF_T_INT8 *) EntryBuffer, 32);
 			RetVal = FF_CreateShortName(pIoman, DirCluster, UTF16EntryBuffer, pDirent->FileName);
 #else
 			RetVal = FF_CreateShortName(pIoman, DirCluster, (FF_T_INT8 *) EntryBuffer, pDirent->FileName);
@@ -1896,6 +1896,9 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 			
 			if(!RetVal) {
 #ifdef FF_LFN_SUPPORT
+#ifdef FF_UNICODE_SUPPORT
+				FF_wcsntocstr((FF_T_INT8 *) EntryBuffer, UTF16EntryBuffer, 11);
+#endif
 				CheckSum = FF_CreateChkSum(EntryBuffer);
 				FF_CreateLFNs(pIoman, DirCluster, pDirent->FileName, CheckSum, (FF_T_UINT16) FreeEntry);
 #else
