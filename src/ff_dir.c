@@ -892,7 +892,138 @@ FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
 }*/
 #endif
 
+FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16 nEntry, FF_FETCH_CONTEXT *pFetchContext) {
+	// First get the entire name as UTF-16 from the LFN's.
+	// Then transform into the API's native string format.
 
+	FF_ERROR	Error;
+	FF_T_UINT	uiNumLFNs;
+	FF_T_UINT	uiLfnLength = 0;
+	FF_T_UINT	i,y;
+	FF_T_UINT16	myShort;
+	FF_T_UINT8	ucCheckSum;
+
+	FF_T_UINT8	EntryBuffer[32];
+	FF_T_UINT16	UTF16Name[FF_MAX_FILENAME];
+
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	WCEntryBuffer[32];
+	FF_T_WCHAR	ShortName[13];
+#else
+	FF_T_INT8	ShortName[13];
+#endif
+
+	Error = FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
+
+	if(Error) {
+		return Error;
+	}
+
+	uiNumLFNs = (FF_T_UINT)(EntryBuffer[0] & ~0x40);
+	ucCheckSum = FF_getChar(EntryBuffer, FF_FAT_LFN_CHECKSUM);
+
+	// Stream through the LFNs to fill the UTF-16 buffer with the whole name;
+	
+	while(uiNumLFNs) {	// Simply memcpy each section into the UTF-16 buffer. (Much simpler than the old code).
+		memcpy(UTF16Name + ((uiNumLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * 2));
+		memcpy(UTF16Name + ((uiNumLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * 2));
+		memcpy(UTF16Name + ((uiNumLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * 2));
+		uiLfnLength += 13;
+		Error = FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
+		if(Error) {
+			return Error;
+		}
+		uiNumLFNs--;
+	}
+
+	UTF16Name[uiLfnLength] = '\0';
+
+	// Various transformation to API's native string format.
+
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	i = 0;
+	y = 0;
+	while(UTF16Name[y]) {
+		i += FF_Utf16ctoUtf8c((FF_T_UINT8 *)&pDirent->FileName[i], &UTF16Name[y], (FF_MAX_FILENAME - i));
+		y += FF_GetUtf16SequenceLen(UTF16Name[y]);
+	}
+	pDirent->FileName[i] = '\0';	
+#endif
+
+#ifdef FF_UNICODE_SUPPORT		// Direct UTF-16 to UTF-16 or UTF-32 transform.
+#if WCHAR_MAX <= 0xFFFF			// UTF-16 to UTF-16, direct copy!
+	i = 0;
+	y = wcslen(UTF16Name);
+	wcsncpy(pDirent->FileName, UTF16Name, FF_MAX_FILENAME);	
+#else							// Convert to UTF-32
+	i = 0;
+	y = 0;
+	while(UTF16Name[y]) {
+		FF_Utf16ctoUtf32c(&pDirent->FileName[i], &UTF16Name[y]);
+		y += FF_GetUtf16SequenceLen(UTF16Name[y]);
+	}
+#endif
+#endif
+
+#ifndef FF_UNICODE_SUPPORT
+#ifndef FF_UNICODE_UTF8_SUPPORT	// No Unicode, simple ASCII.
+	i = 0;
+	y = 0;
+	while(UTF16Name[y]) {
+		pDirent->FileName[i++] = (FF_T_UINT8) UTF16Name[y++];
+	}
+	pDirent->FileName[i] = '\0';
+#endif
+#endif
+
+	// Process the Shortname. -- LFN Transformation is now complete.
+	// Process the ShortName Entry
+#ifdef FF_UNICODE_SUPPORT
+	FF_cstrntowcs(WCEntryBuffer, (FF_T_INT8 *) EntryBuffer, 32);
+	memcpy(ShortName, WCEntryBuffer, 11 * sizeof(FF_T_WCHAR));
+#else
+	memcpy(ShortName, EntryBuffer, 11);
+#endif
+	FF_ProcessShortName(ShortName);
+	if(ucCheckSum != FF_CreateChkSum(EntryBuffer)) {
+#ifdef FF_UNICODE_SUPPORT
+		wcscpy(pDirent->FileName, ShortName);
+#else
+		strcpy(pDirent->FileName, ShortName);
+#endif
+	}
+
+	// Finally fill in the other details
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
+	pDirent->ObjectCluster = (FF_T_UINT32) (myShort << 16);
+	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_LOW));
+	pDirent->ObjectCluster |= myShort;
+
+#ifdef FF_TIME_SUPPORT
+	// Get the creation Time & Date
+	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_CREATE_TIME);
+	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_CREATE_DATE);
+	// Get the modified Time & Date
+	FF_GetTime(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_TIME);
+	FF_GetDate(&pDirent->CreateTime, EntryBuffer, FF_FAT_DIRENT_LASTMOD_DATE);
+	// Get the last accessed Date.
+	FF_GetDate(&pDirent->AccessedTime, EntryBuffer, FF_FAT_DIRENT_LASTACC_DATE);
+	pDirent->AccessedTime.Hour		= 0;
+	pDirent->AccessedTime.Minute	= 0;
+	pDirent->AccessedTime.Second	= 0;
+#endif
+
+	// Get the filesize.
+	pDirent->Filesize = FF_getLong(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_FILESIZE));
+	// Get the attribute.
+	pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+	
+	pDirent->CurrentItem = nEntry;
+	//return x;
+	return FF_ERR_NONE;
+}
+
+/*
 FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16 nEntry, FF_FETCH_CONTEXT *pFetchContext) {
 	FF_T_UINT8	EntryBuffer[32];
 #ifdef FF_UNICODE_SUPPORT
@@ -1028,12 +1159,12 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 		FF_ProcessShortName(ShortName);
 	}
 
-#ifdef FF_HASH_TABLE_SUPPORT
+#ifdef FF_HASH_TABLE_SUPPORT*/
 /*#if FF_HASH_FUNCTION == CRC16
 	FF_AddDirentHash(pIoman, pFetchContext->ulDirCluster, (FF_T_UINT32)FF_GetCRC16((FF_T_UINT8 *) ShortName, strlen(ShortName)));
 #elif FF_HASH_FUNCTION == CRC8
 	FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32)FF_GetCRC8((FF_T_UINT8 *) ShortName, strlen(ShortName)));
-#endif*/
+#endif*//*
 #endif
 	
 	myShort = FF_getShort(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_CLUS_HIGH));
@@ -1064,7 +1195,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	//return x;
 	return FF_ERR_NONE;
 }
-
+*/
 /**
  *	@public
  *	@brief	Find's the first directory entry for the provided path.
@@ -1628,27 +1759,21 @@ FF_ERROR FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 
 	return FF_ERR_DIR_DIRECTORY_FULL;
 }
 #ifdef FF_LFN_SUPPORT
-#ifdef FF_UNICODE_SUPPORT
-static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_WCHAR *Name, FF_T_UINT8 NameLen, FF_T_UINT8 nLFN, FF_T_UINT8 CheckSum) {
-#else
-static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF_T_UINT8 NameLen, FF_T_UINT8 nLFN, FF_T_UINT8 CheckSum) {
-#endif
+static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_UINT16 *Name, FF_T_UINT uiNameLen, FF_T_UINT uiLFN, FF_T_UINT8 CheckSum) {
 	
-	FF_T_UINT8 i, x;
+	FF_T_UINT i, x;
 	
 	memset(EntryBuffer, 0, 32);
 
-	FF_putChar(EntryBuffer, FF_FAT_LFN_ORD,			(FF_T_UINT8) ((nLFN & ~0x40)));
+	FF_putChar(EntryBuffer, FF_FAT_LFN_ORD,			(FF_T_UINT8) ((uiLFN & ~0x40)));
 	FF_putChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB,	(FF_T_UINT8) FF_FAT_ATTR_LFN);
 	FF_putChar(EntryBuffer, FF_FAT_LFN_CHECKSUM,	(FF_T_UINT8) CheckSum);
 
-#ifdef FF_UNICODE_SUPPORT
-#if WCHAR_MAX <= 0xFFFF	// Create the Dirent for a system with native UTF-16 support.
 	// Name_1
-	for(i = 0, x = 0; i < 5; i++, x += sizeof(FF_T_WCHAR)) {
-		if(i < NameLen) {
-			*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
-		} else if (i == NameLen) {
+	for(i = 0, x = 0; i < 5; i++, x += 2) {
+		if(i < uiNameLen) {
+			*((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
+		} else if (i == uiNameLen) {
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= '\0';
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= '\0';
 		}else {
@@ -1659,10 +1784,10 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 
 	// Name_2
 	for(i = 0, x = 0; i < 6; i++, x += 2) {
-		if((i + 5) < NameLen) {
+		if((i + 5) < uiNameLen) {
 			//EntryBuffer[FF_FAT_LFN_NAME_2 + x] = Name[i+5];
-			*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_2 + x]) = Name[i+5];
-		} else if ((i + 5) == NameLen) {
+			*((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_2 + x]) = Name[i+5];
+		} else if ((i + 5) == uiNameLen) {
 			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= '\0';
 			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= '\0';
 		}else {
@@ -1673,10 +1798,10 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 
 	// Name_3
 	for(i = 0, x = 0; i < 2; i++, x += 2) {
-		if((i + 11) < NameLen) {
-			*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_3 + x]) = Name[i+11];
+		if((i + 11) < uiNameLen) {
+			*((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_3 + x]) = Name[i+11];
 			//EntryBuffer[FF_FAT_LFN_NAME_3 + x] = Name[i+11];
-		} else if ((i + 11) == NameLen) {
+		} else if ((i + 11) == uiNameLen) {
 			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= '\0';
 			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= '\0';
 		}else {
@@ -1684,92 +1809,6 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= 0xFF;
 		}
 	}
-#else	// Create the Dirent, converting from UTF-32 to UTF-16 each time.
-	// Name_1
-	for(i = 0, x = 0; i < 5; i++, x += 2) {
-		if(i < NameLen) {
-			//*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
-			FF_Utf32ctoUtf16c((FF_T_UINT16 *)&EntryBuffer[FF_FAT_LFN_NAME_1 + x], (FF_T_UINT32) Name[i], 1);
-		} else if (i == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= '\0';
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= 0xFF;
-		}
-	}
-
-	// Name_2
-	for(i = 0, x = 0; i < 6; i++, x += 2) {
-		if((i + 5) < NameLen) {
-			//EntryBuffer[FF_FAT_LFN_NAME_2 + x] = Name[i+5];
-			//*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_2 + x]) = Name[i+5];
-			FF_Utf32ctoUtf16c((FF_T_UINT16 *)&EntryBuffer[FF_FAT_LFN_NAME_2 + x], (FF_T_UINT32) Name[i+5], 1);
-		} else if ((i + 5) == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= '\0';
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= 0xFF;
-		}
-	}
-
-	// Name_3
-	for(i = 0, x = 0; i < 2; i++, x += 2) {
-		if((i + 11) < NameLen) {
-			//*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_3 + x]) = Name[i+11];
-			//EntryBuffer[FF_FAT_LFN_NAME_3 + x] = Name[i+11];
-			FF_Utf32ctoUtf16c((FF_T_UINT16 *)&EntryBuffer[FF_FAT_LFN_NAME_3 + x], (FF_T_UINT32) Name[i+11], 1);
-		} else if ((i + 11) == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= '\0';
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= 0xFF;
-		}
-	}
-
-#endif
-
-#else
-
-	// Name_1
-	for(i = 0, x = 0; i < 5; i++, x += 2) {
-		if(i < NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x] = Name[i];
-		} else if (i == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= '\0';
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= 0xFF;
-		}
-	}
-
-	// Name_2
-	for(i = 0, x = 0; i < 6; i++, x += 2) {
-		if((i + 5) < NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x] = Name[i+5];
-		} else if ((i + 5) == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x] = '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= 0xFF;
-		}
-	}
-
-	// Name_3
-	for(i = 0, x = 0; i < 2; i++, x += 2) {
-		if((i + 11) < NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x] = Name[i+11];
-		} else if ((i + 11) == NameLen) {
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x] = '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= 0xFF;
-		}
-	}
-#endif
 	
 	return FF_ERR_NONE;
 }
@@ -1833,15 +1872,41 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCH
 #else
 static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
 #endif
-	FF_T_UINT8	EntryBuffer[32];
-	FF_T_UINT16	usUtf16Name[FF_MAX_FILENAME + 1];
-	FF_T_UINT	i;
+	FF_ERROR			Error;
+	FF_T_UINT			uiNumLFNs;
+	FF_T_UINT			uiEndPos;
+	FF_T_UINT			i,y;
+
+#ifndef FF_UNICODE_SUPPORT
+#ifndef FF_UNICODE_UTF8_SUPPORT
+	FF_T_UINT16			*pUtf16;
+#endif
+#endif
+
+	FF_FETCH_CONTEXT	FetchContext;
+
+	FF_T_UINT8			EntryBuffer[32];
+	FF_T_UINT16			usUtf16Name[FF_MAX_FILENAME + 1];
+	
 
 #ifdef FF_UNICODE_SUPPORT
 #if WCHAR_MAX <= 0xFFFF
-	wcscpy(usUtf16Name, Name);
+	y = wcslen(Name);
+	if(y > FF_MAX_FILENAME) {
+		return FF_ERR_DIR_NAME_TOO_LONG;
+	}
+	wcsncpy(usUtf16Name, Name, FF_MAX_FILENAME);
 #else
-	FF_Utf32ctoUtf16c();
+	i = 0;
+	y = 0;
+	while(Name[i]) {
+		FF_Utf32ctoUtf16c(&usUtf16Name[y], (FF_T_UINT32) Name[i], FF_MAX_FILENAME - i);
+		y += FF_GetUtf16SequenceLen(usUtf16Name[y]);
+		i++;
+		if(y > FF_MAX_FILENAME) {
+			return FF_ERR_DIR_NAME_TOO_LONG;
+		}
+	}
 #endif
 #endif
 
@@ -1849,24 +1914,64 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 #ifdef FF_UNICODE_UTF8_SUPPORT
 	// Simply convert the UTF8 to UTF16 and be done with it.
 	i = 0;
-
-	printf("Name is now %s\n", Name);
-
-	while(*Name) {
-		i += FF_Utf8ctoUtf16c(usUtf16Name, &Name[i], FF_MAX_FILENAME - i);
+	y = 0;
+	while(Name[i]) {
+		i += FF_Utf8ctoUtf16c(&usUtf16Name[y], (FF_T_UINT8 *)&Name[i], FF_MAX_FILENAME - i);
+		y += FF_GetUtf16SequenceLen(usUtf16Name[y]);
+		if(y > FF_MAX_FILENAME) {
+			return FF_ERR_DIR_NAME_TOO_LONG;
+		}
 	}
 
 #else
 #ifndef FF_UNICODE_SUPPORT
-	// Do the dumb conversion. (ASCII to UTF-16).
-	FF_cstrntowcs(usUtf16Name, Name, FF_MAX_FILENAME);
+	i = 0;
+	y = strlen(Name);
+	if(y > FF_MAX_FILENAME) {
+		return FF_ERR_DIR_NAME_TOO_LONG;
+	}
+	pUtf16 = usUtf16Name;
+	while(Name[i]) {
+		usUtf16Name[i] = (FF_T_UINT16) Name[i];
+		i++;
+	}
 #endif
 #endif
 
 	// Whole name is now in a valid UTF-16 format. Lets go make thos LFN's.
 	// i should at this point be the length of the name.
 
+	uiNumLFNs	= y / 13;	// Number of LFNs is the total number of UTF-16 units, divided by 13 (13 units per LFN).
+	uiEndPos	= y % 13;	// The ending position in an LFN, of the last LFN UTF-16 charachter.
 
+	if(uiEndPos) {
+		uiNumLFNs++;
+	} else {
+		uiEndPos = 13;
+	}
+
+	Error = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
+	if(Error) {
+		return Error;
+	}
+
+	// After this point, i is no longer the length of the Filename in UTF-16 units.
+	for(i = uiNumLFNs; i > 0; i--) {
+		if(i == uiNumLFNs) {
+			FF_CreateLFNEntry(EntryBuffer, (usUtf16Name + (13 * (i - 1))), uiEndPos, i, CheckSum);
+			EntryBuffer[0] |= 0x40;
+		} else {
+			FF_CreateLFNEntry(EntryBuffer, (usUtf16Name + (13 * (i - 1))), 13, i, CheckSum);
+		}
+		
+		Error = FF_PushEntryWithContext(pIoman, nEntry + (uiNumLFNs - i), &FetchContext, EntryBuffer);
+		if(Error) {
+			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			return Error;
+		}
+	}
+
+	FF_CleanupEntryFetch(pIoman, &FetchContext);
 
 	return FF_ERR_NONE;
 }
@@ -1985,14 +2090,18 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 	FF_T_WCHAR	UTF16EntryBuffer[32];
 #if WCHAR_MAX > 0xFFFF
 	// Check that the filename won't exceed the max LFN length if converted to UTF-16.
-	if(FF_Utf32GetUtf16Len((FF_T_UINT32 *) pDirent->FileName) > FF_MAX_FILENAME) {
+	/*if(FF_Utf32GetUtf16Len((FF_T_UINT32 *) pDirent->FileName) > FF_MAX_FILENAME) {
 		return FF_ERR_UNICODE_CONVERSION_EXCEEDED; 
-	}
+	}*/
 #endif
 
 #endif
 
+#ifdef FF_UNICODE_SUPPORT
 	FF_MakeNameCompliant(pDirent->FileName);	// Ensure we don't break the Dir tables.
+#else
+	FF_MakeNameCompliant((FF_T_UINT8 *)pDirent->FileName);	// Ensure we don't break the Dir tables.
+#endif
 	memset(EntryBuffer, 0, 32);
 
 	if(NameLen % 13) {

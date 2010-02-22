@@ -46,16 +46,13 @@
 // UTF8 / UTF16 Transformation Functions
 
 FF_T_UINT FF_GetUtf16SequenceLen	(FF_T_UINT16 usLeadChar);
-
-FF_T_SINT32 FF_Utf16GetUtf8Len		(const FF_T_UINT16 *utf16String);
-FF_T_SINT32 FF_Utf8GetUtf16Len		(const FF_T_UINT8 *utf8String);
 FF_T_SINT32 FF_Utf8ctoUtf16c		(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Source, FF_T_UINT32 ulSize);
 FF_T_SINT32 FF_Utf16ctoUtf8c		(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Source, FF_T_UINT32 ulSize);
 
 // UTF16 / UTF32 Transformation Functions
 
-
-
+FF_T_SINT32 FF_Utf16ctoUtf32c(FF_T_UINT32 *utf32Dest, const FF_T_UINT16 *utf16Source);
+FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_T_UINT32 ulSize);
 
 
 #endif

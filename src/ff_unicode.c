@@ -58,30 +58,61 @@ FF_T_UINT FF_GetUtf16SequenceLen(FF_T_UINT16 usLeadChar) {
 	if((usLeadChar & 0xFC00) == 0xD800) {
 		return 2;
 	}
-
 	return 1;
-}
-
-/*
-	Returns the number of UTF-8 units that a UTF-16 String will consume.
-*/
-FF_T_SINT32 FF_Utf16GetUtf8Len(const FF_T_UINT16 *utf16String) {
-
-}
-
-/*
-	Returns the number of UTF-16 units that a UTF-8 String will consume.
-*/
-FF_T_SINT32 FF_Utf8GetUtf16Len(const FF_T_UINT8 *utf8String) {
-
 }
 
 /*
 	Returns the number of UTF-16 units required to encode the UTF-8 sequence in UTF-16.
 	Will not exceed ulSize UTF-16 units. (ulSize * 2 bytes).
 */
-FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Source, FF_T_UINT32 ulSize) {
+/*
+   UCS-4 range (hex.)           UTF-8 octet sequence (binary)
+   0000 0000-0000 007F   0xxxxxxx
+   0000 0080-0000 07FF   110xxxxx 10xxxxxx
+   0000 0800-0000 FFFF   1110xxxx 10xxxxxx 10xxxxxx
 
+   0001 0000-001F FFFF   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+   0020 0000-03FF FFFF   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx	-- We don't encode these because we won't receive them. (Invalid UNICODE).
+   0400 0000-7FFF FFFF   1111110x 10xxxxxx ... 10xxxxxx					-- We don't encode these because we won't receive them. (Invalid UNICODE).
+*/
+FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Source, FF_T_UINT32 ulSize) {
+	FF_T_UINT32			ulUtf32char;
+	register FF_T_INT	uiSequenceNumber = 0;
+
+	while((*utf8Source & (0x80 >> (uiSequenceNumber)))) {	// Count number of set bits before a zero.
+		uiSequenceNumber++;
+	}
+
+	if(!uiSequenceNumber) {
+		uiSequenceNumber++;
+	}
+
+	switch(uiSequenceNumber) {
+		case 1:
+			*utf16Dest = (FF_T_UINT16) *utf8Source;
+			break;
+
+		case 2:
+			*utf16Dest = (FF_T_UINT16) ((*utf8Source & 0x1F) << 6) | ((*(utf8Source + 1) & 0x3F));
+			break;
+
+		case 3:
+			*utf16Dest = (FF_T_UINT16) ((*utf8Source & 0x0F) << 12) | ((*(utf8Source + 1) & 0x3F) << 6) | ((*(utf8Source + 2) & 0x3F));
+			break;
+
+		case 4:
+			// Convert to UTF-32 and then into UTF-16
+			ulUtf32char = (FF_T_UINT16) ((*utf8Source & 0x0F) << 18) | ((*(utf8Source + 1) & 0x3F) << 12) | ((*(utf8Source + 2) & 0x3F) << 6) | ((*(utf8Source + 3) & 0x3F));
+			*(utf16Dest + 0) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0xFFC00) >> 10) | 0xD800;
+			*(utf16Dest + 1) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0x003FF) >> 00) | 0xDC00;
+			break;
+
+		default:
+			break;
+	}
+
+	return uiSequenceNumber;
+	//return -1;
 }
 
 
@@ -146,7 +177,7 @@ FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_
 		return FF_ERR_UNICODE_INVALID_CODE; // Invalid charachter.
 	}
 
-	if(utf32char <= 0xFFFF) {
+	if(utf32char < 0x10000) {
 		*utf16Dest = (FF_T_UINT16) utf32char; // Simple conversion! Char comes within UTF-16 space (without surrogates).
 		return 1;
 	}
@@ -190,6 +221,7 @@ FF_T_SINT32 FF_Utf16ctoUtf32c(FF_T_UINT32 *utf32Dest, const FF_T_UINT16 *utf16So
 	Returns the total number of UTF-16 items required to represent
 	the provided UTF-32 string in UTF-16 form.
 */
+/*
 FF_T_UINT FF_Utf32GetUtf16Len(const FF_T_UINT32 *utf32String) {
 	FF_T_UINT utf16len = 0;
 
@@ -202,4 +234,4 @@ FF_T_UINT FF_Utf32GetUtf16Len(const FF_T_UINT32 *utf32String) {
 	}
 	
 	return utf16len;
-}
+}*/

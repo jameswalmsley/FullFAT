@@ -56,9 +56,17 @@
  */
 
 #ifdef FF_UNICODE_SUPPORT
+
+void FF_cstrntowcs(FF_T_WCHAR *wcsDest, const FF_T_INT8 *szpSource, FF_T_UINT32 len) {
+	while(*szpSource && len--) {
+		*wcsDest++ = *szpSource++;
+	}
+	*wcsDest = '\0';
+}
+
 void FF_cstrtowcs(FF_T_WCHAR *wcsDest, const FF_T_INT8 *szpSource) {
 	while(*szpSource) {
-		*wcsDest++ = *szpSource++;
+		*wcsDest++ = (FF_T_WCHAR) *szpSource++;
 	}
 	*wcsDest = '\0';
 }
@@ -68,13 +76,6 @@ void FF_wcstocstr(FF_T_INT8 *szpDest, const FF_T_WCHAR *wcsSource) {
 		*szpDest++ = (FF_T_INT8) *wcsSource++;
 	}
 	*szpDest = '\0';
-}
-
-void FF_cstrntowcs(FF_T_WCHAR *wcsDest, const FF_T_INT8 *szpSource, FF_T_UINT32 len) {
-	while(*szpSource && len--) {
-		*wcsDest++ = *szpSource++;
-	}
-	*wcsDest = '\0';
 }
 
 void FF_wcsntocstr(FF_T_INT8 *szpDest, const FF_T_WCHAR *wcsSource, FF_T_UINT32 len) {

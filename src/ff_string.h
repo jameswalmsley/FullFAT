@@ -46,7 +46,6 @@
 #include "ff_types.h"
 #include "ff_config.h"
 
-
 #ifdef FF_UNICODE_SUPPORT
 void			FF_tolower		(FF_T_WCHAR *string, FF_T_UINT32 strLen);
 void			FF_toupper		(FF_T_WCHAR *string, FF_T_UINT32 strLen);
