@@ -122,6 +122,8 @@ int main(void) {
 
 			Env.pIoman = pIoman;
 
+			FF_MkDir(pIoman, L"\\Grüßen");
+
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
 

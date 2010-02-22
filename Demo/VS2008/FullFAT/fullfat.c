@@ -110,7 +110,7 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 #endif
 
-	//setlocale(LC_ALL,"");
+	setlocale(LC_ALL,"");
 	wprintf(L"This is a Unicode String! Ich heiße Jämes!\n");
 
 	//FF_wildcompare(L"*s?.c", L"test.c");
@@ -151,6 +151,8 @@ int main(void) {
 			}
 
 			Env.pIoman = pIoman;
+
+//			FF_MkDir(pIoman, L"\\Grüßen");
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.

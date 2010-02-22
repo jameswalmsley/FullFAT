@@ -44,7 +44,7 @@
 #define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
 										// FullFAT works great with LFNs and without. You choose, its your project!
 
-//#define FF_UNICODE_SUPPORT				// If this is defined, then FF_FindFirst() and FF_FindNext() will return the original
+#define FF_UNICODE_SUPPORT				// If this is defined, then FF_FindFirst() and FF_FindNext() will return the original
 										// UTF-16 FileNames.
 										
 

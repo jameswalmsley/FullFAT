@@ -1614,6 +1614,7 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 	FF_putChar(EntryBuffer, FF_FAT_LFN_CHECKSUM,	(FF_T_UINT8) CheckSum);
 
 #ifdef FF_UNICODE_SUPPORT
+#if WCHAR_MAX <= 0xFFFF	// Create the Dirent for a system with native UTF-16 support.
 	// Name_1
 	for(i = 0, x = 0; i < 5; i++, x += sizeof(FF_T_WCHAR)) {
 		if(i < NameLen) {
@@ -1654,6 +1655,52 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_INT8 *Name, FF
 			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= 0xFF;
 		}
 	}
+#else	// Create the Dirent, converting from UTF-32 to UTF-16 each time.
+	// Name_1
+	for(i = 0, x = 0; i < 5; i++, x += 2) {
+		if(i < NameLen) {
+			//*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
+			FF_Utf32ctoUtf16c((FF_T_UINT16 *)&EntryBuffer[FF_FAT_LFN_NAME_1 + x], (FF_T_UINT32) Name[i], 1);
+		} else if (i == NameLen) {
+			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= '\0';
+			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= '\0';
+		}else {
+			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= 0xFF;
+			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= 0xFF;
+		}
+	}
+
+	// Name_2
+	for(i = 0, x = 0; i < 6; i++, x += 2) {
+		if((i + 5) < NameLen) {
+			//EntryBuffer[FF_FAT_LFN_NAME_2 + x] = Name[i+5];
+			//*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_2 + x]) = Name[i+5];
+			FF_Utf32ctoUtf16c((FF_T_UINT16 *)&EntryBuffer[FF_FAT_LFN_NAME_2 + x], (FF_T_UINT32) Name[i+5], 1);
+		} else if ((i + 5) == NameLen) {
+			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= '\0';
+			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= '\0';
+		}else {
+			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= 0xFF;
+			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= 0xFF;
+		}
+	}
+
+	// Name_3
+	for(i = 0, x = 0; i < 2; i++, x += 2) {
+		if((i + 11) < NameLen) {
+			//*((FF_T_WCHAR *) &EntryBuffer[FF_FAT_LFN_NAME_3 + x]) = Name[i+11];
+			//EntryBuffer[FF_FAT_LFN_NAME_3 + x] = Name[i+11];
+			FF_Utf32ctoUtf16c((FF_T_UINT16 *)&EntryBuffer[FF_FAT_LFN_NAME_3 + x], (FF_T_UINT32) Name[i+11], 1);
+		} else if ((i + 11) == NameLen) {
+			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= '\0';
+			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= '\0';
+		}else {
+			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= 0xFF;
+			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= 0xFF;
+		}
+	}
+
+#endif
 
 #else
 
