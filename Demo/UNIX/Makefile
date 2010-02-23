@@ -29,8 +29,8 @@ ffterm-platform.o: ../../../ffterm/drivers/linux/ffterm-platform.c ../../../ffte
 
 # FullFAT Stuff
 
-libfullfat.a: ff_blk.o ff_crc.o ff_dir.o ff_error.o  ff_fat.o ff_file.o ff_hash.o ff_ioman.o ff_memory.o ff_safety.o ff_string.o ff_time.o blkdev_linux.o
-	$(AR) rvs libfullfat.a ff_blk.o ff_crc.o ff_dir.o ff_error.o  ff_fat.o ff_file.o ff_hash.o ff_ioman.o ff_memory.o ff_safety.o ff_string.o ff_time.o blkdev_linux.o
+libfullfat.a: ff_blk.o ff_crc.o ff_dir.o ff_error.o  ff_fat.o ff_file.o ff_hash.o ff_ioman.o ff_memory.o ff_safety.o ff_string.o ff_time.o ff_unicode.o blkdev_linux.o
+	$(AR) rvs libfullfat.a ff_blk.o ff_crc.o ff_dir.o ff_error.o  ff_fat.o ff_file.o ff_hash.o ff_ioman.o ff_memory.o ff_safety.o ff_string.o ff_time.o ff_unicode.o blkdev_linux.o
 	
 ff_blk.o: ../../src/ff_blk.c ../../src/ff_blk.h
 	$(CC) -c ../../src/ff_blk.c -o ff_blk.o
@@ -61,6 +61,9 @@ ff_memory.o: ../../src/ff_memory.c ../../src/ff_memory.h
 	
 ff_string.o: ../../src/ff_string.c ../../src/ff_string.h
 	$(CC) -c ../../src/ff_string.c -o ff_string.o
+
+ff_unicode.o: ../../src/ff_unicode.c ../../src/ff_unicode.h
+	$(CC) -c ../../src/ff_unicode.c -o ff_unicode.o
 
 
 # Commands

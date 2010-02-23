@@ -1,4 +1,4 @@
-/*****************************************************************************
+﻿/*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
  *                                                                           *
@@ -168,7 +168,6 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	char		recursivePath[FF_MAX_PATH];
 	const char	*szpWildCard;
 #endif
-
 	
 	int columns, columnWidth;
 	int i;
@@ -247,6 +246,10 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 
 	if(columns > 5) {
 		columns = 5;
+	}
+
+	if(!columns) {
+		columns = 1;
 	}
 
 	columnWidth = (FFTerm_GetConsoleWidth()-1)/ columns;

@@ -1,4 +1,4 @@
-/*****************************************************************************
+ï»¿/*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
  *                                                                           *
@@ -39,7 +39,7 @@
 #include <locale.h>
 #include <wchar.h>
 
-#define PARTITION_NUMBER	1							// FullFAT can mount primary partitions only. Specified at Runtime.
+#define PARTITION_NUMBER	0							// FullFAT can mount primary partitions only. Specified at Runtime.
 
 int fds[3] = { 0, 1, 2 };
 
@@ -101,6 +101,12 @@ int main(void) {
 	FF_IOMAN		*pIoman;							// FullFAT I/O Manager Pointer, to be created.
 	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 	HANDLE			hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
+
+	char			utf8string[30];
+
+	wchar_t c[] = L"\\GrÃ¼ÃŸen_aus_Ã–sterreich";
+	int i,y;
+
 	
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
@@ -110,15 +116,18 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 #endif
 
-	setlocale(LC_ALL,"");
-	wprintf(L"This is a Unicode String! Ich heiße Jämes!\n");
+	setlocale(LC_ALL, "");
+	//wprintf(L"This is a Unicode String! Ich heiÃŸe JÃ¤mes!\n");
 
 	//FF_wildcompare(L"*s?.c", L"test.c");
+
+	//FF_Utf16ctoUtf8c(utf8string, L"ð€€", 10);
 	
+	//c = getwc(stdin);
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\ImageFile1.img", 512);
+	hDisk = fnOpen("c:\\new1gb.img.bak", 512);
 	
 	//hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
@@ -151,8 +160,15 @@ int main(void) {
 			}
 
 			Env.pIoman = pIoman;
-
-			//FF_MkDir(pIoman, L"\\Grüßen_Windows_FF_Proper");
+			
+			i = 0;
+			y = 0;
+			while(c[y]) {
+				i += FF_Utf16ctoUtf8c((FF_T_UINT8 *) &utf8string[i], &c[y], 30 - y);
+				y += FF_GetUtf16SequenceLen(c[y]);
+			}
+			utf8string[i] = '\0';
+//			FF_MkDir(pIoman, "\\A simple Ascii String");
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.

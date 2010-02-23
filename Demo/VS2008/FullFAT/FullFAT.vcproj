@@ -232,6 +232,10 @@
 					RelativePath="..\..\..\src\ff_string.c"
 					>
 				</File>
+				<File
+					RelativePath="..\..\..\src\ff_unicode.c"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="FFTerm"
@@ -404,6 +408,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\src\ff_types.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_unicode.h"
 					>
 				</File>
 				<File

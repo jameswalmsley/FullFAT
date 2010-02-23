@@ -62,7 +62,7 @@ FF_T_UINT FF_GetUtf16SequenceLen(FF_T_UINT16 usLeadChar) {
 }
 
 /*
-	Returns the number of UTF-16 units required to encode the UTF-8 sequence in UTF-16.
+	Returns the number of UTF-8 units read.
 	Will not exceed ulSize UTF-16 units. (ulSize * 2 bytes).
 */
 /*
@@ -87,6 +87,10 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 		uiSequenceNumber++;
 	}
 
+	if(!ulSize) {
+		return FF_ERR_UNICODE_DEST_TOO_SMALL;		
+	}
+
 	switch(uiSequenceNumber) {
 		case 1:
 			*utf16Dest = (FF_T_UINT16) *utf8Source;
@@ -102,6 +106,9 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 
 		case 4:
 			// Convert to UTF-32 and then into UTF-16
+			if(ulSize < 2) {
+				return FF_ERR_UNICODE_DEST_TOO_SMALL;
+			}
 			ulUtf32char = (FF_T_UINT16) ((*utf8Source & 0x0F) << 18) | ((*(utf8Source + 1) & 0x3F) << 12) | ((*(utf8Source + 2) & 0x3F) << 6) | ((*(utf8Source + 3) & 0x3F));
 			*(utf16Dest + 0) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0xFFC00) >> 10) | 0xD800;
 			*(utf16Dest + 1) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0x003FF) >> 00) | 0xDC00;
@@ -112,7 +119,6 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 	}
 
 	return uiSequenceNumber;
-	//return -1;
 }
 
 
@@ -122,6 +128,10 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 */
 FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Source, FF_T_UINT32 ulSize) {
 	FF_T_UINT32	ulUtf32char;
+
+	if(!ulSize) {
+		return FF_ERR_UNICODE_DEST_TOO_SMALL;
+	}
 
 	if((*utf16Source & 0xFC00) == 0xD800) {	// A surrogate sequence was encountered. Must transform to UTF32 first.
 		ulUtf32char  = ((FF_T_UINT32) (*(utf16Source + 0) & 0x003FF) << 10) + 0x10000;
@@ -142,12 +152,18 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 	}
 
 	if(ulUtf32char < 0x00000800) {	// Double byte UTF-8 sequence.
+		if(ulSize < 2) {
+			return FF_ERR_UNICODE_DEST_TOO_SMALL;
+		}
 		*(utf8Dest + 0) = (FF_T_UINT8) (0xC0 | ((ulUtf32char >> 6) & 0x1F));
 		*(utf8Dest + 1) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 0) & 0x3F));
 		return 2;
 	}
 
 	if(ulUtf32char < 0x00010000) {	// Triple byte UTF-8 sequence.
+		if(ulSize < 3) {
+			return FF_ERR_UNICODE_DEST_TOO_SMALL;
+		}
 		*(utf8Dest + 0) = (FF_T_UINT8) (0xE0 | ((ulUtf32char >> 12) & 0x0F));
 		*(utf8Dest + 1) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 6 ) & 0x3F));
 		*(utf8Dest + 2) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 0 ) & 0x3F));
@@ -155,6 +171,9 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 	}
 
 	if(ulUtf32char < 0x00200000) {	// Quadruple byte UTF-8 sequence.
+		if(ulSize < 4) {
+			return FF_ERR_UNICODE_DEST_TOO_SMALL;
+		}
 		*(utf8Dest + 0) = (FF_T_UINT8) (0xF0 | ((ulUtf32char >> 18) & 0x07));
 		*(utf8Dest + 1) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 12) & 0x3F));
 		*(utf8Dest + 2) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 6 ) & 0x3F));
@@ -235,3 +254,24 @@ FF_T_UINT FF_Utf32GetUtf16Len(const FF_T_UINT32 *utf32String) {
 	
 	return utf16len;
 }*/
+
+
+// String conversions
+
+FF_T_SINT32 FF_Utf32stoUtf8s(FF_T_UINT8 *Utf8String, FF_T_UINT32 *Utf32String) {
+	int i = 0,y = 0;
+
+	FF_T_UINT16 utf16buffer[2];
+
+	while(Utf32String[i]) {
+		// Convert to a UTF16 char.
+		FF_Utf32ctoUtf16c(utf16buffer, Utf32String[i], 2);
+		// Now convert the UTF16 to UTF8 sequence.
+		y += FF_Utf16ctoUtf8c(&Utf8String[y], utf16buffer, 4);
+		i++;
+	}
+
+	Utf8String[y] = '\0';
+
+	return 0;
+}

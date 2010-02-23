@@ -48,13 +48,17 @@
 //---------- UNICODE SUPPORT
 //#define FF_UNICODE_SUPPORT			// If this is defined, then all of FullFAT's API's will expect to receive UTF-16 formatted strings.
 										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-16 format.
+										// NOTE: This option may cause FullFAT to not "Clean-compile" when using GCC. This is because
+										// pedantically GCC refuses to accept C99 library functions, unless the -std=c99 flag is used.
+										// To use UNICODE (UTF-16, or UTF-32 depending on the size of wchar_t) you must have a C99 compliant
+										// compiler and library.
 
 #define FF_UNICODE_UTF8_SUPPORT			// If this is defined, then all of FullFAT's API's will expect to receive UTF-8 formatted strings.
 										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-8 format.
 
 										// Note the 2 UNICODE options are mutually exclusive. Only one can be enabled.
 
-//#define FF_UNICODE_UTF8_ENSURE_MAX_LEN	// Ensure that dirents are big enough to hold the maximum UTF-8 sequence.
+										// Ensure that dirents are big enough to hold the maximum UTF-8 sequence.
 
 
 //---------- FAT12 SUPPORT
@@ -147,7 +151,7 @@
 //---------- AUTOMATIC SETTINGS DO NOT EDIT -- These configure your options from above, and check sanity!
 
 #ifdef FF_LFN_SUPPORT
-#define FF_MAX_FILENAME		(129)
+#define FF_MAX_FILENAME		(260)
 #else
 #define	FF_MAX_FILENAME		(13)
 #endif
@@ -155,6 +159,8 @@
 #ifdef FF_USE_NATIVE_STDIO
 #ifdef	MAX_PATH
 #define FF_MAX_PATH MAX_PATH
+#elif	PATH_MAX
+#define	FF_MAX_PATH	PATH_MAX
 #else
 #define FF_MAX_PATH	2600
 #endif

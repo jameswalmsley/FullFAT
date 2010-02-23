@@ -7,8 +7,6 @@ void *FF_CreateSemaphore(void) {
 	
 	sem_init(pSem, 0, 1);
 
-	//HANDLE hSem = CreateMutex(NULL, FALSE, NULL);//CreateSemaphore(NULL, 1, 1, NULL);
-
 	return (void *) pSem;
 }
 

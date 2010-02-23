@@ -48,6 +48,7 @@
 
 #ifdef FF_UNICODE_SUPPORT
 #include <wchar.h>
+#include <wctype.h>
 #endif
 
 /*

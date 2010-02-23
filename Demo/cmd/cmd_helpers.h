@@ -4,7 +4,7 @@
 
 #ifndef _CMD_HELPERS_
 #define _CMD_HELPERS_
-
+#include <stdio.h>
 #include "../../src/fullfat.h"
 #include "dir.h"
 
@@ -44,6 +44,7 @@ void FF_PrintDir(FF_DIRENT *pDirent);
 
 
 #ifndef WIN32
+#include <limits.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -52,8 +53,8 @@ void FF_PrintDir(FF_DIRENT *pDirent);
 typedef struct {
 	struct dirent 	dir;
 	struct stat		itemInfo;
-	char szWildCard[PATH_MAX];
-	char szItemPath[PATH_MAX];
+	char szWildCard[FF_MAX_PATH];
+	char szItemPath[FF_MAX_PATH];
 } DIRENT;
 
 void ProcessLinuxPath(char *dest, const char *src);

@@ -54,5 +54,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c		(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sou
 FF_T_SINT32 FF_Utf16ctoUtf32c(FF_T_UINT32 *utf32Dest, const FF_T_UINT16 *utf16Source);
 FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_T_UINT32 ulSize);
 
+// String transformations
+FF_T_SINT32 FF_Utf32stoUtf8s(FF_T_UINT8 *Utf8String, FF_T_UINT32 *Utf32String);
 
 #endif

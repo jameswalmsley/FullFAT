@@ -30,6 +30,10 @@
  *****************************************************************************/
 #include "cd_cmd.h"
 
+#ifdef FF_UNICODE_SUPPORT
+#include <wchar.h>
+#endif
+
 /**
  *	@public
  *	@brief	Changes the Current Working Directory

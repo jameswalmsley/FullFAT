@@ -78,11 +78,13 @@ int main(void) {
 	FF_ENVIRONMENT	Env;						// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 	BLK_DEV_LINUX	hDisk;						// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
 
-	int i;
-
 	//----------- Initialise the environment
 	Env.pIoman = NULL;							// Initialise the FullFAT I/O Manager to NULL.
+#ifdef FF_UNICODE_SUPPORT
+	wcscpy(Env.WorkingDir, L"\\");				// Reset the Working Directory to the root folder.
+#else
 	strcpy(Env.WorkingDir, "\\");				// Reset the Working Directory to the root folder.
+#endif
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
@@ -91,10 +93,11 @@ int main(void) {
 	// Test unicode conversion routines!
 	setlocale(LC_ALL, NULL);
 	
-	//hDisk = fnOpen("/home/james/ImageFile1.img", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	
+	hDisk = fnOpen("/home/james/new1gb.img.bak", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
-	hDisk = fnOpen("/dev/sdc", 512);
+	//hDisk = fnOpen("/dev/sdc", 512);
 
 	if(hDisk) {
 		//---------- Create FullFAT IO Manager
@@ -122,10 +125,6 @@ int main(void) {
 			}
 
 			Env.pIoman = pIoman;
-
-			if(FF_MkDir(pIoman, L"\\Grüßen3_FF_lin")) {
-				printf("Cannot create dir!\n");
-			}
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.

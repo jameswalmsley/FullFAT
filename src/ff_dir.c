@@ -900,6 +900,9 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	FF_T_UINT	uiNumLFNs;
 	FF_T_UINT	uiLfnLength = 0;
 	FF_T_UINT	i,y;
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	FF_T_SINT32	slRetVal;
+#endif
 	FF_T_UINT16	myShort;
 	FF_T_UINT8	ucCheckSum;
 
@@ -944,7 +947,18 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	i = 0;
 	y = 0;
 	while(UTF16Name[y]) {
-		i += FF_Utf16ctoUtf8c((FF_T_UINT8 *)&pDirent->FileName[i], &UTF16Name[y], (FF_MAX_FILENAME - i));
+		slRetVal = FF_Utf16ctoUtf8c((FF_T_UINT8 *)&pDirent->FileName[i], &UTF16Name[y], ((FF_MAX_FILENAME -1) - i));
+		if(slRetVal > 0) {
+			i += slRetVal;
+		} else {
+			if(slRetVal == FF_ERR_UNICODE_DEST_TOO_SMALL) {
+				// No more space in pDirent->FileName to fit more filename.
+				break; // Get out of the while loop, simply stop processing unicode.
+			} else {
+				// Unrecognised UNICODE char, replace with an underscore or ?
+				pDirent->FileName[i] = '_';
+			}
+		}
 		y += FF_GetUtf16SequenceLen(UTF16Name[y]);
 	}
 	pDirent->FileName[i] = '\0';	
@@ -954,14 +968,15 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #if WCHAR_MAX <= 0xFFFF			// UTF-16 to UTF-16, direct copy!
 	i = 0;
 	y = wcslen(UTF16Name);
-	wcsncpy(pDirent->FileName, UTF16Name, FF_MAX_FILENAME);	
+	wcsncpy(pDirent->FileName, UTF16Name, (FF_MAX_FILENAME - 1));
 #else							// Convert to UTF-32
 	i = 0;
 	y = 0;
 	while(UTF16Name[y]) {
-		FF_Utf16ctoUtf32c(&pDirent->FileName[i], &UTF16Name[y]);
+		FF_Utf16ctoUtf32c((FF_T_UINT32 *)&pDirent->FileName[i++], &UTF16Name[y]);
 		y += FF_GetUtf16SequenceLen(UTF16Name[y]);
 	}
+	pDirent->FileName[i] = '\0';
 #endif
 #endif
 
@@ -969,7 +984,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #ifndef FF_UNICODE_UTF8_SUPPORT	// No Unicode, simple ASCII.
 	i = 0;
 	y = 0;
-	while(UTF16Name[y]) {
+	while(UTF16Name[y] && i < FF_MAX_FILENAME - 1) {
 		pDirent->FileName[i++] = (FF_T_UINT8) UTF16Name[y++];
 	}
 	pDirent->FileName[i] = '\0';
@@ -1877,6 +1892,10 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	FF_T_UINT			uiEndPos;
 	FF_T_UINT			i,y;
 
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	FF_T_SINT32			slRetVal;
+#endif
+
 #ifndef FF_UNICODE_SUPPORT
 #ifndef FF_UNICODE_UTF8_SUPPORT
 	FF_T_UINT16			*pUtf16;
@@ -1916,13 +1935,17 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	i = 0;
 	y = 0;
 	while(Name[i]) {
-		i += FF_Utf8ctoUtf16c(&usUtf16Name[y], (FF_T_UINT8 *)&Name[i], FF_MAX_FILENAME - i);
+		slRetVal = FF_Utf8ctoUtf16c(&usUtf16Name[y], (FF_T_UINT8 *)&Name[i], FF_MAX_FILENAME - i);
+		if(slRetVal > 0) {
+			i += slRetVal;
+		} else {
+			break;	// No more space in the UTF-16 buffer, simply truncate for safety.
+		}
 		y += FF_GetUtf16SequenceLen(usUtf16Name[y]);
 		if(y > FF_MAX_FILENAME) {
 			return FF_ERR_DIR_NAME_TOO_LONG;
 		}
 	}
-
 #else
 #ifndef FF_UNICODE_SUPPORT
 	i = 0;

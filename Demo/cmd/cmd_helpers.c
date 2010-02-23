@@ -2,18 +2,15 @@
 	Provides a library to help command lines!
 */
 
-#ifdef FF_UNICODE_SUPPORT
-#include <wchar.h>
-int swprintf(wchar_t *wcs, size_t maxlen, const wchar_t *format, ...);
-
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include "cmd_helpers.h"
 #include "../../../ffterm/src/ffterm.h"
 #include "../../src/ff_config.h"
 
+#ifdef FF_UNICODE_SUPPORT
+#include <wchar.h>
+#endif
 
 
 /*
@@ -324,9 +321,9 @@ void ExpandPath(char *acPath) {
 
 void ProcessLinuxPath(char *dest, const char *src) {
 	
-	char path[PATH_MAX + 1];
+	char path[FF_MAX_PATH + 1];
 
-	getcwd(path, PATH_MAX);
+	getcwd(path, FF_MAX_PATH);
 	
 	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(path) == 1) {
@@ -379,7 +376,7 @@ DIR	*FindFirstFile(const char *szpPath, DIRENT *pFindData) {
 	DIR 			*pDir;
 	struct dirent 	*pDirent;
 	const char		*szpWildCard;
-	char			path[PATH_MAX];
+	char			path[FF_MAX_PATH];
 
 	strcpy(pFindData->szWildCard, "");
 	szpWildCard = GetWildcard(szpPath);
