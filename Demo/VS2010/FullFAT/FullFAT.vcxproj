@@ -97,12 +97,19 @@
     <ClCompile Include="..\..\..\src\ff_ioman.c" />
     <ClCompile Include="..\..\..\src\ff_memory.c" />
     <ClCompile Include="..\..\..\src\ff_string.c" />
-    <ClCompile Include="..\..\VS2008\FullFAT\cmd.c" />
-    <ClCompile Include="..\..\VS2008\FullFAT\cmd_helpers.c" />
-    <ClCompile Include="..\..\VS2008\FullFAT\dir.c" />
+    <ClCompile Include="..\..\..\src\ff_unicode.c" />
+    <ClCompile Include="..\..\cmd\cd_cmd.c" />
+    <ClCompile Include="..\..\cmd\cmd_helpers.c" />
+    <ClCompile Include="..\..\cmd\cmd_prompt.c" />
+    <ClCompile Include="..\..\cmd\cp_cmd.c" />
+    <ClCompile Include="..\..\cmd\dir.c" />
+    <ClCompile Include="..\..\cmd\ls_cmd.c" />
+    <ClCompile Include="..\..\cmd\md5sum_cmd.c" />
+    <ClCompile Include="..\..\cmd\mkdir_cmd.c" />
+    <ClCompile Include="..\..\cmd\more_cmd.c" />
+    <ClCompile Include="..\..\cmd\pwd_cmd.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c" />
-    <ClCompile Include="..\..\VS2008\FullFAT\test_threads.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Commands.h" />
@@ -131,9 +138,17 @@
     <ClInclude Include="..\..\..\src\ff_time.h" />
     <ClInclude Include="..\..\..\src\ff_types.h" />
     <ClInclude Include="..\..\..\src\fullfat.h" />
-    <ClInclude Include="..\..\VS2008\FullFAT\cmd.h" />
-    <ClInclude Include="..\..\VS2008\FullFAT\cmd_helpers.h" />
-    <ClInclude Include="..\..\VS2008\FullFAT\dir.h" />
+    <ClInclude Include="..\..\cmd\cd_cmd.h" />
+    <ClInclude Include="..\..\cmd\cmd_helpers.h" />
+    <ClInclude Include="..\..\cmd\cmd_prompt.h" />
+    <ClInclude Include="..\..\cmd\commands.h" />
+    <ClInclude Include="..\..\cmd\cp_cmd.h" />
+    <ClInclude Include="..\..\cmd\dir.h" />
+    <ClInclude Include="..\..\cmd\ls_cmd.h" />
+    <ClInclude Include="..\..\cmd\md5sum_cmd.h" />
+    <ClInclude Include="..\..\cmd\mkdir_cmd.h" />
+    <ClInclude Include="..\..\cmd\more_cmd.h" />
+    <ClInclude Include="..\..\cmd\pwd_cmd.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

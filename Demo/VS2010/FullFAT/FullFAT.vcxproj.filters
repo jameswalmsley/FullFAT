@@ -5,6 +5,12 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Header Files\commands">
+      <UniqueIdentifier>{5638aec8-0597-4de9-8d10-6c848fdf2f0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\commands\helpers">
+      <UniqueIdentifier>{49c18482-e45f-4c44-81c9-1d2da10736b0}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\FFTerm">
       <UniqueIdentifier>{a0f982db-cc2a-4040-8410-88fa8ebaf3e0}</UniqueIdentifier>
     </Filter>
@@ -21,6 +27,12 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\commands">
+      <UniqueIdentifier>{b74776b3-2035-415b-8829-1b514b12c8f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\commands\helpers">
+      <UniqueIdentifier>{f0a4d0f5-20f1-40be-a9e5-a34d1f1cd3c7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Driver">
       <UniqueIdentifier>{9d5df429-cbd0-4964-8f29-c80fd7a85935}</UniqueIdentifier>
@@ -90,22 +102,43 @@
     <ClCompile Include="..\..\..\src\ff_string.c">
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\VS2008\FullFAT\cmd.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\..\src\ff_unicode.c">
+      <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\VS2008\FullFAT\cmd_helpers.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\cmd\cd_cmd.c">
+      <Filter>Source Files\commands</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\VS2008\FullFAT\dir.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\cmd\cmd_helpers.c">
+      <Filter>Source Files\commands\helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\cmd_prompt.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\cp_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\dir.c">
+      <Filter>Source Files\commands\helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\ls_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\md5sum_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\mkdir_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\more_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\pwd_cmd.c">
+      <Filter>Source Files\commands</Filter>
     </ClCompile>
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\VS2008\FullFAT\test_threads.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -188,14 +221,38 @@
     <ClInclude Include="..\..\..\src\fullfat.h">
       <Filter>Header Files\FullFAT</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\VS2008\FullFAT\cmd.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\cmd\cd_cmd.h">
+      <Filter>Header Files\commands</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\VS2008\FullFAT\cmd_helpers.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\cmd\cmd_helpers.h">
+      <Filter>Header Files\commands\helpers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\VS2008\FullFAT\dir.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\..\cmd\cmd_prompt.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\commands.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\cp_cmd.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\dir.h">
+      <Filter>Header Files\commands\helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\ls_cmd.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\md5sum_cmd.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\mkdir_cmd.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\more_cmd.h">
+      <Filter>Header Files\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\pwd_cmd.h">
+      <Filter>Header Files\commands</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

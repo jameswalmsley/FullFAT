@@ -39,7 +39,7 @@
 #include <locale.h>
 #include <wchar.h>
 
-#define PARTITION_NUMBER	0							// FullFAT can mount primary partitions only. Specified at Runtime.
+#define PARTITION_NUMBER	0
 
 int fds[3] = { 0, 1, 2 };
 
@@ -47,52 +47,6 @@ int *getfds() {
 	return fds;
 }
 
-
-int getopttester(int argc, char **argv) {
-	FFT_GETOPT_CONTEXT Ctx;
-	int option;
-
-	Ctx.nextchar 	= 0;
-	Ctx.optarg		= 0;
-	Ctx.optind		= 0;
-	Ctx.optopt		= 0;
-
-	if(argc < 3) {
-		printf("Usage: \n");
-		return 0;
-	}
-
-	option = FFTerm_getopt((argc - 1), (argv + 1), argv[1], &Ctx);
-
-	if(option != EOF) {
-
-		do {
-			switch(option) {
-				case '?':
-					printf("Unrecognised option on commandline: %c\n", Ctx.optopt);
-					break;
-
-				case ':':
-					printf("Missing option argument\n");
-					break;
-
-				default:
-					printf("Option %c detected.", option);
-					if(Ctx.optarg) {
-						printf(" with argument: %s", Ctx.optarg);
-					}
-					printf("\n");
-					break;
-			}
-
-			option = FFTerm_getopt((argc - 1), (argv + 1), argv[1], &Ctx);
-		} while(option != EOF);
-	}
-
-	//printf("FDS: %d, %d, %d\n", getfds()[0], getfds()[1], getfds()[2]);
-
-	return 0;
-}
 
 int main(void) {
 	
@@ -176,17 +130,15 @@ int main(void) {
 			if(pConsole) {
 				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
+
 				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
 				FFTerm_AddExCmd(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd, 	cpInfo,			&Env);
 				FFTerm_AddExCmd(pConsole, "ls", 	(FFT_FN_COMMAND_EX) ls_cmd, 	lsInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "md5sum", (FFT_FN_COMMAND_EX) md5sum_cmd, md5sumInfo, 	&Env);
-				FFTerm_AddCmd(pConsole, "md5win",	(FFT_FN_COMMAND)	md5sum_win_cmd, md5sum_win_Info);
 				FFTerm_AddExCmd(pConsole, "mkdir", 	(FFT_FN_COMMAND_EX) mkdir_cmd, 	mkdirInfo,		&Env);
 				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
-				
-				FFTerm_AddCmd(pConsole, "getopt", getopttester, NULL);
 
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
