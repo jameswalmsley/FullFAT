@@ -106,7 +106,6 @@
     <ClCompile Include="..\..\cmd\ls_cmd.c" />
     <ClCompile Include="..\..\cmd\md5sum_cmd.c" />
     <ClCompile Include="..\..\cmd\mkdir_cmd.c" />
-    <ClCompile Include="..\..\cmd\more_cmd.c" />
     <ClCompile Include="..\..\cmd\pwd_cmd.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c" />

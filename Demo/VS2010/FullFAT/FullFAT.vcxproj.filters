@@ -129,9 +129,6 @@
     <ClCompile Include="..\..\cmd\mkdir_cmd.c">
       <Filter>Source Files\commands</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cmd\more_cmd.c">
-      <Filter>Source Files\commands</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cmd\pwd_cmd.c">
       <Filter>Source Files\commands</Filter>
     </ClCompile>
