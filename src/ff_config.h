@@ -44,6 +44,11 @@
 #define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
 										// FullFAT works great with LFNs and without. You choose, its your project!
 
+//#define FF_INCLUDE_SHORT_NAME			// HT addition, in 'FF_DIRENT', beside FileName, ShortName will be filled as well
+                                     	// Useful for debugging, but also some situations its useful to know both.
+//---------- SHORTNAMES CAN USE THE CASE BITS
+#define FF_SHORTNAME_CASE				// Works for XP+ e.g. short.TXT or SHORT.txt.
+
 
 //---------- UNICODE SUPPORT
 //#define FF_UNICODE_SUPPORT			// If this is defined, then all of FullFAT's API's will expect to receive UTF-16 formatted strings.
@@ -53,7 +58,7 @@
 										// To use UNICODE (UTF-16, or UTF-32 depending on the size of wchar_t) you must have a C99 compliant
 										// compiler and library.
 
-#define FF_UNICODE_UTF8_SUPPORT			// If this is defined, then all of FullFAT's API's will expect to receive UTF-8 formatted strings.
+#define FF_UNICODE_UTF8_SUPPORT		// If this is defined, then all of FullFAT's API's will expect to receive UTF-8 formatted strings.
 										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-8 format.
 
 										// Note the 2 UNICODE options are mutually exclusive. Only one can be enabled.

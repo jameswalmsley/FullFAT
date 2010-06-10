@@ -198,7 +198,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	if(!wcsicmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
 		wcscat(path, L"\\*");	// Add a backslash to the end!
 #else
-	if(!stricmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
+	if(!FF_stricmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
 		strcat(path, "\\*");	// Add a backslash to the end!
 #endif
 		//strcpy(recursivePath, szPath);	// Copy szPath, to recursivePath so \* can be added.

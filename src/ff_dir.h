@@ -90,6 +90,10 @@ typedef struct {
 #else
 	FF_T_INT8	FileName[FF_MAX_FILENAME];
 #endif
+
+#if defined(FF_LFN_SUPPORT) && defined(FF_INCLUDE_SHORT_NAME)
+	FF_T_INT8	ShortName[13];
+#endif
 	FF_T_UINT8	Attrib;
 	FF_FETCH_CONTEXT FetchContext;
 } FF_DIRENT;
@@ -127,10 +131,10 @@ FF_ERROR	FF_FindNextInDir			(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONT
 
 #ifdef FF_UNICODE_SUPPORT
 FF_T_UINT32 FF_FindEntryInDir			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_WCHAR *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent, FF_ERROR *pError);
-FF_ERROR	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *ShortName, FF_T_WCHAR *LongName);
+FF_T_SINT8	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *ShortName, FF_T_WCHAR *LongName);
 #else
 FF_T_UINT32 FF_FindEntryInDir			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF_T_INT8 *name, FF_T_UINT8 pa_Attrib, FF_DIRENT *pDirent, FF_ERROR *pError);
-FF_ERROR	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName);
+FF_T_SINT8	FF_CreateShortName			(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *ShortName, FF_T_INT8 *LongName);
 #endif
 
 

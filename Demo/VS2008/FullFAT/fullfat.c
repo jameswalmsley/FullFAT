@@ -81,9 +81,9 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\new1gb.img.bak", 512);
+	//hDisk = fnOpen("c:\\new1gb.img.bak", 512);
 	
-	//hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	hDisk = fnOpen("\\\\.\\G:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);

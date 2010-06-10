@@ -341,35 +341,13 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 	while(!pBufMatch) {
 		FF_PendSemaphore(pIoman->pSemaphore);
 		{
-			for(i = 0; i < pIoman->CacheSize; i++) {
+			pBuffer = pIoman->pBuffers;
+			// HT if a perfect match has priority, find that first
+			for(i = 0; i < pIoman->CacheSize; i++, pBuffer++) {
 				pBuffer = (pIoman->pBuffers + i);
 				if(pBuffer->Sector == Sector && pBuffer->Valid == FF_TRUE) {
 					pBufMatch = pBuffer;
-				} else {
-					if(pBuffer->NumHandles == 0) {
-						pBuffer->LRU += 1;
-
-						if(!pBufLRU) {
-							pBufLRU = pBuffer;
-						}
-						if(!pBufLHITS) {
-							pBufLHITS = pBuffer;
-						}
-
-						if(pBuffer->LRU >= pBufLRU->LRU) {
-							if(pBuffer->LRU == pBufLRU->LRU) {
-								if(pBuffer->Persistance > pBufLRU->Persistance) {
-									pBufLRU = pBuffer;
-								}
-							} else {
-								pBufLRU = pBuffer;
-							}
-						}
-
-						if(pBuffer->Persistance < pBufLHITS->Persistance) {
-							pBufLHITS = pBuffer;
-						}
-					}
+					break;	// Why look further if you found a perfect match?
 				}
 			}
 
@@ -402,7 +380,34 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 				pBufMatch = NULL;	// Sector is already in use, keep yielding until its available!
 
 			} else {
-				// Choose a suitable buffer!
+				pBuffer = pIoman->pBuffers;
+				for(i = 0; i < pIoman->CacheSize; i++, pBuffer++) {
+					if(pBuffer->NumHandles == 0) {
+						pBuffer->LRU += 1;
+
+						if(!pBufLRU) {
+							pBufLRU = pBuffer;
+						}
+						if(!pBufLHITS) {
+							pBufLHITS = pBuffer;
+						}
+
+						if(pBuffer->LRU >= pBufLRU->LRU) {
+							if(pBuffer->LRU == pBufLRU->LRU) {
+								if(pBuffer->Persistance > pBufLRU->Persistance) {
+									pBufLRU = pBuffer;
+								}
+							} else {
+								pBufLRU = pBuffer;
+							}
+						}
+
+						if(pBuffer->Persistance < pBufLHITS->Persistance) {
+							pBufLHITS = pBuffer;
+						}
+					}
+				}
+
 				if(pBufLRU) {
 					// Process the suitable candidate.
 					if(pBufLRU->Modified == FF_TRUE) {
