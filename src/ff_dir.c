@@ -271,6 +271,11 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 					numLFNs--;
 					ptr = pDirent->FileName + (numLFNs * 13);
 
+					/*
+						This section needs to extract the name and do the comparison
+						dependent on UNICODE settings in the ff_config.h file.
+					*/
+
 					for(i = 0; i < 10 && ptr < lastPtr; i += 2)
 						*(ptr++) = src[FF_FAT_LFN_NAME_1 + i];
 
@@ -2169,7 +2174,7 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 			RetVal = FF_CreateShortName(pIoman, DirCluster, (FF_T_INT8 *) EntryBuffer, pDirent->FileName);
 #endif
 			
-			if(!RetVal) {
+			//if(!RetVal) {
 #ifdef FF_LFN_SUPPORT
 #ifdef FF_UNICODE_SUPPORT
 				FF_wcsntocstr((FF_T_INT8 *) EntryBuffer, UTF16EntryBuffer, 11);
@@ -2203,10 +2208,10 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 					FF_unlockDIR(pIoman);
 					return RetVal;
 				}
-			} else {
+			/*} else {
 				FF_unlockDIR(pIoman);
 				return RetVal;
-			}
+			}*/
 		}else {
 			FF_unlockDIR(pIoman);
 			return FreeEntry;
