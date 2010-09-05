@@ -1647,6 +1647,11 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		return FF_ERR_NULL_POINTER;
 	}
 
+	Error = FF_FlushCache(pFile->pIoman);
+	if(Error) {
+		return Error;
+	}
+
 	switch(Origin) {
 		case FF_SEEK_SET:
 			if((FF_T_UINT32) Offset <= pFile->Filesize && Offset >= 0) {
