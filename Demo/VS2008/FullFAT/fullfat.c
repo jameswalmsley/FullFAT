@@ -47,7 +47,6 @@ int *getfds() {
 	return fds;
 }
 
-
 int main(void) {
 	
 	FFT_CONSOLE		*pConsole;							// FFTerm Console Pointer.										
@@ -81,9 +80,9 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	//hDisk = fnOpen("c:\\new1gb.img.bak", 512);
+	hDisk = fnOpen("c:\\ImageFile1.img", 512);
 	
-	hDisk = fnOpen("\\\\.\\G:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	//hDisk = fnOpen("\\\\.\\G:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
@@ -139,6 +138,8 @@ int main(void) {
 				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
+
+//				fseek_test(&pIoman);
 
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).

@@ -45,9 +45,28 @@
 #include "ff_unicode.h"
 #include <stdio.h>
 
+
 #ifdef FF_UNICODE_SUPPORT
 #include <wchar.h>
 #endif
+
+#ifdef WIN32
+#else
+#include <ctype.h>  // tolower()
+int strcasecmp(const char *s1, const char *s2)
+{
+  unsigned char c1,c2;
+  do {
+    c1 = *s1++;
+    c2 = *s2++;
+    c1 = (unsigned char) tolower( (unsigned char) c1);
+    c2 = (unsigned char) tolower( (unsigned char) c2);
+  }
+  while((c1 == c2) && (c1 != '\0'));
+  return (int) c1-c2;
+}
+#endif
+
 
 #ifdef FF_UNICODE_SUPPORT
 static void FF_ProcessShortName(FF_T_WCHAR *name);
@@ -1811,22 +1830,31 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_UINT16 *Name, 
 
 	// Name_1
 	for(i = 0, x = 0; i < 5; i++, x += 2) {
-		if(i < uiNameLen) {
-			*((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
-		} else if (i == uiNameLen) {
+		if(i < uiNameLen)
+                {                  
+                  memcpy(&EntryBuffer[FF_FAT_LFN_NAME_1 + x], &Name[i], sizeof(FF_T_UINT16));
+                  //bobtntfullfat *((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_1 + x]) = Name[i];
+		}
+                else
+                  if (i == uiNameLen)
+                  {
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= '\0';
 			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= '\0';
-		}else {
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= 0xFF;
-			EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= 0xFF;
-		}
+                  }
+                  else
+                  {
+                          EntryBuffer[FF_FAT_LFN_NAME_1 + x]		= 0xFF;
+                          EntryBuffer[FF_FAT_LFN_NAME_1 + x + 1]	= 0xFF;
+                  }
 	}
 
 	// Name_2
 	for(i = 0, x = 0; i < 6; i++, x += 2) {
-		if((i + 5) < uiNameLen) {
-			//EntryBuffer[FF_FAT_LFN_NAME_2 + x] = Name[i+5];
-			*((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_2 + x]) = Name[i+5];
+		if((i + 5) < uiNameLen)
+                {
+                  memcpy(&EntryBuffer[FF_FAT_LFN_NAME_2 + x], &Name[i+5], sizeof(FF_T_UINT16));
+                  //EntryBuffer[FF_FAT_LFN_NAME_2 + x] = Name[i+5];
+                  //bobtntfullfat *((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_2 + x]) = Name[i+5];
 		} else if ((i + 5) == uiNameLen) {
 			EntryBuffer[FF_FAT_LFN_NAME_2 + x]		= '\0';
 			EntryBuffer[FF_FAT_LFN_NAME_2 + x + 1]	= '\0';
@@ -1838,9 +1866,11 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_UINT16 *Name, 
 
 	// Name_3
 	for(i = 0, x = 0; i < 2; i++, x += 2) {
-		if((i + 11) < uiNameLen) {
-			*((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_3 + x]) = Name[i+11];
-			//EntryBuffer[FF_FAT_LFN_NAME_3 + x] = Name[i+11];
+		if((i + 11) < uiNameLen)
+                {
+                  memcpy(&EntryBuffer[FF_FAT_LFN_NAME_3 + x], &Name[i+11], sizeof(FF_T_UINT16));
+                  //EntryBuffer[FF_FAT_LFN_NAME_3 + x] = Name[i+11];                  
+                  //bobtntfullfat *((FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_3 + x]) = Name[i+11];
 		} else if ((i + 11) == uiNameLen) {
 			EntryBuffer[FF_FAT_LFN_NAME_3 + x]		= '\0';
 			EntryBuffer[FF_FAT_LFN_NAME_3 + x + 1]	= '\0';

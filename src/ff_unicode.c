@@ -40,6 +40,7 @@
  **/
 
 #include "ff_unicode.h"
+#include "string.h"
 
 // UTF-8 Routines
 
@@ -77,6 +78,7 @@ FF_T_UINT FF_GetUtf16SequenceLen(FF_T_UINT16 usLeadChar) {
 */
 FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Source, FF_T_UINT32 ulSize) {
 	FF_T_UINT32			ulUtf32char;
+	FF_T_UINT16			utf16Source = 0;
 	register FF_T_INT	uiSequenceNumber = 0;
 
 	while((*utf8Source & (0x80 >> (uiSequenceNumber)))) {	// Count number of set bits before a zero.
@@ -93,15 +95,21 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 
 	switch(uiSequenceNumber) {
 		case 1:
-			*utf16Dest = (FF_T_UINT16) *utf8Source;
+                        utf16Source = (FF_T_UINT16) *utf8Source;
+                        memcpy(utf16Dest,&utf16Source,sizeof(FF_T_UINT16));
+			//bobtntfullfat *utf16Dest = (FF_T_UINT16) *utf8Source;
 			break;
 
 		case 2:
-			*utf16Dest = (FF_T_UINT16) ((*utf8Source & 0x1F) << 6) | ((*(utf8Source + 1) & 0x3F));
+                        utf16Source =(FF_T_UINT16) ((*utf8Source & 0x1F) << 6) | ((*(utf8Source + 1) & 0x3F));
+                        memcpy(utf16Dest,&utf16Source,sizeof(FF_T_UINT16));
+			//bobtntfullfat *utf16Dest = (FF_T_UINT16) ((*utf8Source & 0x1F) << 6) | ((*(utf8Source + 1) & 0x3F));
 			break;
 
 		case 3:
-			*utf16Dest = (FF_T_UINT16) ((*utf8Source & 0x0F) << 12) | ((*(utf8Source + 1) & 0x3F) << 6) | ((*(utf8Source + 2) & 0x3F));
+                        utf16Source =(FF_T_UINT16) ((*utf8Source & 0x0F) << 12) | ((*(utf8Source + 1) & 0x3F) << 6) | ((*(utf8Source + 2) & 0x3F));
+                        memcpy(utf16Dest,&utf16Source,sizeof(FF_T_UINT16));
+			//bobtntfullfat *utf16Dest = (FF_T_UINT16) ((*utf8Source & 0x0F) << 12) | ((*(utf8Source + 1) & 0x3F) << 6) | ((*(utf8Source + 2) & 0x3F));
 			break;
 
 		case 4:
@@ -110,8 +118,13 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 				return FF_ERR_UNICODE_DEST_TOO_SMALL;
 			}
 			ulUtf32char = (FF_T_UINT16) ((*utf8Source & 0x0F) << 18) | ((*(utf8Source + 1) & 0x3F) << 12) | ((*(utf8Source + 2) & 0x3F) << 6) | ((*(utf8Source + 3) & 0x3F));
-			*(utf16Dest + 0) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0xFFC00) >> 10) | 0xD800;
-			*(utf16Dest + 1) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0x003FF) >> 00) | 0xDC00;
+                        
+                        utf16Source = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0xFFC00) >> 10) | 0xD800;
+                        memcpy(utf16Dest,&utf16Source,sizeof(FF_T_UINT16));                        
+                        utf16Source = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0x003FF) >> 00) | 0xDC00;
+                        memcpy(utf16Dest+1,&utf16Source,sizeof(FF_T_UINT16));                                                
+			//bobtntfullfat *(utf16Dest + 0) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0xFFC00) >> 10) | 0xD800;
+			//bobtntfullfat *(utf16Dest + 1) = (FF_T_UINT16) (((ulUtf32char - 0x10000) & 0x003FF) >> 00) | 0xDC00;
 			break;
 
 		default:
@@ -128,21 +141,25 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 */
 FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Source, FF_T_UINT32 ulSize) {
 	FF_T_UINT32	ulUtf32char;
+	FF_T_UINT16	ulUtf16char;
 
 	if(!ulSize) {
 		return FF_ERR_UNICODE_DEST_TOO_SMALL;
 	}
 
-	if((*utf16Source & 0xFC00) == 0xD800) {	// A surrogate sequence was encountered. Must transform to UTF32 first.
-		ulUtf32char  = ((FF_T_UINT32) (*(utf16Source + 0) & 0x003FF) << 10) + 0x10000;
-	
-		if((*(utf16Source + 1) & 0xFC00) != 0xDC00) {
+        memcpy(&ulUtf16char, utf16Source, sizeof(FF_T_UINT16));
+	if((/*bobtntfullfat *utf16Source*/ulUtf16char & 0xFC00) == 0xD800) {	// A surrogate sequence was encountered. Must transform to UTF32 first.
+                ulUtf32char  = ((FF_T_UINT32) (ulUtf16char & 0x003FF) << 10) + 0x10000;
+		//bobtntfullfat ulUtf32char  = ((FF_T_UINT32) (*(utf16Source + 0) & 0x003FF) << 10) + 0x10000;
+
+                memcpy(&ulUtf16char, utf16Source + 1, sizeof(FF_T_UINT16));                
+		if((/*bobtntfullfat *(utf16Source + 1)*/ulUtf16char & 0xFC00) != 0xDC00) {
 			return FF_ERR_UNICODE_INVALID_SEQUENCE;	// Invalid UTF-16 sequence.
 		}
-		ulUtf32char |= ((FF_T_UINT32) (*(utf16Source + 1) & 0x003FF));
+		ulUtf32char |= ((FF_T_UINT32) (/*bobtntfullfat *(utf16Source + 1)*/ulUtf16char & 0x003FF));
 
 	} else {
-		ulUtf32char = (FF_T_UINT32) *utf16Source;
+		ulUtf32char = (FF_T_UINT32) /*bobtntfullfat *utf16Source*/ulUtf16char;
 	}
 
 	// Now convert to the UTF-8 sequence.
