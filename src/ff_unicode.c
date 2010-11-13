@@ -148,7 +148,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 	}
 
         memcpy(&ulUtf16char, utf16Source, sizeof(FF_T_UINT16));
-	if((/*bobtntfullfat *utf16Source*/ulUtf16char & 0xFC00) == 0xD800) {	// A surrogate sequence was encountered. Must transform to UTF32 first.
+	if((/*bobtntfullfat *utf16Source*/ulUtf16char & 0xF800) == 0xD800) {	// A surrogate sequence was encountered. Must transform to UTF32 first.
                 ulUtf32char  = ((FF_T_UINT32) (ulUtf16char & 0x003FF) << 10) + 0x10000;
 		//bobtntfullfat ulUtf32char  = ((FF_T_UINT32) (*(utf16Source + 0) & 0x003FF) << 10) + 0x10000;
 

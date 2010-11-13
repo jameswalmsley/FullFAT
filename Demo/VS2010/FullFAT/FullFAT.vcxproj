@@ -136,6 +136,7 @@
     <ClInclude Include="..\..\..\src\ff_string.h" />
     <ClInclude Include="..\..\..\src\ff_time.h" />
     <ClInclude Include="..\..\..\src\ff_types.h" />
+    <ClInclude Include="..\..\..\src\ff_unicode.h" />
     <ClInclude Include="..\..\..\src\fullfat.h" />
     <ClInclude Include="..\..\cmd\cd_cmd.h" />
     <ClInclude Include="..\..\cmd\cmd_helpers.h" />

@@ -248,5 +248,8 @@
     <ClInclude Include="..\..\cmd\pwd_cmd.h">
       <Filter>Header Files\commands</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\ff_unicode.h">
+      <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

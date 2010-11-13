@@ -247,6 +247,10 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_FETCH_CONTEXT FetchContext;
 	FF_T_UINT8	*src;	// Pointer to read from pBuffer
 	FF_T_UINT8	*lastSrc;
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	FF_T_SINT32	utf8Error;
+	FF_T_UINT8	bSurrogate = FF_FALSE;
+#endif
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	*ptr;		// Pointer to store a LFN
 #else
@@ -316,6 +320,19 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 #endif
 #ifdef FF_UNICODE_UTF8_SUPPORT
 					// UTF-8 Routine here
+					for(i = 0; i < 5; i++) {
+						utf8Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) ptr, (FF_T_UINT16 *) &src[FF_FAT_LFN_NAME_1 + (2*i)], sizeof(pDirent->FileName) - (ptr - pDirent->FileName));
+						if(utf8Error > 0) {
+							ptr += utf8Error;
+
+						} else {
+							if(utf8Error == FF_ERR_UNICODE_INVALID_SEQUENCE) {
+								// Handle potential surrogate sequence across entries.
+
+							}
+						}
+					}
+					
 #endif
 #ifndef FF_UNICODE_SUPPORT
 #ifndef FF_UNICODE_UTF8_SUPPORT
