@@ -245,9 +245,6 @@
     <ClInclude Include="..\..\cmd\mkdir_cmd.h">
       <Filter>Header Files\commands</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\cmd\more_cmd.h">
-      <Filter>Header Files\commands</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\cmd\pwd_cmd.h">
       <Filter>Header Files\commands</Filter>
     </ClInclude>

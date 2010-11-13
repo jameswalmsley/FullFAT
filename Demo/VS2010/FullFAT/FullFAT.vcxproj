@@ -146,7 +146,6 @@
     <ClInclude Include="..\..\cmd\ls_cmd.h" />
     <ClInclude Include="..\..\cmd\md5sum_cmd.h" />
     <ClInclude Include="..\..\cmd\mkdir_cmd.h" />
-    <ClInclude Include="..\..\cmd\more_cmd.h" />
     <ClInclude Include="..\..\cmd\pwd_cmd.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

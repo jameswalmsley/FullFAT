@@ -247,8 +247,16 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_FETCH_CONTEXT FetchContext;
 	FF_T_UINT8	*src;	// Pointer to read from pBuffer
 	FF_T_UINT8	*lastSrc;
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	*ptr;		// Pointer to store a LFN
+#else
 	FF_T_INT8	*ptr;		// Pointer to store a LFN
+#endif
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
+#else
 	FF_T_INT8	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
+#endif
 	FF_T_UINT8	CheckSum;
 	FF_T_UINT8	lastAttrib;
 	FF_T_INT8	totalLFNs = 0;
@@ -294,7 +302,23 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 						This section needs to extract the name and do the comparison
 						dependent on UNICODE settings in the ff_config.h file.
 					*/
+#ifdef FF_UNICODE_SUPPORT
+					// Add UTF-16 Routine here
+					memcpy(ptr, &src[FF_FAT_LFN_NAME_1], 10);	// Copy first 5 UTF-16 chars (10 bytes).
+					ptr += 5;									// Increment Filename pointer 5 utf16 chars.
+					
+					memcpy(ptr, &src[FF_FAT_LFN_NAME_2], 12);	//Copy next 6 chars (12 bytes).
+					ptr += 6;
 
+					memcpy(ptr, &src[FF_FAT_LFN_NAME_3], 4);		// You're getting the idea by now!
+					ptr += 2;
+
+#endif
+#ifdef FF_UNICODE_UTF8_SUPPORT
+					// UTF-8 Routine here
+#endif
+#ifndef FF_UNICODE_SUPPORT
+#ifndef FF_UNICODE_UTF8_SUPPORT
 					for(i = 0; i < 10 && ptr < lastPtr; i += 2)
 						*(ptr++) = src[FF_FAT_LFN_NAME_1 + i];
 
@@ -306,6 +330,11 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 
 					if (numLFNs == totalLFNs-1 && ptr < lastPtr)
 						*ptr = '\0';	// Important when name len is multiple of 13
+#endif
+#endif
+					if (numLFNs == totalLFNs-1 && ptr < lastPtr)
+						*ptr = '\0';	// Important when name len is multiple of 13
+						
 				}
 #endif
 				continue;
@@ -318,13 +347,24 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 			if(!totalLFNs || CheckSum != FF_CreateChkSum(src)) 
 #endif
 			{
+#ifdef FF_UNICODE_SUPPORT
+				for(i = 0; i < 11; i++) {
+					pDirent->FileName[i] = (FF_T_WCHAR) src[i];
+				}
+				FF_ProcessShortName(pDirent->FileName);
+#else
 				memcpy(pDirent->FileName, src, 11);
 				FF_ProcessShortName(pDirent->FileName);
+#endif
 				totalLFNs = 0;
 			}
 
 			if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
+#ifdef FF_UNICODE_SUPPORT
+				if(!wcsicmp(name, pDirent->FileName)) {
+#else
 				if (!FF_stricmp(name, pDirent->FileName)) {
+#endif
 					// Finally get the complete information
 #ifdef FF_LFN_SUPPORT
 					if (totalLFNs) {
@@ -456,7 +496,11 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
  *  For short-name entries, NT/XP etc store case information in byte 0x0c
  *  Use this to show proper case of "README.txt" or "source.H"
  **/
+#ifdef FF_UNICODE_SUPPORT
+static void FF_CaseShortName(FF_T_WCHAR *name, FF_T_UINT8 attrib) {
+#else
 static void FF_CaseShortName(FF_T_INT8 *name, FF_T_UINT8 attrib) {
+#endif
 	FF_T_UINT8 testAttrib = FF_FAT_CASE_ATTR_BASE;
 	for (; *name; name++) {
 		if (*name == '.') {
@@ -476,7 +520,7 @@ static void FF_CaseShortName(FF_T_INT8 *name, FF_T_UINT8 attrib) {
  **/
 
 #ifdef FF_UNICODE_SUPPORT
-static void FF_ProcessShortName(FF_T_INT8 *name) {
+static void FF_ProcessShortName(FF_T_WCHAR *name) {
 	FF_T_WCHAR	shortName[13];
 	FF_T_WCHAR	*ptr = name;
 #else
@@ -1699,7 +1743,11 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 
 	FF_T_UINT16 i,x,y,last_dot;
 	FF_T_UINT16 first_tilde = 6;
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	MyShortName[13];
+#else
 	FF_T_INT8	MyShortName[13];
+#endif
 	FF_T_UINT16 NameLen;
 	FF_T_BOOL	FitsShort = FF_TRUE;
 	FF_DIRENT	MyDir;
@@ -1708,7 +1756,11 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	FF_T_INT8	NumberBuf[6];
 	FF_ERROR	Error;
 
+#ifdef FF_UNICODE_SUPPORT
+	NameLen = (FF_T_UINT16) wcslen(LongName);
+#else
 	NameLen = (FF_T_UINT16) strlen(LongName);
+#endif
 
 	// Does LongName fit a shortname?
 
@@ -1725,7 +1777,7 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	}
 
 	for(i = 0, x = 0; i < 11; x++) {
-		FF_T_INT8 ch = LongName[x];
+		FF_T_INT8 ch = (FF_T_INT8) LongName[x];
 		if (!ch)
 			break;
 		if (x == last_dot) {
@@ -1737,9 +1789,9 @@ FF_T_SINT8 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 		} else {
 			if (i == 8) {
 				x = last_dot;
-				ch = LongName[x];
+				ch = (FF_T_INT8) LongName[x];
 				if (ch)
-					ch = LongName[++x];
+					ch = (FF_T_INT8) LongName[++x];
 #if defined(FF_SHORTNAME_CASE)
 				testAttrib = FF_FAT_CASE_ATTR_EXT;
 #endif

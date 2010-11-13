@@ -80,9 +80,9 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\ImageFile1.img", 512);
+	hDisk = fnOpen("c:\\1gbImage.img", 512);
 	
-	//hDisk = fnOpen("\\\\.\\G:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	//hDisk = fnOpen("\\\\.\\H:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
@@ -142,6 +142,7 @@ int main(void) {
 //				fseek_test(&pIoman);
 
 				//---------- Start the console.
+				printf("Welcome to FullFAT 1.1.0. Type 'help' for a list of commands.\n");
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
 				FF_UnmountPartition(pIoman);						// Dis-mount the mounted partition from FullFAT.
 				FF_DestroyIOMAN(pIoman);							// Clean-up the FF_IOMAN Object.
