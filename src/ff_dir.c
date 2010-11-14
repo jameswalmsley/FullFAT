@@ -320,8 +320,9 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 #endif
 #ifdef FF_UNICODE_UTF8_SUPPORT
 					// UTF-8 Routine here
-					for(i = 0; i < 5; i++) {
-						utf8Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) ptr, (FF_T_UINT16 *) &src[FF_FAT_LFN_NAME_1 + (2*i)], sizeof(pDirent->FileName) - (ptr - pDirent->FileName));
+					for(i = 0; i < 5 && ptr < lastPtr; i++) {
+						// Was there a surrogate sequence? -- Add handling here.
+						utf8Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) ptr, (FF_T_UINT16 *) &src[FF_FAT_LFN_NAME_1 + (2*i)], lastPtr - ptr);
 						if(utf8Error > 0) {
 							ptr += utf8Error;
 
@@ -332,6 +333,30 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 							}
 						}
 					}
+
+					for(i = 0; i < 6 && ptr < lastPtr; i++) {
+						// Was there a surrogate sequence? -- To add handling here.
+						utf8Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) ptr, (FF_T_UINT16 *) &src[FF_FAT_LFN_NAME_2 + (2*i)], lastPtr - ptr);
+						if(utf8Error > 0) {
+							ptr += utf8Error;
+						} else {
+							if(utf8Error == FF_ERR_UNICODE_INVALID_SEQUENCE) {
+								// Handle potential surrogate sequence across entries.
+							}
+						}
+					}
+
+					for(i = 0; i < 2 && ptr < lastPtr; i++) {
+						// Was there a surrogate sequence? -- To add handling here.
+						utf8Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) ptr, (FF_T_UINT16 *) &src[FF_FAT_LFN_NAME_3 + (2*i)], lastPtr - ptr);
+						if(utf8Error > 0) {
+							ptr += utf8Error;
+						} else {
+							if(utf8Error == FF_ERR_UNICODE_INVALID_SEQUENCE) {
+								// Handle potential surrogate sequence across entries.
+							}
+						}
+					} 
 					
 #endif
 #ifndef FF_UNICODE_SUPPORT
