@@ -1097,7 +1097,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	FF_T_UINT	uiLfnLength = 0;
 	FF_T_UINT	i,y;
 #ifdef FF_UNICODE_UTF8_SUPPORT
-	FF_T_SINT32	slRetVal;
+//	FF_T_SINT32	slRetVal;
 	FF_T_UINT16 nLfnBegin;
 	FF_T_UINT16	usUtf8Len = 0;
 #endif
@@ -1191,15 +1191,34 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 
 #ifndef FF_UNICODE_SUPPORT
 #ifndef FF_UNICODE_UTF8_SUPPORT	// No Unicode, simple ASCII.
-	i = 0;
-	y = 0;
-	while(UTF16Name[y] && i < FF_MAX_FILENAME - 1) {
-		pDirent->FileName[i++] = (FF_T_UINT8) UTF16Name[y++];
+	while(uiNumLFNs) {	// Avoid stack intensive use of a UTF-16 buffer. Stream direct to FileName dirent field in correct format.
+		
+		for(i = 0; i < 5; i++) {
+			pDirent->FileName[((uiNumLFNs - 1) * 13) + i] = EntryBuffer[FF_FAT_LFN_NAME_1 + (i*2)];
+		}
+
+		for(i = 0; i < 6; i++) {
+			pDirent->FileName[((uiNumLFNs - 1) * 13) + i + 5] = EntryBuffer[FF_FAT_LFN_NAME_2 + (i*2)];
+		}
+
+		for(i = 0; i < 2; i++) {
+			pDirent->FileName[((uiNumLFNs - 1) * 13) + i + 11] = EntryBuffer[FF_FAT_LFN_NAME_3 + (i*2)];
+		}
+
+		uiLfnLength += 13;
+
+		Error = FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
+		if(Error) {
+			return Error;
+		}
+		uiNumLFNs--;
 	}
-	pDirent->FileName[i] = '\0';
+
+	pDirent->FileName[uiLfnLength] = '\0';
+
+	
 #endif
 #endif
-	*/
 	// Process the Shortname. -- LFN Transformation is now complete.
 	// Process the ShortName Entry
 
@@ -1729,7 +1748,7 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 	
 	FF_CleanupEntryFetch(pIoman, &FetchContext);
 
-	return FF_ERR_DIR_DIRECTORY_FULL;	
+	return FF_ERR_DIR_DIRECTORY_FULL;
 }
 
 
