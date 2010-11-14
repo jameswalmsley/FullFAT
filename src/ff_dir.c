@@ -1098,12 +1098,14 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	FF_T_UINT	i,y;
 #ifdef FF_UNICODE_UTF8_SUPPORT
 	FF_T_SINT32	slRetVal;
+	FF_T_UINT16 nLfnBegin;
+	FF_T_UINT16	usUtf8Len = 0;
 #endif
 	FF_T_UINT16	myShort;
 	FF_T_UINT8	ucCheckSum;
 
 	FF_T_UINT8	EntryBuffer[32];
-	FF_T_UINT16	UTF16Name[FF_MAX_FILENAME];
+	//FF_T_UINT16	UTF16Name[FF_MAX_FILENAME];
 
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	WCEntryBuffer[32];
@@ -1113,7 +1115,6 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #endif
 
 	Error = FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
-
 	if(Error) {
 		return Error;
 	}
@@ -1121,13 +1122,19 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	uiNumLFNs = (FF_T_UINT)(EntryBuffer[0] & ~0x40);
 	ucCheckSum = FF_getChar(EntryBuffer, FF_FAT_LFN_CHECKSUM);
 
-	// Stream through the LFNs to fill the UTF-16 buffer with the whole name;
-	
-	while(uiNumLFNs) {	// Simply memcpy each section into the UTF-16 buffer. (Much simpler than the old code).
-		memcpy(UTF16Name + ((uiNumLFNs - 1) * 13) + 0,	&EntryBuffer[FF_FAT_LFN_NAME_1], (5 * 2));
-		memcpy(UTF16Name + ((uiNumLFNs - 1) * 13) + 5,	&EntryBuffer[FF_FAT_LFN_NAME_2], (6 * 2));
-		memcpy(UTF16Name + ((uiNumLFNs - 1) * 13) + 11,	&EntryBuffer[FF_FAT_LFN_NAME_3], (2 * 2));
+#ifdef FF_UNICODE_SUPPORT	// UTF-16 Can simply get segments of the UTF-16 sequence going forward
+							// in the dirents. (I.e. reversed order).
+
+	while(uiNumLFNs) {	// Avoid stack intensive use of a UTF-16 buffer. Stream direct to FileName dirent field in correct format.
+
+		// memcopy direct!-UTF-16 support
+		memcpy(pDirent->FileName + ((uiNumLFNs - 1) * 13) + 0,  &EntryBuffer[FF_FAT_LFN_NAME_1], 10);
+		memcpy(pDirent->FileName + ((uiNumLFNs - 1) * 13) + 5,  &EntryBuffer[FF_FAT_LFN_NAME_2], 12);
+		memcpy(pDirent->FileName + ((uiNumLFNs - 1) * 13) + 11, &EntryBuffer[FF_FAT_LFN_NAME_3], 4);
+
+
 		uiLfnLength += 13;
+
 		Error = FF_FetchEntryWithContext(pIoman, nEntry++, pFetchContext, EntryBuffer);
 		if(Error) {
 			return Error;
@@ -1135,45 +1142,51 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 		uiNumLFNs--;
 	}
 
-	UTF16Name[uiLfnLength] = '\0';
-
-	// Various transformation to API's native string format.
+	pDirent->FileName[uiLfnLength] = '\0';
+#endif
 
 #ifdef FF_UNICODE_UTF8_SUPPORT
-	i = 0;
-	y = 0;
-	while(UTF16Name[y]) {
-		slRetVal = FF_Utf16ctoUtf8c((FF_T_UINT8 *)&pDirent->FileName[i], &UTF16Name[y], ((FF_MAX_FILENAME -1) - i));
-		if(slRetVal > 0) {
-			i += slRetVal;
-		} else {
-			if(slRetVal == FF_ERR_UNICODE_DEST_TOO_SMALL) {
-				// No more space in pDirent->FileName to fit more filename.
-				break; // Get out of the while loop, simply stop processing unicode.
-			} else {
-				// Unrecognised UNICODE char, replace with an underscore or ?
-				pDirent->FileName[i] = '_';
+	// UTF-8 Sequence, we can only convert this from the beginning, must receive entries in reverse.
+	nLfnBegin = nEntry - 1;
+
+	for(i = 0; i < uiNumLFNs; i++) {
+		Error = FF_FetchEntryWithContext(pIoman, (nLfnBegin + (uiNumLFNs - 1) - i), pFetchContext, EntryBuffer);
+		if(Error) {
+			return Error;
+		}
+		
+		// Now have the first part of the UTF-16 sequence. Stream into a UTF-8 sequence.
+		for(y = 0; y < 5; y++) {
+			Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) &pDirent->FileName[usUtf8Len], (FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_1 + (y*2)], sizeof(pDirent->FileName) - usUtf8Len);
+			if(Error > 0) {
+				usUtf8Len += (FF_T_UINT16) Error;
 			}
 		}
-		y += FF_GetUtf16SequenceLen(UTF16Name[y]);
-	}
-	pDirent->FileName[i] = '\0';	
-#endif
 
-#ifdef FF_UNICODE_SUPPORT		// Direct UTF-16 to UTF-16 or UTF-32 transform.
-#if WCHAR_MAX <= 0xFFFF			// UTF-16 to UTF-16, direct copy!
-	i = 0;
-	y = wcslen(UTF16Name);
-	wcsncpy(pDirent->FileName, UTF16Name, (FF_MAX_FILENAME - 1));
-#else							// Convert to UTF-32
-	i = 0;
-	y = 0;
-	while(UTF16Name[y]) {
-		FF_Utf16ctoUtf32c((FF_T_UINT32 *)&pDirent->FileName[i++], &UTF16Name[y]);
-		y += FF_GetUtf16SequenceLen(UTF16Name[y]);
+		for(y = 0; y < 6; y++) {
+			Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) &pDirent->FileName[usUtf8Len], (FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_2 + (y*2)], sizeof(pDirent->FileName) - usUtf8Len);
+			if(Error > 0) {
+				usUtf8Len += (FF_T_UINT16) Error;
+			}
+		}
+
+		for(y = 0; y < 2; y++) {
+			Error = FF_Utf16ctoUtf8c((FF_T_UINT8 *) &pDirent->FileName[usUtf8Len], (FF_T_UINT16 *) &EntryBuffer[FF_FAT_LFN_NAME_3 + (y*2)], sizeof(pDirent->FileName) - usUtf8Len);
+			if(Error > 0) {
+				usUtf8Len += (FF_T_UINT16) Error;
+			}
+		}
+		nEntry++;
 	}
-	pDirent->FileName[i] = '\0';
-#endif
+
+	pDirent->FileName[usUtf8Len] = '\0';
+	
+	// Put Entry context to correct position.
+	Error = FF_FetchEntryWithContext(pIoman, nEntry-1, pFetchContext, EntryBuffer);
+	if(Error) {
+		return Error;
+	}
+
 #endif
 
 #ifndef FF_UNICODE_SUPPORT
@@ -1186,7 +1199,7 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	pDirent->FileName[i] = '\0';
 #endif
 #endif
-
+	*/
 	// Process the Shortname. -- LFN Transformation is now complete.
 	// Process the ShortName Entry
 
