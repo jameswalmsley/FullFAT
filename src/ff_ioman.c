@@ -80,14 +80,14 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	if((BlkSize % 512) != 0 || BlkSize == 0) {
 		if(pError) {
-			*pError = FF_ERR_IOMAN_BAD_BLKSIZE;
+			*pError = FF_ERR_IOMAN_BAD_BLKSIZE | FF_CREATEIOMAN;
 		}
 		return NULL;	// BlkSize Size not a multiple of 512 > 0
 	}
 
 	if((Size % BlkSize) != 0 || Size == 0 || Size == BlkSize) {  // Size must now be atleast 2 * BlkSize (or a deadlock will occur).
 		if(pError) {
-			*pError = FF_ERR_IOMAN_BAD_MEMSIZE;
+			*pError = FF_ERR_IOMAN_BAD_MEMSIZE | FF_CREATEIOMAN;
 		}
 		return NULL;	// Memory Size not a multiple of BlkSize > 0
 	}
@@ -96,7 +96,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	if(!pIoman) {		// Ensure malloc() succeeded.
 		if(pError) {
-			*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY | FF_CREATEIOMAN;
 		}
 		return NULL;
 	}
@@ -108,7 +108,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	pIoman->pPartition	= (FF_PARTITION  *) FF_MALLOC(sizeof(FF_PARTITION));
 	if(!pIoman->pPartition) {
 		if(pError) {
-			*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY | FF_CREATEIOMAN;
 		}
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
@@ -141,7 +141,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	pIoman->pBlkDevice	= (FF_BLK_DEVICE *) FF_MALLOC(sizeof(FF_BLK_DEVICE));
 	if(!pIoman->pBlkDevice) {	// If succeeded, flag that allocation.
 		if(pError) {
-			*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY | FF_CREATEIOMAN;
 		}
 		FF_DestroyIOMAN(pIoman);
 		return NULL;
@@ -162,7 +162,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 		pIoman->pCacheMem = (FF_T_UINT8 *) pLong;
 		if(!pIoman->pCacheMem) {
 			if(pError) {
-				*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+				*pError = FF_ERR_NOT_ENOUGH_MEMORY | FF_CREATEIOMAN;
 			}
 			FF_DestroyIOMAN(pIoman);
 			return NULL;
@@ -184,7 +184,7 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	if(!pIoman->pBuffers) {
 		if(pError) {
-			*pError = FF_ERR_NOT_ENOUGH_MEMORY;
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY | FF_CREATEIOMAN;
 		}
 		FF_DestroyIOMAN(pIoman);
 		return NULL;	// HT added
@@ -221,7 +221,7 @@ FF_ERROR FF_DestroyIOMAN(FF_IOMAN *pIoman) {
 
 	// Ensure no NULL pointer was provided.
 	if(!pIoman) {
-		return FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER | FF_DESTROYIOMAN;
 	}
 
 	// Ensure pPartition pointer was allocated.
@@ -299,7 +299,7 @@ FF_ERROR FF_FlushCache(FF_IOMAN *pIoman) {
 	FF_T_UINT16 i,x;
 
 	if(!pIoman) {
-		return FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER | FF_FLUSHCACHE;
 	}
 
 	FF_PendSemaphore(pIoman->pSemaphore);
@@ -479,27 +479,27 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
  **/
 FF_ERROR FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BLOCKS fnWriteBlocks, FF_READ_BLOCKS fnReadBlocks, void *pParam) {
 	if(!pIoman) {	// We can't do anything without an IOMAN object.
-		return FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER | FF_REGISTERBLKDEVICE;
 	}
 
 	if((BlkSize % 512) != 0 || BlkSize == 0) {
-		return FF_ERR_IOMAN_DEV_INVALID_BLKSIZE;	// BlkSize Size not a multiple of IOMAN's Expected BlockSize > 0
+		return FF_ERR_IOMAN_DEV_INVALID_BLKSIZE | FF_REGISTERBLKDEVICE;	// BlkSize Size not a multiple of IOMAN's Expected BlockSize > 0
 	}
 
 	if((BlkSize % pIoman->BlkSize) != 0 || BlkSize == 0) {
-		return FF_ERR_IOMAN_DEV_INVALID_BLKSIZE;	// BlkSize Size not a multiple of IOMAN's Expected BlockSize > 0
+		return FF_ERR_IOMAN_DEV_INVALID_BLKSIZE | FF_REGISTERBLKDEVICE;	// BlkSize Size not a multiple of IOMAN's Expected BlockSize > 0
 	}
 
 	// Ensure that a device cannot be re-registered "mid-flight"
 	// Doing so would corrupt the context of FullFAT
 	if(pIoman->pBlkDevice->fnpReadBlocks) {
-		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
+		return FF_ERR_IOMAN_DEV_ALREADY_REGD | FF_REGISTERBLKDEVICE;
 	}
 	if(pIoman->pBlkDevice->fnpWriteBlocks) {
-		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
+		return FF_ERR_IOMAN_DEV_ALREADY_REGD | FF_REGISTERBLKDEVICE;
 	}
 	if(pIoman->pBlkDevice->pParam) {
-		return FF_ERR_IOMAN_DEV_ALREADY_REGD;
+		return FF_ERR_IOMAN_DEV_ALREADY_REGD | FF_REGISTERBLKDEVICE;
 	}
 
 	// Here we shall just set the values.
@@ -521,7 +521,7 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 
 	if(pIoman->pPartition->TotalSectors) {
 		if((ulSectorLBA + ulNumSectors) > (pIoman->pPartition->TotalSectors + pIoman->pPartition->BeginLBA)) {
-			return FF_ERR_IOMAN_OUT_OF_BOUNDS_READ;		
+			return -(FF_ERR_IOMAN_OUT_OF_BOUNDS_READ | FF_BLOCKREAD);		
 		}
 	}
 	
@@ -533,10 +533,10 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 #ifdef	FF_BLKDEV_USES_SEM
 		FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
-		if(slRetVal == FF_ERR_DRIVER_BUSY) {
+		if(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY) {
 			FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 		}
-	} while(slRetVal == FF_ERR_DRIVER_BUSY);
+	} while(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY);
 
 	return slRetVal;
 }
@@ -546,7 +546,7 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 
 	if(pIoman->pPartition->TotalSectors) {
 		if((ulSectorLBA + ulNumSectors) > (pIoman->pPartition->TotalSectors + pIoman->pPartition->BeginLBA)) {
-			return FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE;		
+			return -(FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE | FF_BLOCKWRITE);		
 		}
 	}
 	
@@ -558,10 +558,10 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 #ifdef	FF_BLKDEV_USES_SEM
 		FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
-		if(slRetVal == FF_ERR_DRIVER_BUSY) {
+		if(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY) {
 			FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 		}
-	} while(slRetVal == FF_ERR_DRIVER_BUSY);
+	} while(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY);
 
 	return slRetVal;
 }
