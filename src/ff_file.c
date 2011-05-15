@@ -185,6 +185,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		return (FF_FILE *)NULL;
 	}
 
+	memset (pFile, 0, sizeof *pFile);
 	// Get the Mode Bits.
 	pFile->Mode = Mode;
 
@@ -315,13 +316,17 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 					pFileChain = (FF_FILE *) pIoman->FirstFile;
 					do {
 						if(pFileChain->ObjectCluster == pFile->ObjectCluster) {
-							// File is already open! DON'T ALLOW IT!
-							FF_ReleaseSemaphore(pIoman->pSemaphore);
-							FF_FREE(pFile);
-							if(pError) {
-								*pError = FF_ERR_FILE_ALREADY_OPEN;
+							// HT: Only fail if any of them has write access...
+							// Why not have 2 open read handles to a single file?
+							if ((pFileChain->Mode | pFile->Mode) & (FF_MODE_WRITE | FF_MODE_APPEND)) {
+								// File is already open! DON'T ALLOW IT!
+								FF_ReleaseSemaphore(pIoman->pSemaphore);
+								FF_FREE(pFile);
+								if(pError) {
+									*pError = FF_ERR_FILE_ALREADY_OPEN;
+								}
+								return (FF_FILE *) NULL;
 							}
-							return (FF_FILE *) NULL;
 						}
 						if(!pFileChain->Next) {
 							pFileChain->Next = pFile;
@@ -621,7 +626,8 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 	pDestFile = FF_Open(pIoman, szDestinationFile, FF_MODE_READ, &Error);
 
 	if(pDestFile || (Error == FF_ERR_FILE_OBJECT_IS_A_DIR)) {
-		FF_Close(pDestFile);
+		if (pDestFile)
+			FF_Close(pDestFile);
 		return FF_ERR_FILE_DESTINATION_EXISTS;	// YES -- FAIL
 	}
 
@@ -636,108 +642,104 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 		return Error;
 	}
 
-	if(pSrcFile) {
-		// Create the new dirent.
-		Error = FF_InitEntryFetch(pIoman, pSrcFile->DirCluster, &FetchContext);
-		if(Error) {
-			FF_Close(pSrcFile);
-			return Error;
+	// Create the new dirent.
+	Error = FF_InitEntryFetch(pIoman, pSrcFile->DirCluster, &FetchContext);
+	if(Error) {
+		FF_Close(pSrcFile);
+		return Error;
+	}
+	Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+	if(Error) {
+		FF_Close(pSrcFile);
+		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		return Error;
+	}
+	//FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+	MyFile.Attrib			= FF_getChar(EntryBuffer,  (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
+	MyFile.Filesize			= pSrcFile->Filesize;
+	MyFile.ObjectCluster	= pSrcFile->ObjectCluster;
+	MyFile.CurrentItem		= 0;
+
+#ifdef FF_UNICODE_SUPPORT
+	i = (FF_T_UINT16) wcslen(szDestinationFile);
+#else
+	i = (FF_T_UINT16) strlen(szDestinationFile);
+#endif
+
+	while(i != 0) {
+		if(szDestinationFile[i] == '\\' || szDestinationFile[i] == '/') {
+			break;
 		}
-		Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+		i--;
+	}
+
+#ifdef FF_UNICODE_SUPPORT
+	wcsncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
+#else
+	strncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
+#endif
+
+	if(i == 0) {
+		i = 1;
+	}
+	
+
+	DirCluster = FF_FindDir(pIoman, szDestinationFile, i, &Error);
+	if(Error) {
+		FF_Close(pSrcFile);
+		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		return Error;
+	}
+	
+	if(DirCluster) {
+		// HT: Cleaup because FF_CreateDirent might want to write the same sector
+		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		// Destination Dir was found, we can now create the new entry.
+		Error = FF_CreateDirent(pIoman, DirCluster, &MyFile);
 		if(Error) {
 			FF_Close(pSrcFile);
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
-			return Error;
-		}
-		//FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
-		MyFile.Attrib			= FF_getChar(EntryBuffer,  (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
-		MyFile.Filesize			= pSrcFile->Filesize;
-		MyFile.ObjectCluster	= pSrcFile->ObjectCluster;
-		MyFile.CurrentItem		= 0;
-
-#ifdef FF_UNICODE_SUPPORT
-		i = (FF_T_UINT16) wcslen(szDestinationFile);
-#else
-		i = (FF_T_UINT16) strlen(szDestinationFile);
-#endif
-
-		while(i != 0) {
-			if(szDestinationFile[i] == '\\' || szDestinationFile[i] == '/') {
-				break;
-			}
-			i--;
+			return Error;	// FAILED
 		}
 
-#ifdef FF_UNICODE_SUPPORT
-		wcsncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
-#else
-		strncpy(MyFile.FileName, (szDestinationFile + i + 1), FF_MAX_FILENAME);
-#endif
+		// Edit the Directory Entry! (So it appears as deleted);
+		FF_lockDIR(pIoman);
+		{
 
-		if(i == 0) {
-			i = 1;
-		}
-		
-
-		DirCluster = FF_FindDir(pIoman, szDestinationFile, i, &Error);
-		if(Error) {
-			FF_Close(pSrcFile);
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
-			return Error;
-		}
-		
-		if(DirCluster) {
-
-			// Destination Dir was found, we can now create the new entry.
-			Error = FF_CreateDirent(pIoman, DirCluster, &MyFile);
+			Error = FF_RmLFNs(pIoman, pSrcFile->DirEntry, &FetchContext);
 			if(Error) {
+				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
-				return Error;	// FAILED
+				return Error;
 			}
-
-			// Edit the Directory Entry! (So it appears as deleted);
-			FF_lockDIR(pIoman);
-			{
-
-				Error = FF_RmLFNs(pIoman, pSrcFile->DirEntry, &FetchContext);
-				if(Error) {
-					FF_unlockDIR(pIoman);
-					FF_Close(pSrcFile);
-					FF_CleanupEntryFetch(pIoman, &FetchContext);
-					return Error;
-				}
-				Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
-				if(Error) {
-					FF_unlockDIR(pIoman);
-					FF_Close(pSrcFile);
-					FF_CleanupEntryFetch(pIoman, &FetchContext);
-					return Error;
-				}
-				EntryBuffer[0] = 0xE5;
-				//FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
-				Error = FF_PushEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
-				if(Error) {
-					FF_unlockDIR(pIoman);
-					FF_Close(pSrcFile);
-					FF_CleanupEntryFetch(pIoman, &FetchContext);
-					return Error;
-				}
+			Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+			if(Error) {
+				FF_unlockDIR(pIoman);
+				FF_Close(pSrcFile);
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				return Error;
 			}
-			FF_unlockDIR(pIoman);
-			FF_Close(pSrcFile);
-
-			FF_FlushCache(pIoman);
-
-			return FF_ERR_NONE;
+			EntryBuffer[0] = 0xE5;
+			//FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
+			Error = FF_PushEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
+			if(Error) {
+				FF_unlockDIR(pIoman);
+				FF_Close(pSrcFile);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				return Error;
+			}
+			FF_CleanupEntryFetch(pIoman, &FetchContext);
 		}
+		FF_unlockDIR(pIoman);
+		FF_Close(pSrcFile);
 
-		return FF_ERR_FILE_DIR_NOT_FOUND;
+		FF_FlushCache(pIoman);
 
+		return FF_ERR_NONE;
 	}
-		
-	return FF_ERR_FILE_SOURCE_NOT_FOUND; // Source not found!
+
+	return FF_ERR_FILE_DIR_NOT_FOUND;
 }
 
 
@@ -809,7 +811,7 @@ static FF_ERROR FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *b
 		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA);
 
-		slRetVal = FF_BlockRead(pFile->pIoman, nItemLBA, ulSectors, buffer);
+		slRetVal = FF_BlockRead(pFile->pIoman, nItemLBA, ulSectors, buffer, FF_FALSE);
 		if(slRetVal < 0) {
 			return slRetVal;
 		}
@@ -831,7 +833,7 @@ static FF_ERROR FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *b
 static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	FF_IOMAN	*pIoman = pFile->pIoman;
 	FF_T_UINT32 nBytesPerCluster = pIoman->pPartition->BlkSize * pIoman->pPartition->SectorsPerCluster;
-	FF_T_UINT32 nTotalClustersNeeded = Size / nBytesPerCluster;
+	FF_T_UINT32 nTotalClustersNeeded = (Size + nBytesPerCluster-1) / nBytesPerCluster;
 	FF_T_UINT32 nClusterToExtend; 
 	FF_T_UINT32 CurrentCluster, NextCluster;
 	FF_T_UINT32	i;
@@ -869,10 +871,6 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		pFile->iEndOfChain = pFile->AddrCurrentCluster;
 	}
 	
-	if(Size % nBytesPerCluster) {
-		nTotalClustersNeeded += 1;
-	}
-
 	if(pFile->iChainLength == 0) {	// First extension requiring the chain length, 
 		pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster, &pFile->iEndOfChain, &Error);
 		if(Error) {
@@ -887,7 +885,9 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		NextCluster = pFile->AddrCurrentCluster;
 		FF_lockFAT(pIoman);
 		{
-			for(i = 0; i <= nClusterToExtend; i++) {
+			// HT This "<=" issue is now solved by asing for 1 extra byte
+			// Thus not always asking for 1 extra cluster
+			for(i = 0; i < nClusterToExtend; i++) {
 				CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster, &Error);
 				if(Error) {
 					FF_unlockFAT(pIoman);
@@ -895,15 +895,13 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 					return Error;
 				}
 				NextCluster = FF_FindFreeCluster(pIoman, &Error);
+				if(!Error && !NextCluster) {
+					Error = FF_ERR_FAT_NO_FREE_CLUSTERS;
+				}
 				if(Error) {
 					FF_unlockFAT(pIoman);
 					FF_DecreaseFreeClusters(pIoman, i);
 					return Error;
-				}
-				if(!NextCluster) {
-					FF_unlockFAT(pIoman);
-					FF_DecreaseFreeClusters(pIoman, i);
-					return FF_ERR_FAT_NO_FREE_CLUSTERS;
 				}
 				
 				Error = FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
@@ -957,7 +955,7 @@ static FF_ERROR FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *
 		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA);
 
-		slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, ulSectors, buffer);
+		slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, ulSectors, buffer, FF_FALSE);
 
 		if(slRetVal < 0) {
 			return slRetVal;
@@ -1013,7 +1011,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 	pIoman = pFile->pIoman;
 
-	if(pFile->FilePointer == pFile->Filesize) {
+	if(pFile->FilePointer >= pFile->Filesize) {
 		return 0;
 	}
 
@@ -1095,7 +1093,10 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 
 			sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
 			
-			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer);
+			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
+			if(RetVal < 0) {
+				return RetVal;
+			}
 			
 			nBytesToRead		 = sSectors * pIoman->BlkSize;
 			nBytes				-= nBytesToRead;
@@ -1151,7 +1152,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
-			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer);
+			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
 
 			if(RetVal < 0) {
 				return RetVal;
@@ -1308,9 +1309,10 @@ FF_T_SINT32 FF_GetLine(FF_FILE *pFile, FF_T_INT8 *szLine, FF_T_UINT32 ulLimit) {
 	return i;
 }
 
-FF_T_UINT32 FF_Tell(FF_FILE *pFile) {
-	return pFile->FilePointer;
-}
+// HT made inline
+//FF_T_UINT32 FF_Tell(FF_FILE *pFile) {
+//	return pFile->FilePointer;
+//}
 
 
 /**
@@ -1359,7 +1361,9 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	// Extend File for atleast nBytes!
 	// Handle file-space allocation
-	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes);
+
+	// HT: + 1 byte because the code assumes there is always a next cluster
+	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes + 1);
 
 	if(Error) {
 		return Error;	
@@ -1437,7 +1441,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 			sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
 
-			slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer);
+			slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
 			if(slRetVal < 0) {
 				return slRetVal;
 			}
@@ -1499,7 +1503,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 			
-			slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer);
+			slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
 			if(slRetVal < 0) {
 				return slRetVal;
 			}
@@ -1700,6 +1704,75 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	return 0;
 }
 
+#ifdef FF_REMOVABLE_MEDIA
+/**
+ *	@public
+ *	@brief	Invalidate all file handles belonging to pIoman
+ *
+ *	@param	pIoMan		FF_IOMAN object that was created by FF_CreateIOMAN().
+ *
+ *	@return 0 if no handles were open
+ *	@return >0 the amount of handles that were invalidated
+ *	@return <0 probably an invalid FF_IOMAN pointer
+ *
+ **/
+FF_T_SINT32	 FF_Invalidate (FF_IOMAN *pIoman) ///< Invalidate all handles belonging to pIoman
+{
+	FF_T_SINT32	 Result;
+	FF_FILE *pFileChain;
+	if (!pIoman)
+		return FF_ERR_NULL_POINTER;
+	Result = 0;
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{	// Semaphore is required, or linked list might change
+
+		pFileChain = (FF_FILE *) pIoman->FirstFile;
+		if (pFileChain) {
+			// Count elements in FirstFile
+			do {
+				pFileChain->Invalidated = FF_TRUE;
+				Result++;
+				pFileChain = pFileChain->Next;
+			} while (pFileChain);
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+	return Result;
+}
+#endif	// FF_REMOVABLE_MEDIA
+
+/**
+ *	@public
+ *	@brief	Check validity of file handle
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *
+ *	@return 0 on sucess.
+ *	@return FF_ERR_NULL_POINTER       if a null pointer was provided.
+ *	@return FF_ERR_FILE_BAD_HANDLE    if handle is not recognized
+ *	@return FF_ERR_FILE_MEDIA_REMOVED please call FF_Close
+ *
+ **/
+FF_ERROR FF_CheckValid (FF_FILE *pFile)
+{
+	FF_FILE *pFileChain;
+
+	if (!pFile || !pFile->pIoman)
+		return FF_ERR_NULL_POINTER;
+
+	pFileChain = (FF_FILE *)pFile->pIoman->FirstFile;
+	while (pFileChain) {
+		if (pFileChain == pFile) {
+#ifdef FF_REMOVABLE_MEDIA
+			if (pFileChain->Invalidated)
+				return FF_ERR_FILE_MEDIA_REMOVED;
+#endif
+			return FF_ERR_NONE;
+		}
+		pFileChain = pFileChain->Next;
+	}
+	return FF_ERR_FILE_BAD_HANDLE;
+}
 
 /**
  *	@public
@@ -1720,48 +1793,78 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	if(!pFile) {
 		return FF_ERR_NULL_POINTER;	
 	}
-	// UpDate Dirent if File-size has changed?
 
-	// Update the Dirent!
-	Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-	if(Error) {
-		return Error;
+	/*
+     * HT thinks:
+	 * It is important to check that:
+	 * user doesn't supply invalid handle
+	 * or a handle invalid because of "media removed"
+	 */
+	Error = FF_CheckValid (pFile);
+#ifdef FF_REMOVABLE_MEDIA
+	if (Error == FF_ERR_FILE_MEDIA_REMOVED) {
+		FF_PendSemaphore(pFile->pIoman->pSemaphore);
+		{
+			pFileChain = (FF_FILE *) pFile->pIoman->FirstFile;
+			if(pFileChain == pFile) {
+				pFile->pIoman->FirstFile = pFile->Next;
+			} else {
+				while (pFileChain) {
+					if (pFileChain->Next == pFile) {
+						pFileChain->Next = pFile->Next;
+						break;
+					}
+					pFileChain = pFileChain->Next;	// Forgot this one
+				}
+			}
+		}	// Semaphore released, linked list was shortened!
+		FF_ReleaseSemaphore(pFile->pIoman->pSemaphore);
+		FF_FREE(pFile);  // So at least we have freed the poniter
+		return FF_ERR_NONE;
 	}
+#endif
+	if (Error != FF_ERR_NONE)
+		return Error; // FF_ERR_FILE_BAD_HANDLE or FF_ERR_NULL_POINTER
+
+	/*
+     * So here we have a normal valid file handle
+	 */
+
 	
-	if(!pFile->FileDeleted) {
-		if(pFile->Filesize != OriginalEntry.Filesize) {
+	// UpDate Dirent if File-size has changed?
+	if(!pFile->FileDeleted && (pFile->Mode & (FF_MODE_WRITE |FF_MODE_APPEND))) {
+		// Update the Dirent!
+		Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+		// Error might be non-zero, but don't forget to remove handle from list
+		// and to free the pFile pointer
+		if (!Error && pFile->Filesize != OriginalEntry.Filesize) {
 			OriginalEntry.Filesize = pFile->Filesize;
 			Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-			if(Error) {
-				return Error;
-			}
 		}
 	}
-
-	Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
+	if (!Error)
+		Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
 
 	// Handle Linked list!
 	FF_PendSemaphore(pFile->pIoman->pSemaphore);
 	{	// Semaphore is required, or linked list could become corrupted.
-		if(pFile->pIoman->FirstFile == pFile) {
+		pFileChain = (FF_FILE *) pFile->pIoman->FirstFile;
+		if(pFileChain == pFile) {
 			pFile->pIoman->FirstFile = pFile->Next;
 		} else {
-			pFileChain = (FF_FILE *) pFile->pIoman->FirstFile;
-			while(pFileChain->Next != pFile) {
-				pFileChain = pFileChain->Next;
+			while (pFileChain) {
+				if (pFileChain->Next == pFile) {
+					pFileChain->Next = pFile->Next;
+					break;
+				}
+				pFileChain = pFileChain->Next;	// Forgot this one
 			}
-			pFileChain->Next = pFile->Next;
 		}
 	}	// Semaphore released, linked list was shortened!
 	FF_ReleaseSemaphore(pFile->pIoman->pSemaphore);
 
 	// If file written, flush to disk
 	FF_FREE(pFile);
-
-	if(Error) {
-		return Error;
-	}
-
 	// Simply free the pointer!
-	return FF_ERR_NONE;
+	return Error;
 }
