@@ -261,7 +261,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 #else
 	FF_T_INT8	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
 #endif
-	FF_T_UINT8	CheckSum;
+	FF_T_UINT8	CheckSum = 0;
 	FF_T_UINT8	lastAttrib;
 	FF_T_INT8	totalLFNs = 0;
 	FF_T_INT8	numLFNs = 0;
@@ -1095,11 +1095,12 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 	FF_ERROR	Error;
 	FF_T_UINT	uiNumLFNs;
 	FF_T_UINT	uiLfnLength = 0;
-	FF_T_UINT	i,y;
+	FF_T_UINT	i; //,y;
 #ifdef FF_UNICODE_UTF8_SUPPORT
 //	FF_T_SINT32	slRetVal;
 	FF_T_UINT16 nLfnBegin;
 	FF_T_UINT16	usUtf8Len = 0;
+	FF_T_UINT	y;
 #endif
 	FF_T_UINT16	myShort;
 	FF_T_UINT8	ucCheckSum;
@@ -1703,7 +1704,7 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 	
 	for(nEntry = 0; nEntry < 0xFFFF; nEntry++) {
 		Error = FF_FetchEntryWithContext(pIoman, nEntry, &FetchContext, EntryBuffer);
-		if(Error == FF_ERR_DIR_END_OF_DIR) {
+		if(FF_GETERROR(Error) == FF_ERR_DIR_END_OF_DIR) {
 			
 			Error = FF_ExtendDirectory(pIoman, DirCluster);
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
@@ -2496,7 +2497,7 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 			return FF_ERR_DIR_OBJECT_EXISTS;
 		}
 
-		if(Error && Error != FF_ERR_DIR_END_OF_DIR) {
+		if(Error && (FF_GETERROR(Error) != FF_ERR_DIR_END_OF_DIR)) {
 			return Error;	
 		}
 

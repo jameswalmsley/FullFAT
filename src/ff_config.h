@@ -76,6 +76,8 @@
 #define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
 										// Note, by default ff_time.c is set-up for the Windows Demonstration. Please see ff_time.c to disable.
 
+#define FF_REMOVABLE_MEDIA				// Enable removable media support.
+
 
 //---------- FILE SPACE ALLOCATION PERFORMANCE
 										// Uncomment the prefered method. (Can only choose a single method).

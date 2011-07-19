@@ -42,13 +42,15 @@
 
 /**
 	Error codes are 32-bit numbers, and consist of three items:
-	   8Bits	  8bits		      16bits
-     ........   ........    ........  ........
-	[ModuleID][FunctionID][--   ERROR CODE   --]
+	1Bit	  7Bits       8Bits		      16Bits
+      .		 ........   ........    ........  ........
+  [ErrFlag]	[ModuleID][FunctionID][--   ERROR CODE   --]
 
 **/
 
 #define FF_GETERROR(x)		(x & 0x0000FFFF)
+#define FF_ERRFLAG			(0x80000000)		// Used for Signed errors (FF_SINT32) returns.
+#define FF_isERR(x)			(x & FF_ERRFLAG)
 
 #define FF_MODULE_SHIFT		24
 #define FF_FUNCTION_SHIFT	16
@@ -94,6 +96,21 @@
 #define FF_RMFILE					(5	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
 #define FF_MOVE						(6	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
 #define FF_ISEOF					(7	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_GETSEQUENTIALCLUSTERS	(8	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_READCLUSTERS				(9	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_EXTENDFILE				(10	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_WRITECLUSTERS			(11 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_READ						(12 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_GETC						(13 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_GETLINE					(14	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_TELL						(15	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_WRITE					(16 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_PUTC						(17 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_SEEK						(18 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_INVALIDATE				(19 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_CHECKVALID				(20 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_CLOSE					(21 << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+
 
 
 
@@ -139,6 +156,7 @@
 #define FF_ERR_FILE_DIR_NOT_FOUND				40
 #define FF_ERR_FILE_COULD_NOT_CREATE_DIRENT		41
 #define FF_ERR_FILE_BAD_HANDLE					42
+#define FF_ERR_FILE_MEDIA_REMOVED				43
 
 // Directory Error Codes						50 +
 #define FF_ERR_DIR_OBJECT_EXISTS				50	///< A file or folder of the same name already exists in the current directory.
