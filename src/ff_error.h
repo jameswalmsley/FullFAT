@@ -85,6 +85,18 @@
 // -- COMPLETE THESE ERROR CODES TOMORROW :P
 
 
+
+//----- FF_FILE - The FullFAT file handling routines.
+#define FF_GETMODEBITS				(1	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_OPEN						(2  << FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_ISDIREMPTY				(3	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_RMDIR					(4	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_RMFILE					(5	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_MOVE						(6	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+#define FF_ISEOF					(7	<< FF_FUNCTION_SHIFT) | FF_MODULE_FILE
+
+
+
 /*	FullFAT defines different Error-Code spaces for each module. This ensures
 	that all error codes remain unique, and their meaning can be quickly identified.
 */
@@ -126,6 +138,7 @@
 #define FF_ERR_FILE_SOURCE_NOT_FOUND			39
 #define FF_ERR_FILE_DIR_NOT_FOUND				40
 #define FF_ERR_FILE_COULD_NOT_CREATE_DIRENT		41
+#define FF_ERR_FILE_BAD_HANDLE					42
 
 // Directory Error Codes						50 +
 #define FF_ERR_DIR_OBJECT_EXISTS				50	///< A file or folder of the same name already exists in the current directory.
