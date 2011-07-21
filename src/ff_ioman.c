@@ -57,7 +57,7 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
 FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 BlkSize, FF_ERROR *pError) {
 
 	FF_IOMAN	*pIoman = NULL;
-	FF_T_UINT32 *pLong	= NULL;	// Force malloc to malloc memory on a 32-bit boundary.
+	FF_T_UINT32 *pLong	= NULL;
 #ifdef FF_PATH_CACHE
 	FF_T_UINT32	i;
 #endif
@@ -268,7 +268,7 @@ static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman) {
 	pIoman->LastReplaced = 0;
 	// HT : it is assmued that pBuffer was cleared by memset ()
 	for(i = 0; i < pIoman->CacheSize; i++) {
-		pBuffer->pBuffer 		= (FF_T_UINT8 *)((pIoman->pCacheMem) + (pIoman->BlkSize * i));
+		pBuffer->pBuffer = (FF_T_UINT8 *)((pIoman->pCacheMem) + (pIoman->BlkSize * i));
 		pBuffer++;
 	}
 }
@@ -509,7 +509,7 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 
 	if(pIoman->pPartition->TotalSectors) {
 		if((ulSectorLBA + ulNumSectors) > (pIoman->pPartition->TotalSectors + pIoman->pPartition->BeginLBA)) {
-			return -(FF_ERR_IOMAN_OUT_OF_BOUNDS_READ | FF_BLOCKREAD);		
+			return (FF_ERR_IOMAN_OUT_OF_BOUNDS_READ | FF_BLOCKREAD);		
 		}
 	}
 	
@@ -534,7 +534,7 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 
 	if(pIoman->pPartition->TotalSectors) {
 		if((ulSectorLBA + ulNumSectors) > (pIoman->pPartition->TotalSectors + pIoman->pPartition->BeginLBA)) {
-			return -(FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE | FF_BLOCKWRITE);		
+			return (FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE | FF_BLOCKWRITE);
 		}
 	}
 	
@@ -575,16 +575,16 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED;
+					return FF_ERR_DEVICE_DRIVER_FAILED | FF_DETERMINEFATTYPE;
 				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if((testLong & 0x3FF) != 0x3F8) {
-				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+				return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 			}
 #else
-			return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+			return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 #endif
 #endif
 #ifdef FF_FAT12_SUPPORT
@@ -598,13 +598,13 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED;
+					return FF_ERR_DEVICE_DRIVER_FAILED | FF_DETERMINEFATTYPE;
 				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if(testLong != 0xFFF8) {
-				Error = FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+				Error = FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 			} else {
 				return FF_ERR_NONE;
 			}
@@ -618,13 +618,13 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED;
+					return FF_ERR_DEVICE_DRIVER_FAILED | FF_DETERMINEFATTYPE;
 				}
 				testLong = FF_getLong(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8 && (testLong & 0x0FFFFFF8) != 0x0FFFFFF0) {
-				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+				return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 			} else {
 				return FF_ERR_NONE;
 			}
@@ -635,7 +635,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 		}
 	}
 
-	return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+	return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 }
 
 static FF_T_SINT8 FF_PartitionCount (FF_T_UINT8 *pBuffer)
@@ -689,19 +689,19 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	FF_T_UINT32		ulGPTHeadCRC, ulGPTCrcCheck, ulGPTHeadLength;
 
 	if(ulPartitionNumber >= 128) {
-		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+		return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_GETEFIPARTITIONENTRY;
 	}
 
 	pBuffer = FF_GetBuffer(pIoman, pPart->BeginLBA, FF_MODE_READ);
 	{
 		if(!pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED;
+			return FF_ERR_DEVICE_DRIVER_FAILED | FF_GETEFIPARTITIONENTRY;
 		}
 
 		// Verify this is an EFI header
 		if(memcmp(pBuffer->pBuffer, "EFI PART", 8) != 0) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			return FF_ERR_IOMAN_INVALID_FORMAT;
+			return FF_ERR_IOMAN_INVALID_FORMAT | FF_GETEFIPARTITIONENTRY;
 		}
 
 		ulBeginGPT					= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_PART_ENTRY_LBA);
@@ -725,7 +725,7 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 
 	// Check CRC
 	if(ulGPTHeadCRC != ulGPTCrcCheck) {
-		return FF_ERR_IOMAN_GPT_HEADER_CORRUPT;
+		return FF_ERR_IOMAN_GPT_HEADER_CORRUPT | FF_GETEFIPARTITIONENTRY;
 	}
 	
 	// Calculate Sector Containing the Partition Entry we want to use.
@@ -736,7 +736,7 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	pBuffer = FF_GetBuffer(pIoman, ulEntrySector, FF_MODE_READ);
 	{
 		if(!pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED;
+			return FF_ERR_DEVICE_DRIVER_FAILED | FF_GETEFIPARTITIONENTRY;
 		}
 
 		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, ulSectorOffset + FF_GPT_ENTRY_FIRST_SECTOR_LBA);
@@ -744,7 +744,7 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
 	if(!pPart->BeginLBA) {
-		return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+		return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_GETEFIPARTITIONENTRY;
 	}
 
 	return FF_ERR_NONE;
@@ -795,7 +795,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_READ);
 	if(!pBuffer) {
-		return FF_ERR_DEVICE_DRIVER_FAILED;
+		return FF_ERR_DEVICE_DRIVER_FAILED | FF_MOUNTPARTITION;
 	}
 
 	partCount = FF_PartitionCount (pBuffer->pBuffer);
@@ -813,7 +813,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 			if(PartitionNumber > 3) {
 				FF_ReleaseBuffer(pIoman, pBuffer);
-				return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+				return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_MOUNTPARTITION;
 			}
 
 			// Primary Partitions to deal with!
@@ -833,17 +833,17 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		}
 
 		if(!pPart->BeginLBA) {
-			return FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION;
+			return FF_ERR_IOMAN_NO_MOUNTABLE_PARTITION | FF_MOUNTPARTITION;
 		}
 		// Now we get the Partition sector.
 		pBuffer = FF_GetBuffer(pIoman, pPart->BeginLBA, FF_MODE_READ);
 		if(!pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED;
+			return FF_ERR_DEVICE_DRIVER_FAILED | FF_MOUNTPARTITION;
 		}
 		pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
 		if((pPart->BlkSize % 512) != 0 || pPart->BlkSize == 0) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			return FF_ERR_IOMAN_INVALID_FORMAT;
+			return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 		}
 	}
 
@@ -880,7 +880,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
 
 	if(!pPart->BlkSize) {
-		return FF_ERR_IOMAN_INVALID_FORMAT;
+		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 	}
 	
 	pPart->RootDirSectors	= ((FF_getShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT) * 32) + pPart->BlkSize - 1) / pPart->BlkSize;
@@ -888,10 +888,10 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
 	
 	if(!pPart->SectorsPerCluster) {
-		return FF_ERR_IOMAN_INVALID_FORMAT;
+		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 	}
 	
-	pPart->NumClusters		= pPart->DataSectors / pPart->SectorsPerCluster;
+	pPart->NumClusters = pPart->DataSectors / pPart->SectorsPerCluster;
 
 	Error = FF_DetermineFatType(pIoman);
 	
@@ -922,10 +922,10 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
  **/
 FF_ERROR FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
 
-	FF_T_SINT8 RetVal = FF_ERR_NONE;
+	FF_ERROR RetVal = FF_ERR_NONE;
 
 	if(!pIoman) {
-		return FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER | FF_UNREGISTERBLKDEVICE;
 	}
 
 	FF_PendSemaphore(pIoman->pSemaphore);
@@ -936,7 +936,7 @@ FF_ERROR FF_UnregisterBlkDevice(FF_IOMAN *pIoman) {
 			pIoman->pBlkDevice->fnpWriteBlocks	= NULL;
 			pIoman->pBlkDevice->pParam			= NULL;
 		} else {
-			RetVal = FF_ERR_IOMAN_PARTITION_MOUNTED;
+			RetVal = FF_ERR_IOMAN_PARTITION_MOUNTED | FF_UNREGISTERBLKDEVICE;
 		}
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
@@ -978,10 +978,10 @@ static FF_T_BOOL FF_ActiveHandles(FF_IOMAN *pIoman) {
  *	@return FF_ERR_NONE on success.
  **/
 FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
-	FF_T_SINT8 RetVal = FF_ERR_NONE;
+	FF_ERROR RetVal = FF_ERR_NONE;
 
 	if(!pIoman) {
-		return FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER | FF_UNMOUNTPARTITION;
 	}
 
 	FF_PendSemaphore(pIoman->pSemaphore);	// Ensure that there are no File Handles
@@ -995,10 +995,10 @@ FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 				FF_PendSemaphore(pIoman->pSemaphore);
 				pIoman->pPartition->PartitionMounted = FF_FALSE;
 			} else {
-				RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;
+				RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES | FF_UNMOUNTPARTITION;
 			}
 		} else {
-			RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES;	// Active handles found on the cache.
+			RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES | FF_UNMOUNTPARTITION;	// Active handles found on the cache.
 		}
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
@@ -1066,7 +1066,7 @@ FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman) {
 		return (FF_T_SINT32) pIoman->pPartition->BlkSize;
 	}
 
-	return FF_ERR_NULL_POINTER;
+	return FF_ERR_NULL_POINTER | FF_GETPARTITIONBLOCKSIZE;
 }
 
 #ifdef FF_64_NUM_SUPPORT
@@ -1088,8 +1088,11 @@ FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman) {
 
 #else
 FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman) {
-	FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
-	return (FF_T_UINT32) (TotalClusters * (pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize));
+	if(pIoman) {
+		FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
+		return (FF_T_UINT32) (TotalClusters * (pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize));
+	}
+	return 0;
 }
 #endif
 

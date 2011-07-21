@@ -30,34 +30,49 @@
 #include "ff_types.h"
 
 /**
-	Error codes are 32-bit numbers, and consist of three items:
-	1Bit	  7Bits       8Bits		      16Bits
-      .		 ........   ........    ........  ........
-  [ErrFlag]	[ModuleID][FunctionID][--   ERROR CODE   --]
-
-**/
-
-#define FF_GETERROR(x)		(x & 0x0000FFFF)
-#define FF_ERRFLAG			(0x80000000)		// Used for Signed errors (FF_SINT32) returns.
-#define FF_isERR(x)			(x & FF_ERRFLAG)
+ * Error codes are 32-bit numbers, and consist of three items:
+ *    1Bit     7Bits      8Bits           16Bits
+ *     .     ........   ........    ........  ........
+ * [ErrFlag][ModuleID][FunctionID][--   ERROR CODE   --]
+ *
+ * Error Codes should always have the ErrFlag set, this is the reason why all module
+ * codes include it.
+ *
+ * When returning an error simply return the defined Error Code, OR'd with the function
+ * name (capitalised) in which the error has occured.
+ *
+ * When receiving an Error code from another layer, do not modify the code, as this will
+ * prevent the error code from containing the origin of the error, simply pass it to the
+ * next layer.
+ *
+ * Some API's have been defined to provide, useful and meaningful Error messages to the
+ * the 'userspace' application layer.
+ *
+ **/
 
 #define FF_MODULE_SHIFT		24
 #define FF_FUNCTION_SHIFT	16
 
+#define FF_GETERROR(x)		(x & 0x0000FFFF)
+#define FF_GETMODULE(x)		((x & 0xFF000000) >> FF_MODULE_SHIFT)
+#define FF_GETFUNCTION(x)	((x & 0x00FF0000) >> FF_FUNCTION_SHIFT)
+#define FF_ERRFLAG			0x80000000									// Used for Signed errors (FF_SINT32) returns.
+#define FF_isERR(x)			(x & FF_ERRFLAG)
+
 //----- FullFAT Module Identifiers
-#define FF_MODULE_IOMAN		(1	<< FF_MODULE_SHIFT)
-#define FF_MODULE_DIR		(2	<< FF_MODULE_SHIFT)
-#define FF_MODULE_FILE		(3	<< FF_MODULE_SHIFT)
-#define FF_MODULE_FAT		(4	<< FF_MODULE_SHIFT)
-#define FF_MODULE_CRC		(5	<< FF_MODULE_SHIFT)
-#define FF_MODULE_FORMAT	(6	<< FF_MODULE_SHIFT)
-#define FF_MODULE_HASH		(7	<< FF_MODULE_SHIFT)
-#define FF_MODULE_MEMORY	(8	<< FF_MODULE_SHIFT)
-#define FF_MODULE_STRING	(9	<< FF_MODULE_SHIFT)
-#define FF_MODULE_UNICODE	(10 << FF_MODULE_SHIFT)
-#define FF_MODULE_SAFETY	(11 << FF_MODULE_SHIFT)
-#define FF_MODULE_TIME		(12 << FF_MODULE_SHIFT)
-#define FF_MODULE_DRIVER	(13 << FF_MODULE_SHIFT)	// We can mark underlying platform error codes with this.
+#define FF_MODULE_IOMAN		(( 1 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_DIR		(( 2 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_FILE		(( 3 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_FAT		(( 4 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_CRC		(( 5 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_FORMAT	(( 6 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_HASH		(( 7 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_MEMORY	(( 8 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_STRING	(( 9 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_UNICODE	((10 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_SAFETY	((11 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_TIME		((12 << FF_MODULE_SHIFT) | FF_ERRFLAG)
+#define FF_MODULE_DRIVER	((13 << FF_MODULE_SHIFT) | FF_ERRFLAG)	// We can mark errors from underlying layers with this code.
 
 //----- FullFAT Function Identifiers (In Modular Order)
 //----- FF_IOMAN - The FullFAT I/O Manager.
@@ -71,6 +86,10 @@
 #define FF_GETPARTITIONBLOCKSIZE	(8	<< FF_FUNCTION_SHIFT) | FF_MODULE_IOMAN
 #define FF_BLOCKREAD				(9	<< FF_FUNCTION_SHIFT) | FF_MODULE_IOMAN
 #define FF_BLOCKWRITE				(10	<< FF_FUNCTION_SHIFT) | FF_MODULE_IOMAN
+#define FF_DETERMINEFATTYPE			(11 << FF_FUNCTION_SHIFT) | FF_MODULE_IOMAN
+#define FF_GETEFIPARTITIONENTRY		(12 << FF_FUNCTION_SHIFT) | FF_MODULE_IOMAN
+
+
 
 //----- FF_DIR - The FullFAT directory handling routines.
 // -- COMPLETE THESE ERROR CODES TOMORROW :P
@@ -108,7 +127,7 @@
 */
 // Global Error Codes
 #define FF_ERR_NONE								 0	///< No Error
-//#define FF_ERR_GENERIC							  1	///< BAD NEVER USE THIS!
+//#define FF_ERR_GENERIC							  1	///< BAD NEVER USE THIS! -- Therefore commented out.
 #define FF_ERR_NULL_POINTER						 2	///< pIoman was NULL.
 #define FF_ERR_NOT_ENOUGH_MEMORY				 3	///< malloc() failed! - Could not allocate handle memory.
 #define FF_ERR_DEVICE_DRIVER_FAILED				 4	///< The Block Device driver reported a FATAL error, cannot continue.
@@ -167,10 +186,13 @@
 #define FF_ERR_UNICODE_CONVERSION_EXCEEDED		103 ///< Filename exceeds MAX long-filename length when converted to UTF-16.
 
 #ifdef FF_DEBUG
-const FF_T_INT8 *FF_GetErrMessage(FF_ERROR iErrorCode);
+const FF_T_INT8 *FF_GetErrMessage	(FF_ERROR iErrorCode);
+const FF_T_INT8 *FF_GetErrModule	(FF_ERROR iErrorCode);
+const FF_T_INT8 *FF_GetErrFunction	(FF_ERROR iErrorCode);
 #else
-#define FF_GetErrMessage(X) ""					// A special MACRO incase FF_GetErrMessage() isn't gated with FF_DEBUG
+#define FF_GetErrMessage(X)		""				// A special MACRO incase FF_GetErrMessage() isn't gated with FF_DEBUG
+#define FF_GetErrModule(X)		""
+#define FF_GetErrFunction(X)	""
 #endif											// Function call is safely replaced with a NULL string.
 
 #endif
-

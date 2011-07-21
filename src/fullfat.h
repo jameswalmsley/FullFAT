@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+#define FF_VERSION		"2.0.0-beta1"
+
 #include "ff_config.h"
 #include "ff_ioman.h"
 #include "ff_fat.h"
