@@ -2,7 +2,7 @@
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *                                                                           *
  *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
- *	Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
+ *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
@@ -563,6 +563,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT32		testLong;
+	FF_ERROR		Error = FF_ERR_NONE;
 	if(pIoman) {
 		pPart = pIoman->pPartition;
 
@@ -590,7 +591,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			return FF_ERR_NONE;
 #endif
 
-		} else if(pPart->NumClusters < 65525) {
+		} else if(/*pPart->NumClusters < 65525*/1) {
 			// FAT 16
 			pPart->Type = FF_T_FAT16;
 #ifdef FF_FAT_CHECK
@@ -603,10 +604,12 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if(testLong != 0xFFF8) {
-				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+				Error = FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+			} else {
+				return FF_ERR_NONE;
 			}
 #endif
-			return FF_ERR_NONE;
+			//return FF_ERR_NONE;
 		}
 		else {
 			// FAT 32!
@@ -622,9 +625,13 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8 && (testLong & 0x0FFFFFF8) != 0x0FFFFFF0) {
 				return FF_ERR_IOMAN_NOT_FAT_FORMATTED;
+			} else {
+				return FF_ERR_NONE;
 			}
-#endif
+#else
 			return FF_ERR_NONE;
+#endif
+			
 		}
 	}
 
