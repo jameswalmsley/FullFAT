@@ -12,6 +12,8 @@
 #include <wchar.h>
 #endif
 
+void PrintError(FF_ERROR Error);
+
 #define DIR_COLOUR 			FFT_FOREGROUND_BLUE | FFT_FOREGROUND_GREEN | FFT_FOREGROUND_INTENSITY
 #define COPY_BUFFER_SIZE 	8192
 

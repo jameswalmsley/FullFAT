@@ -12,6 +12,17 @@
 #include <wchar.h>
 #endif
 
+/*
+	Meaningful and Pretty Error printing:
+*/
+
+void PrintError(FF_ERROR Error) {
+	printf("Error    : %08X encountered.\n", Error);
+	printf("Message  : %s.\n", FF_GetErrMessage(Error));
+	printf("Module   : %s.\n", FF_GetErrModule(Error));
+	printf("Function : %s()\n", FF_GetErrFunction(Error));
+}
+
 
 /*
 	Gets the last token of a path.
@@ -96,7 +107,7 @@ int	AppendFilename(char *path, char *filename) {
  **/
 #ifdef FF_UNICODE_SUPPORT
 void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv) {
-		if(src[0] != '\\' && src[0] != '/') {
+	if(src[0] != '\\' && src[0] != '/') {
 		if(wcslen(pEnv->WorkingDir) == 1) {
 			swprintf(dest, FF_MAX_PATH, L"\\%ls", src);
 		} else {
@@ -105,10 +116,11 @@ void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv) {
 	} else {
 		swprintf(dest, FF_MAX_PATH, L"%ls", src);
 	}
+	wcsExpandPath(dest);
 }
 #else
 void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
-		if(src[0] != '\\' && src[0] != '/') {
+	if(src[0] != '\\' && src[0] != '/') {
 		if(strlen(pEnv->WorkingDir) == 1) {
 			sprintf(dest, "\\%s", src);
 		} else {
@@ -117,6 +129,8 @@ void ProcessPath(char *dest, const char *src, FF_ENVIRONMENT *pEnv) {
 	} else {
 		sprintf(dest, "%s", src);
 	}
+
+	ExpandPath(dest);	// Remove all relativity from the path.
 }
 #endif
 
