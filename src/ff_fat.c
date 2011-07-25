@@ -136,7 +136,7 @@ FF_T_UINT32 FF_getFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_ERROR *pEr
 	
 #ifdef FF_FAT12_SUPPORT
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
-		if(relClusterEntry == (pIoman->BlkSize - 1)) {
+		if(relClusterEntry == (FF_T_UINT32)((pIoman->BlkSize - 1))) {
 			// Fat Entry SPANS a Sector!
 			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
@@ -359,7 +359,7 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 
 #ifdef FF_FAT12_SUPPORT	
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
-		if(relClusterEntry == pIoman->BlkSize - 1) {
+		if(relClusterEntry == (FF_T_UINT32) (pIoman->BlkSize - 1)) {
 			// Fat Entry SPANS a Sector!
 			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);

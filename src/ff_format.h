@@ -42,7 +42,8 @@ extern "C" {
 //---------- PROTOTYPES
 // PUBLIC (Interfaces):
 
-FF_ERROR FF_Format (FF_IOMAN *pIoman, FF_T_UINT32 SectorCount, FF_T_BOOL TryFat16);
+//FF_ERROR FF_Format (FF_IOMAN *pIoman, FF_T_UINT32 SectorCount, FF_T_BOOL TryFat16);
+FF_ERROR FF_Format(FF_IOMAN *pIoman, FF_T_UINT32 ulStartLBA, FF_T_UINT32 ulEndLBA, FF_T_UINT32 ulClusterSize);
 
 // Private :
 

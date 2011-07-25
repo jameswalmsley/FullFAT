@@ -1871,7 +1871,7 @@ FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTim
 	FF_ERROR	Error;
 	FF_T_UINT32     DirCluster;
 	FF_T_UINT32     FileCluster;
-	FF_T_INT        i;
+	FF_T_UINT16        i;
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	filename[FF_MAX_FILENAME];
 #else
