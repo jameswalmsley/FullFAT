@@ -39,6 +39,7 @@
 #endif
 
 #ifdef WIN32
+#define wcsicmp _wcsicmp
 #else
 #include <ctype.h>  // tolower()
 int strcasecmp(const char *s1, const char *s2)
@@ -1088,9 +1089,17 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_UINT	uiLfnLength = 0;
 #endif
+#ifndef FF_UNICODE_SUPPORT
 	FF_T_UINT	i,y;
+#endif
+
+#ifdef FF_UNICODE_SUPPORT
+//	FF_T_WCHAR	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
+//	FF_T_WCHAR	*ptr;
+#else
+	FF_T_INT8	*lastPtr = pDirent->FileName + sizeof (pDirent->FileName);
 	FF_T_INT8	*ptr;
-	FF_T_INT8	*lastPtr = pDirent->FileName + sizeof pDirent->FileName;
+#endif
 #ifdef FF_UNICODE_UTF8_SUPPORT
 //	FF_T_SINT32	slRetVal;
 	FF_T_UINT16 nLfnBegin;
@@ -2082,7 +2091,12 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 #if defined(FF_UNICODE_SUPPORT) || defined(FF_UNICODE_UTF8_SUPPORT)
 	FF_T_UINT16			usUtf16Name[FF_MAX_FILENAME + 1];
 #endif
+
+#ifndef FF_UNICODE_SUPPORT
 	FF_T_INT8			*NamePtr;
+#else
+	FF_T_INT16			*NamePtr;
+#endif
 	
 
 #ifdef FF_UNICODE_SUPPORT
@@ -2148,7 +2162,7 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 		return Error;
 	}
 #if defined(FF_UNICODE_SUPPORT) || defined(FF_UNICODE_UTF8_SUPPORT)
-	NamePtr = (FF_T_UINT8*)(usUtf16Name + 13 * (uiNumLFNs-1));
+	NamePtr = (FF_T_INT16*)(usUtf16Name + 13 * (uiNumLFNs-1));
 #else
 	NamePtr = Name + 13 * (uiNumLFNs-1);
 #endif
