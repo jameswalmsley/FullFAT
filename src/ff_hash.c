@@ -57,7 +57,7 @@ FF_ERROR FF_ClearHashTable(FF_HASH_TABLE pHash) {
 		return FF_ERR_NONE;
 	}
 
-	return FF_ERR_NULL_POINTER;
+	return FF_ERR_NULL_POINTER | FF_CLEARHASHTABLE;
 }
 
 FF_ERROR FF_SetHash(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
@@ -69,7 +69,7 @@ FF_ERROR FF_SetHash(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
 		return FF_ERR_NONE;
 	}
 
-	return FF_ERR_NULL_POINTER;	
+	return FF_ERR_NULL_POINTER | FF_SETHASH;
 }
 
 FF_ERROR FF_ClearHash(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
@@ -81,7 +81,7 @@ FF_ERROR FF_ClearHash(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
 		return FF_ERR_NONE;
 	}
 
-	return FF_ERR_NULL_POINTER;
+	return FF_ERR_NULL_POINTER | FF_CLEARHASH;
 }
 
 FF_T_BOOL FF_isHashSet(FF_HASH_TABLE pHash, FF_T_UINT32 nHash) {
@@ -101,7 +101,7 @@ FF_ERROR FF_DestroyHashTable(FF_HASH_TABLE pHash) {
 		FF_FREE(pHash);
 		return FF_ERR_NONE;
 	}
-	return FF_ERR_NULL_POINTER;
+	return FF_ERR_NULL_POINTER | FF_DESTROYHASHTABLE;
 }
 
 #endif

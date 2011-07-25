@@ -67,8 +67,6 @@ typedef struct {
 typedef FF_T_SINT32 (*FF_WRITE_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
 typedef FF_T_SINT32 (*FF_READ_BLOCKS)	(FF_T_UINT8 *pBuffer, FF_T_UINT32 SectorAddress, FF_T_UINT32 Count, void *pParam);
 
-#define FF_ERR_DRIVER_BUSY			-10
-#define FF_ERR_DRIVER_FATAL_ERROR	-11
 
 /**
  *	@public
@@ -223,8 +221,8 @@ FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman);
 #endif
 
 // PUBLIC  (To FullFAT Only):
-FF_T_SINT32 FF_BlockRead			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer);
-FF_T_SINT32 FF_BlockWrite			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer);
+FF_T_SINT32 FF_BlockRead			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer, FF_T_BOOL aSemLocked);
+FF_T_SINT32 FF_BlockWrite			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer, FF_T_BOOL aSemLocked);
 FF_ERROR	FF_IncreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_ERROR	FF_DecreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);

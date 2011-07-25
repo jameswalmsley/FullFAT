@@ -79,7 +79,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 	pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_READ);
 	{
 		if(!pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED;
+			return FF_ERR_DEVICE_DRIVER_FAILED | FF_FORMATPARTITION;
 		}
 
 		scPartitionCount = FF_PartitionCount(pBuffer->pBuffer);
@@ -92,7 +92,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 		} else {
 			if(ulPartitionNumber > (FF_T_UINT32) scPartitionCount) {
 				FF_ReleaseBuffer(pIoman, pBuffer);
-				return FF_ERR_IOMAN_INVALID_PARTITION_NUM;
+				return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_FORMATPARTITION;
 			}
 			ulPnum = ulPartitionNumber;
 		}

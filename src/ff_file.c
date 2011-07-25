@@ -387,7 +387,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_ERROR 			Error = FF_ERR_NONE;
 	FF_T_UINT8 			EntryBuffer[32];
 	FF_FETCH_CONTEXT	FetchContext;
-	FF_T_SINT8 			RetVal = FF_ERR_NONE;
+	FF_ERROR 			RetVal = FF_ERR_NONE;
 #ifdef FF_PATH_CACHE
 	FF_T_UINT32 i;
 #endif
@@ -486,7 +486,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 				return Error;
 			}
 		} else {
-			RetVal = FF_ERR_DIR_NOT_EMPTY;
+			RetVal = (FF_ERR_DIR_NOT_EMPTY | FF_RMDIR);
 		}
 	}
 	FF_unlockDIR(pIoman);
@@ -755,6 +755,31 @@ FF_T_BOOL FF_isEOF(FF_FILE *pFile) {
 	}
 }
 
+/**
+ *	@public
+ *	@brief	Checks the number of bytes left on a read handle
+ *
+ *	@param	pFile		An open file handle
+ *
+ *	@return	Less than zero: an error code
+ *	@return	Number of bytes left to read from handle
+ **/
+FF_T_SINT32 FF_BytesLeft(FF_FILE *pFile) {
+	if(!pFile) {
+		return FF_ERR_NULL_POINTER | FF_BYTESLEFT;
+	}
+	if(!(pFile->Mode & FF_MODE_READ)) {
+		return FF_ERR_FILE_NOT_OPENED_IN_READ_MODE | FF_BYTESLEFT;
+	}
+
+	if(pFile->FilePointer >= pFile->Filesize) {
+		return 0;
+	} else {
+		return pFile->Filesize - pFile->FilePointer;
+	}
+}
+
+
 static FF_T_UINT32 FF_GetSequentialClusters(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT32 Limit, FF_ERROR *pError) {
 	FF_T_UINT32 CurrentCluster;
 	FF_T_UINT32 NextCluster = StartCluster;
@@ -848,8 +873,6 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		if(!Error) {
 			OriginalEntry.ObjectCluster = pFile->AddrCurrentCluster;
 			Error = FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-		} else {
-			return Error;
 		}
 
 		if(Error) {
@@ -995,6 +1018,9 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	if(!pFile) {
 		return (FF_ERR_NULL_POINTER | FF_READ);
 	}
+	Error = FF_CheckValid (pFile);
+	if (Error)
+		return Error;
 
 	if(!(pFile->Mode & FF_MODE_READ)) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_READ_MODE | FF_READ);
@@ -1344,6 +1370,10 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	if(!pFile) {
 		return (FF_ERR_NULL_POINTER | FF_WRITE);
 	}
+
+	Error = FF_CheckValid (pFile);
+	if (Error)
+		return Error;
 
 	if(!(pFile->Mode & FF_MODE_WRITE)) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE | FF_WRITE);
@@ -1781,6 +1811,124 @@ FF_ERROR FF_CheckValid (FF_FILE *pFile)
 	return (FF_ERR_FILE_BAD_HANDLE | FF_CHECKVALID);
 }
 
+#ifdef FF_TIME_SUPPORT
+/**
+ *	@public
+ *	@brief	Set the time-stamp(s) of a file entry
+ *
+ *	@param	pFile		FF_FILE object that was created by FF_Open().
+ *	@param	pTime       FF_SYSTEMTIME the time stamp
+ *	@param	aWhat       FF_T_UINT a combination of enum ETimeMask
+ *
+ *	@return 0 or FF_ERROR
+ *
+ **/
+FF_ERROR FF_SetFileTime(FF_FILE *pFile, FF_SYSTEMTIME *pTime, FF_T_UINT aWhat) {
+	FF_DIRENT	OriginalEntry;
+	FF_ERROR	Error;
+	Error = FF_CheckValid (pFile);
+	if (Error)
+		return Error;
+
+	if (pFile->ValidFlags & FF_VALID_FLAG_DELETED) { //if (pFile->FileDeleted)
+		return FF_ERR_FILE_NOT_FOUND | FF_SETFILETIME;
+	}
+	if (!(pFile->Mode & (FF_MODE_WRITE |FF_MODE_APPEND))) {
+		return FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE | FF_SETFILETIME;
+	}
+	// Update the Dirent!
+	Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+	if (!Error) {
+		if (aWhat & ETimeCreate) OriginalEntry.CreateTime = *pTime;		///< Date and Time Created.
+		if (aWhat & ETimeMod)    OriginalEntry.ModifiedTime = *pTime;	///< Date and Time Modified.
+		if (aWhat & ETimeAccess) OriginalEntry.AccessedTime = *pTime;	///< Date of Last Access.
+		Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+	}
+	if (!Error)
+		Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
+	return Error;
+}
+
+/**
+ *	@public
+ *	@brief	Set the time-stamp(s) of a file entry (by name)
+ *
+ *	@param	pIoman		FF_IOMAN device handle
+ *	@param	path		FF_T_INT8/FF_T_WCHAR name of the file
+ *	@param	pTime       FF_SYSTEMTIME the time stamp
+ *	@param	aWhat       FF_T_UINT a combination of enum ETimeMask
+ *
+ *	@return 0 or FF_ERROR
+ *
+ **/
+#ifdef FF_UNICODE_SUPPORT
+FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_WCHAR *path, FF_SYSTEMTIME *pTime, FF_T_UINT aWhat)
+#else
+FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTime, FF_T_UINT aWhat)
+#endif
+{
+	FF_DIRENT	OriginalEntry;
+	FF_ERROR	Error;
+	FF_T_UINT32     DirCluster;
+	FF_T_UINT32     FileCluster;
+	FF_T_INT        i;
+#ifdef FF_UNICODE_SUPPORT
+	FF_T_WCHAR	filename[FF_MAX_FILENAME];
+#else
+	FF_T_INT8	filename[FF_MAX_FILENAME];
+#endif
+
+#ifdef FF_UNICODE_SUPPORT
+	i = (FF_T_UINT16) wcslen(path);
+#else 
+	i = (FF_T_UINT16) strlen(path);
+#endif
+
+	while(i != 0) {
+		if(path[i] == '\\' || path[i] == '/') {
+			break;
+		}
+		i--;
+	}
+#ifdef FF_UNICODE_SUPPORT
+	wcsncpy(filename, (path + i + 1), FF_MAX_FILENAME);
+#else
+	strncpy(filename, (path + i + 1), FF_MAX_FILENAME);
+#endif
+
+	if(i == 0) {
+		i = 1;
+	}
+	
+	DirCluster = FF_FindDir(pIoman, path, i, &Error);
+	if (Error)
+		return Error;
+
+	if (!DirCluster) {
+		return FF_ERR_FILE_NOT_FOUND | FF_SETTIME;
+	}
+	FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0, &OriginalEntry, &Error);
+	if (Error)
+		return Error;
+
+	if (!FileCluster) {
+		//logPrintf ("FF_SetTime: Can not find '%s'\n", filename);
+		return FF_ERR_FILE_NOT_FOUND | FF_SETTIME;
+	}
+
+	// Update the Dirent!
+	if (aWhat & ETimeCreate) OriginalEntry.CreateTime = *pTime;		///< Date and Time Created.
+	if (aWhat & ETimeMod)    OriginalEntry.ModifiedTime = *pTime;	///< Date and Time Modified.
+	if (aWhat & ETimeAccess) OriginalEntry.AccessedTime = *pTime;	///< Date of Last Access.
+	Error = FF_PutEntry(pIoman, OriginalEntry.CurrentItem-1, DirCluster, &OriginalEntry);
+
+	if (!Error)
+		Error = FF_FlushCache(pIoman);		// Ensure all modfied blocks are flushed to disk!
+	return Error;
+}
+
+#endif // FF_TIME_SUPPORT
+
 /**
  *	@public
  *	@brief	Equivalent to fclose()
@@ -1850,7 +1998,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 			Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		}
 	}
-	if (!Error) {
+	if (!FF_GETERROR (Error)) {
 		Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
 	}
 

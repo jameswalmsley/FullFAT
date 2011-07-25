@@ -30,6 +30,8 @@
 #include "ff_types.h"
 #include "ff_error.h"
 
+//#include "logbuf.h"
+
 #ifdef FF_DEBUG
 const struct _FFMODULETAB
 {
@@ -87,18 +89,15 @@ const struct _FFERRTAB
     {"Cannot unregister device, a partition is still mounted",						FF_ERR_IOMAN_PARTITION_MOUNTED},
     {"Cannot unmount the partition while there are active FILE handles",			FF_ERR_IOMAN_ACTIVE_HANDLES},
 	{"The GPT partition header appears to be corrupt, refusing to mount",			FF_ERR_IOMAN_GPT_HEADER_CORRUPT},
+	{"Not enough free disk space to complete the disk transaction",					FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE},
+	{"Attempted to Read a sector out of bounds",									FF_ERR_IOMAN_OUT_OF_BOUNDS_READ},
+	{"Attempted to Write a sector out of bounds",									FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE},
+
     {"Cannot open the file, file already in use",									FF_ERR_FILE_ALREADY_OPEN},
     {"The specified file could not be found",										FF_ERR_FILE_NOT_FOUND},
     {"Cannot open a Directory",														FF_ERR_FILE_OBJECT_IS_A_DIR},
 	{"Cannot open for writing: File is marked as Read-Only",						FF_ERR_FILE_IS_READ_ONLY},
     {"Path not found",																FF_ERR_FILE_INVALID_PATH},
-    {"A file or folder of the same name already exists",							FF_ERR_DIR_OBJECT_EXISTS},
-    {"FF_ERR_DIR_DIRECTORY_FULL",													FF_ERR_DIR_DIRECTORY_FULL},
-    {"FF_ERR_DIR_END_OF_DIR",														FF_ERR_DIR_END_OF_DIR},
-    {"The directory is not empty",													FF_ERR_DIR_NOT_EMPTY},
-	{"Could not extend File or Folder - No Free Space!",							FF_ERR_FAT_NO_FREE_CLUSTERS},
-	{"Could not find the directory specified by the path",							FF_ERR_DIR_INVALID_PATH},
-	{"The Root Dir is full, and cannot be extended on Fat12 or 16 volumes",			FF_ERR_DIR_CANT_EXTEND_ROOT_DIR},
 	{"File operation failed - the file was not opened for writing",					FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE},
 	{"File operation failed - the file was not opened for reading",					FF_ERR_FILE_NOT_OPENED_IN_READ_MODE},
 	{"File operation failed - could not extend file",								FF_ERR_FILE_EXTEND_FAILED},
@@ -106,9 +105,26 @@ const struct _FFERRTAB
 	{"Source file was not found",													FF_ERR_FILE_SOURCE_NOT_FOUND},
 	{"Destination path (dir) was not found",										FF_ERR_FILE_DIR_NOT_FOUND},
 	{"Failed to create the directory Entry",										FF_ERR_FILE_COULD_NOT_CREATE_DIRENT},
-	{"Not enough free disk space to complete the disk transaction",					FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE},
-	{"Attempted to Read a sector out of bounds",									FF_ERR_IOMAN_OUT_OF_BOUNDS_READ},
-	{"Attempted to Write a sector out of bounds",									FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE},
+	{"A file handle was invalid",													FF_ERR_FILE_BAD_HANDLE},
+#ifdef FF_REMOVABLE_MEDIA
+	{"File handle got invalid because media was removed",							FF_ERR_FILE_MEDIA_REMOVED},
+#endif
+    {"A file or folder of the same name already exists",							FF_ERR_DIR_OBJECT_EXISTS},
+    {"FF_ERR_DIR_DIRECTORY_FULL",													FF_ERR_DIR_DIRECTORY_FULL},
+    {"FF_ERR_DIR_END_OF_DIR",														FF_ERR_DIR_END_OF_DIR},
+    {"The directory is not empty",													FF_ERR_DIR_NOT_EMPTY},
+	{"Could not extend File or Folder - No Free Space!",							FF_ERR_FAT_NO_FREE_CLUSTERS},
+	{"Could not find the directory specified by the path",							FF_ERR_DIR_INVALID_PATH},
+	{"The Root Dir is full, and cannot be extended on Fat12 or 16 volumes",			FF_ERR_DIR_CANT_EXTEND_ROOT_DIR},
+	{"Not enough space to extend the directory.",									FF_ERR_DIR_EXTEND_FAILED},
+	{"Name exceeds the number of allowed charachters for a filename",				FF_ERR_DIR_NAME_TOO_LONG},
+
+#ifdef FF_UNICODE_SUPPORT
+	{"An invalid Unicode charachter was provided!",									FF_ERR_UNICODE_INVALID_CODE},
+	{"Not enough space in the UTF-16 buffer to encode the entire sequence",			FF_ERR_UNICODE_DEST_TOO_SMALL},
+	{"An invalid UTF-16 sequence was encountered",									FF_ERR_UNICODE_INVALID_SEQUENCE},
+	{"Filename exceeds MAX long-filename length when converted to UTF-16",			FF_ERR_UNICODE_CONVERSION_EXCEEDED},
+#endif
 };
 
 /**
@@ -123,7 +139,7 @@ const struct _FFERRTAB
 const FF_T_INT8 *FF_GetErrMessage(FF_ERROR iErrorCode) {
     FF_T_UINT32 stCount = sizeof (gcpFullFATErrorTable) / sizeof ( struct _FFERRTAB);
     while (stCount--){
-        if ((FF_ERROR) (gcpFullFATErrorTable[stCount].ucErrorCode) == FF_GETERROR(iErrorCode)) {
+        if (((FF_ERROR) gcpFullFATErrorTable[stCount].ucErrorCode) == FF_GETERROR(iErrorCode)) {
             return gcpFullFATErrorTable[stCount].strErrorString;
         }
     }

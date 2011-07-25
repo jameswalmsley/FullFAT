@@ -28,8 +28,26 @@
 #ifndef _FF_FORMAT_H_
 #define _FF_FORMAT_H_
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 
+#include "ff_config.h"
+#include "ff_types.h"
+#include "ff_ioman.h"
+#include "ff_dir.h"
+#include "ff_format.h"
 
+//---------- PROTOTYPES
+// PUBLIC (Interfaces):
+
+FF_ERROR FF_Format (FF_IOMAN *pIoman, FF_T_UINT32 SectorCount, FF_T_BOOL TryFat16);
+
+// Private :
+
+#ifdef	__cplusplus
+} // extern "C"
+#endif
 
 #endif

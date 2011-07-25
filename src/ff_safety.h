@@ -38,6 +38,7 @@
 // PRIVATE:
 void		*FF_CreateSemaphore		(void);
 void		FF_PendSemaphore		(void *pSemaphore);
+FF_T_BOOL	FF_TrySemaphore         (void *pSemaphore, FF_T_UINT32 TimeMs);
 void		FF_ReleaseSemaphore		(void *pSemaphore);
 void		FF_DestroySemaphore		(void *pSemaphore);
 void		FF_Yield				(void);

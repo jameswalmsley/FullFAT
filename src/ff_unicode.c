@@ -78,7 +78,7 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 	}
 
 	if(!ulSize) {
-		return FF_ERR_UNICODE_DEST_TOO_SMALL;		
+		return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF8CTOUTF16C;
 	}
 
 	switch(uiSequenceNumber) {
@@ -103,7 +103,7 @@ FF_T_SINT32 FF_Utf8ctoUtf16c(FF_T_UINT16 *utf16Dest, const FF_T_UINT8 *utf8Sourc
 		case 4:
 			// Convert to UTF-32 and then into UTF-16
 			if(ulSize < 2) {
-				return FF_ERR_UNICODE_DEST_TOO_SMALL;
+				return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF8CTOUTF16C;
 			}
 			ulUtf32char = (FF_T_UINT16) ((*utf8Source & 0x0F) << 18) | ((*(utf8Source + 1) & 0x3F) << 12) | ((*(utf8Source + 2) & 0x3F) << 6) | ((*(utf8Source + 3) & 0x3F));
                         
@@ -132,7 +132,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 	FF_T_UINT16	ulUtf16char;
 
 	if(!ulSize) {
-		return FF_ERR_UNICODE_DEST_TOO_SMALL;
+		return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF16CTOUTF8C;
 	}
 
         memcpy(&ulUtf16char, utf16Source, sizeof(FF_T_UINT16));
@@ -142,7 +142,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 
                 memcpy(&ulUtf16char, utf16Source + 1, sizeof(FF_T_UINT16));                
 		if((/*bobtntfullfat *(utf16Source + 1)*/ulUtf16char & 0xFC00) != 0xDC00) {
-			return FF_ERR_UNICODE_INVALID_SEQUENCE;	// Invalid UTF-16 sequence.
+			return FF_ERR_UNICODE_INVALID_SEQUENCE | FF_UTF16CTOUTF8C;	// Invalid UTF-16 sequence.
 		}
 		ulUtf32char |= ((FF_T_UINT32) (/*bobtntfullfat *(utf16Source + 1)*/ulUtf16char & 0x003FF));
 
@@ -158,7 +158,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 
 	if(ulUtf32char < 0x00000800) {	// Double byte UTF-8 sequence.
 		if(ulSize < 2) {
-			return FF_ERR_UNICODE_DEST_TOO_SMALL;
+			return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF16CTOUTF8C;
 		}
 		*(utf8Dest + 0) = (FF_T_UINT8) (0xC0 | ((ulUtf32char >> 6) & 0x1F));
 		*(utf8Dest + 1) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 0) & 0x3F));
@@ -167,7 +167,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 
 	if(ulUtf32char < 0x00010000) {	// Triple byte UTF-8 sequence.
 		if(ulSize < 3) {
-			return FF_ERR_UNICODE_DEST_TOO_SMALL;
+			return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF16CTOUTF8C;
 		}
 		*(utf8Dest + 0) = (FF_T_UINT8) (0xE0 | ((ulUtf32char >> 12) & 0x0F));
 		*(utf8Dest + 1) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 6 ) & 0x3F));
@@ -177,7 +177,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 
 	if(ulUtf32char < 0x00200000) {	// Quadruple byte UTF-8 sequence.
 		if(ulSize < 4) {
-			return FF_ERR_UNICODE_DEST_TOO_SMALL;
+			return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF16CTOUTF8C;
 		}
 		*(utf8Dest + 0) = (FF_T_UINT8) (0xF0 | ((ulUtf32char >> 18) & 0x07));
 		*(utf8Dest + 1) = (FF_T_UINT8) (0x80 | ((ulUtf32char >> 12) & 0x3F));
@@ -186,7 +186,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 		return 4;
 	}
 
-	return FF_ERR_UNICODE_INVALID_CODE;	// Invalid Charachter
+	return FF_ERR_UNICODE_INVALID_CODE | FF_UTF16CTOUTF8C;	// Invalid Charachter
 }
 
 
@@ -198,7 +198,7 @@ FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_
 	// Check that its a valid UTF-32 wide-char!	
 
 	if(utf32char >= 0xD800 && utf32char <= 0xDFFF) {	// This range is not a valid Unicode code point.
-		return FF_ERR_UNICODE_INVALID_CODE; // Invalid charachter.
+		return FF_ERR_UNICODE_INVALID_CODE | FF_UTF32CTOUTF16C; // Invalid charachter.
 	}
 
 	if(utf32char < 0x10000) {
@@ -207,7 +207,7 @@ FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_
 	}
 
 	if(ulSize < 2) {
-		return FF_ERR_UNICODE_DEST_TOO_SMALL;	// Not enough UTF-16 units to record this charachter.
+		return FF_ERR_UNICODE_DEST_TOO_SMALL | FF_UTF32CTOUTF16C;	// Not enough UTF-16 units to record this charachter.
 	}
 
 	if(utf32char < 0x00200000) {
@@ -220,7 +220,7 @@ FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_
 		return 2;	// Surrogate pair encoded value.
 	}
 	
-	return FF_ERR_UNICODE_INVALID_CODE;	// Invalid Charachter
+	return FF_ERR_UNICODE_INVALID_CODE | FF_UTF32CTOUTF16C;	// Invalid Charachter
 }
 
 // Converts a UTF-16 sequence into its equivalent UTF-32 code point.
@@ -234,7 +234,7 @@ FF_T_SINT32 FF_Utf16ctoUtf32c(FF_T_UINT32 *utf32Dest, const FF_T_UINT16 *utf16So
 	*utf32Dest  = ((FF_T_UINT32) (*(utf16Source + 0) & 0x003FF) << 10) + 0x10000;
 	
 	if((*(utf16Source + 1) & 0xFC00) != 0xDC00) {
-		return FF_ERR_UNICODE_INVALID_SEQUENCE;	// Invalid UTF-16 sequence.
+		return FF_ERR_UNICODE_INVALID_SEQUENCE | FF_UTF16CTOUTF32C;	// Invalid UTF-16 sequence.
 	}
 	*utf32Dest |= ((FF_T_UINT32) (*(utf16Source + 1) & 0x003FF));
 	return 2;	// 2 utf-16 units make up the Unicode code-point.

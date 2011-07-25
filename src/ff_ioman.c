@@ -30,6 +30,7 @@
  *	Destroying a FullFAT IO object.
  **/
 
+#include <time.h>
 #include <string.h>
 
 #include "ff_ioman.h"	// Includes ff_types.h, ff_safety.h, <stdio.h>
@@ -138,9 +139,10 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	pIoman->MemAllocation |= FF_IOMAN_ALLOC_BLKDEV;
 
 	// Make sure all pointers are NULL
-	pIoman->pBlkDevice->fnpReadBlocks = NULL;
-	pIoman->pBlkDevice->fnpWriteBlocks = NULL;
-	pIoman->pBlkDevice->pParam = NULL;
+	// ...have been nulled by previous memset()
+//	pIoman->pBlkDevice->fnReadBlocks = NULL;
+//	pIoman->pBlkDevice->fnWriteBlocks = NULL;
+//	pIoman->pBlkDevice->pParam = NULL;
 
 	// Organise the memory provided, or create our own!
 	if(pCacheMem) {
@@ -162,8 +164,8 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	pIoman->BlkSize		 = BlkSize;
 	pIoman->CacheSize	 = (FF_T_UINT16) (Size / BlkSize);
-	pIoman->FirstFile	 = NULL;
-	pIoman->Locks		 = 0;
+//	pIoman->FirstFile	 = NULL;
+//	pIoman->Locks		 = 0;
 
 	/*	Malloc() memory for buffer objects. (FullFAT never refers to a buffer directly
 		but uses buffer objects instead. Allows us to provide thread safety.
@@ -295,7 +297,7 @@ FF_ERROR FF_FlushCache(FF_IOMAN *pIoman) {
 		for(i = 0; i < pIoman->CacheSize; i++) {
 			if((pIoman->pBuffers + i)->NumHandles == 0 && (pIoman->pBuffers + i)->Modified == FF_TRUE) {
 
-				FF_BlockWrite(pIoman, (pIoman->pBuffers + i)->Sector, 1, (pIoman->pBuffers + i)->pBuffer);
+				FF_BlockWrite(pIoman, (pIoman->pBuffers + i)->Sector, 1, (pIoman->pBuffers + i)->pBuffer, FF_TRUE);
 
 				// Buffer has now been flushed, mark it as a read buffer and unmodified.
 				(pIoman->pBuffers + i)->Mode = FF_MODE_READ;
@@ -318,24 +320,40 @@ FF_ERROR FF_FlushCache(FF_IOMAN *pIoman) {
 	return FF_ERR_NONE;
 }
 
+/*
+	A new version of FF_GetBuffer() with a simple mechanism for timeout
+*/
+
+#define	FF_GETBUFFER_SLEEP_TIME	10
+#define	FF_GETBUFFER_WAIT_TIME	(20000 / FF_GETBUFFER_SLEEP_TIME)
+
 FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 	FF_BUFFER	*pBuffer;
-	FF_BUFFER	*pBufLRU	= NULL;
-	FF_BUFFER	*pBufLHITS	= NULL;
-	FF_BUFFER	*pBufMatch	= NULL;
+	FF_BUFFER	*pBufLRU;
+//	FF_BUFFER	*pBufLHITS = NULL;  // Wasn't use anymore?
+	FF_BUFFER	*pBufMatch = NULL;
+	FF_T_SINT32	RetVal;
+	FF_T_INT    LoopCount = FF_GETBUFFER_WAIT_TIME;
 
-	FF_T_UINT32	i;
+	FF_T_INT cacheSize = pIoman->CacheSize;
+	if (cacheSize <= 0) {
+		return NULL;
+	}
 
 	while(!pBufMatch) {
+		if (!--LoopCount) {
+			//
+			// *pError = FF_ERR_IOMAN_GETBUFFER_TIMEOUT;
+			//
+			return NULL;
+		}
 		FF_PendSemaphore(pIoman->pSemaphore);
 		{
-			pBuffer = pIoman->pBuffers;
-			// HT if a perfect match has priority, find that first
-			for(i = 0; i < pIoman->CacheSize; i++, pBuffer++) {
-				pBuffer = (pIoman->pBuffers + i);
-				if(pBuffer->Sector == Sector && pBuffer->Valid == FF_TRUE) {
+
+			for(pBuffer = pIoman->pBuffers; pBuffer < pIoman->pBuffers + cacheSize; pBuffer++) {
+				if(pBuffer->Sector == Sector && pBuffer->Valid) {
 					pBufMatch = pBuffer;
-					break;	// Why look further if you found a perfect match?
+					break;	// Don't look further if you found a perfect match
 				}
 			}
 
@@ -344,62 +362,53 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 				if(Mode == FF_MODE_READ && pBufMatch->Mode == FF_MODE_READ) {
 					pBufMatch->NumHandles += 1;
 					pBufMatch->Persistance += 1;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return pBufMatch;
+					break;
 				}
 
-				if(pBufMatch->Mode == FF_MODE_WRITE && pBufMatch->NumHandles == 0) {	// This buffer has no attached handles.
+				if(pBufMatch->NumHandles == 0) {
 					pBufMatch->Mode = Mode;
+					if(Mode == FF_MODE_WRITE)	// This buffer has no attached handles.
+						pBufMatch->Modified = FF_TRUE;
 					pBufMatch->NumHandles = 1;
 					pBufMatch->Persistance += 1;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return pBufMatch;
-				}
-
-				if(pBufMatch->Mode == FF_MODE_READ && Mode == FF_MODE_WRITE && pBufMatch->NumHandles == 0) {
-					pBufMatch->Mode = Mode;
-					pBufMatch->Modified = FF_TRUE;
-					pBufMatch->NumHandles = 1;
-					pBufMatch->Persistance += 1;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return pBufMatch;
+					break;
 				}
 
 				pBufMatch = NULL;	// Sector is already in use, keep yielding until its available!
 
 			} else {
-				pBuffer = pIoman->pBuffers;
-				for(i = 0; i < pIoman->CacheSize; i++, pBuffer++) {
-					if(pBuffer->NumHandles == 0) {
-						pBuffer->LRU += 1;
+				pBufLRU   = NULL;	// So put them to NULL here
 
-						if(!pBufLRU) {
-							pBufLRU = pBuffer;
-						}
-						if(!pBufLHITS) {
-							pBufLHITS = pBuffer;
-						}
+				for(pBuffer = pIoman->pBuffers; pBuffer < pIoman->pBuffers + cacheSize; pBuffer++) {
+					if(pBuffer->NumHandles)
+						continue;  // Occupied
+					pBuffer->LRU += 1;
 
-						if(pBuffer->LRU >= pBufLRU->LRU) {
-							if(pBuffer->LRU == pBufLRU->LRU) {
-								if(pBuffer->Persistance > pBufLRU->Persistance) {
-									pBufLRU = pBuffer;
-								}
-							} else {
-								pBufLRU = pBuffer;
-							}
-						}
-
-						if(pBuffer->Persistance < pBufLHITS->Persistance) {
-							pBufLHITS = pBuffer;
-						}
+					if(!pBufLRU) {
+						pBufLRU = pBuffer;
 					}
-				}
 
+					if(pBuffer->LRU > pBufLRU->LRU ||
+					   (pBuffer->LRU == pBufLRU->LRU && pBuffer->Persistance > pBufLRU->Persistance)) {
+						pBufLRU = pBuffer;
+					}
+
+				}
+				// Choose a suitable buffer!
 				if(pBufLRU) {
 					// Process the suitable candidate.
 					if(pBufLRU->Modified == FF_TRUE) {
-						FF_BlockWrite(pIoman, pBufLRU->Sector, 1, pBufLRU->pBuffer);
+						// Along with the FF_TRUE parameter to indicate sempahore has been claimed
+						RetVal = FF_BlockWrite(pIoman, pBufLRU->Sector, 1, pBufLRU->pBuffer, FF_TRUE);
+						if (RetVal < 0) {
+							pBufMatch = NULL;
+							break;
+						}
+					}
+					RetVal = FF_BlockRead(pIoman, Sector, 1, pBufLRU->pBuffer, FF_TRUE);
+					if (RetVal < 0) {
+						pBufMatch = NULL;
+						break;
 					}
 					pBufLRU->Mode = Mode;
 					pBufLRU->Persistance = 1;
@@ -407,23 +416,20 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 					pBufLRU->NumHandles = 1;
 					pBufLRU->Sector = Sector;
 
-					if(Mode == FF_MODE_WRITE) {
-						pBufLRU->Modified = FF_TRUE;
-					} else {
-						pBufLRU->Modified = FF_FALSE;
-					}
+					pBufLRU->Modified = (Mode == FF_MODE_WRITE);
 
-					FF_BlockRead(pIoman, Sector, 1, pBufLRU->pBuffer);
 					pBufLRU->Valid = FF_TRUE;
-					FF_ReleaseSemaphore(pIoman->pSemaphore);
-					return pBufLRU;
+					pBufMatch = pBufLRU;
+					break;
 				}
 
 			}
 		}
 		FF_ReleaseSemaphore(pIoman->pSemaphore);
-		FF_Yield();	// Better to go asleep to give low-priority task a chance to release buffer(s)
-	}
+		// Better to go asleep to give low-priority task a chance to release buffer(s)
+		FF_Sleep (FF_GETBUFFER_SLEEP_TIME);
+	}	// while(!pBufMatch)
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
 
 	return pBufMatch;	// Return the Matched Buffer!
 }
@@ -504,7 +510,7 @@ FF_ERROR FF_RegisterBlkDevice(FF_IOMAN *pIoman, FF_T_UINT16 BlkSize, FF_WRITE_BL
 	New Interface for FullFAT to read blocks.
 */
 
-FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer) {
+FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer, FF_T_BOOL aSemLocked) {
 	FF_T_SINT32 slRetVal = 0;
 
 	if(pIoman->pPartition->TotalSectors) {
@@ -513,23 +519,25 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 		}
 	}
 	
-	if(pIoman->pBlkDevice->fnpReadBlocks) {	// Make sure we don't execute a NULL.
+	if(pIoman->pBlkDevice->fnpReadBlocks) do {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_PendSemaphore(pIoman->pBlkDevSemaphore);
+		if (!aSemLocked)
+			FF_PendSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		slRetVal = pIoman->pBlkDevice->fnpReadBlocks(pBuffer, ulSectorLBA, ulNumSectors, pIoman->pBlkDevice->pParam);
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
+		if (!aSemLocked)
+			FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
-		if(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY) {
-			FF_Sleep(FF_DRIVER_BUSY_SLEEP);
-		}
-	} while(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY);
+		if(FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY)
+			break;
+		FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+	} while (FF_TRUE);
 
 	return slRetVal;
 }
 
-FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer) {
+FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 ulNumSectors, void *pBuffer, FF_T_BOOL aSemLocked) {
 	FF_T_SINT32 slRetVal = 0;
 
 	if(pIoman->pPartition->TotalSectors) {
@@ -538,18 +546,20 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 		}
 	}
 	
-	if(pIoman->pBlkDevice->fnpWriteBlocks) {	// Make sure we don't execute a NULL.
+	if(pIoman->pBlkDevice->fnpWriteBlocks) do {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_PendSemaphore(pIoman->pBlkDevSemaphore);
+		if (!aSemLocked)
+			FF_PendSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		slRetVal = pIoman->pBlkDevice->fnpWriteBlocks(pBuffer, ulSectorLBA, ulNumSectors, pIoman->pBlkDevice->pParam);
 #ifdef	FF_BLKDEV_USES_SEM
-		FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
+		if (!aSemLocked)
+			FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
-		if(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY) {
-			FF_Sleep(FF_DRIVER_BUSY_SLEEP);
-		}
-	} while(FF_GETERROR(slRetVal) == FF_ERR_DRIVER_BUSY);
+		if(FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY)
+			break;
+		FF_Sleep(FF_DRIVER_BUSY_SLEEP);
+	} while (FF_TRUE);
 
 	return slRetVal;
 }
@@ -563,7 +573,6 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT32		testLong;
-	FF_ERROR		Error = FF_ERR_NONE;
 	if(pIoman) {
 		pPart = pIoman->pPartition;
 
@@ -590,8 +599,9 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 #ifdef FF_FAT12_SUPPORT
 			return FF_ERR_NONE;
 #endif
-
-		} else if(/*pPart->NumClusters < 65525*/1) {
+//		HT: Why was this changed, testing?
+//		} else if(/*pPart->NumClusters < 65525*/1) {
+		} else if(pPart->NumClusters < 65525) {
 			// FAT 16
 			pPart->Type = FF_T_FAT16;
 #ifdef FF_FAT_CHECK
@@ -604,7 +614,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if(testLong != 0xFFF8) {
-				Error = FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
+				return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 			} else {
 				return FF_ERR_NONE;
 			}
@@ -624,14 +634,14 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8 && (testLong & 0x0FFFFFF8) != 0x0FFFFFF0) {
-				return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
-			} else {
-				return FF_ERR_NONE;
+				// HT:
+				// I had an SD-card which worked well in Linux/W32
+				// but FullFAT returned me this error
+				// So for me I left out this check (just issue a warning for now)
+				return FF_ERR_NONE; // FF_ERR_IOMAN_NOT_FAT_FORMATTED;
 			}
-#else
-			return FF_ERR_NONE;
 #endif
-			
+			return FF_ERR_NONE;
 		}
 	}
 
@@ -774,11 +784,13 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	FF_ERROR		Error;
 
 	FF_T_UINT8		ucPartitionType;
-
+#ifdef FF_HASH_CACHE
+	FF_T_INT        i;
+#endif
 	int partCount;
 
 	if(!pIoman) {
-		return FF_ERR_NULL_POINTER;
+		return FF_ERR_NULL_POINTER | FF_MOUNTPARTITION;
 	}
 
 	/*if(PartitionNumber > 3) {
@@ -789,6 +801,12 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	memset (pIoman->pBuffers, '\0', sizeof(FF_BUFFER) * pIoman->CacheSize);
 	memset (pIoman->pCacheMem, '\0', pIoman->BlkSize * pIoman->CacheSize);
+
+#ifdef FF_HASH_CACHE
+	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
+		FF_ClearHashTable(pIoman->HashCache[i].pHashTable);
+	}
+#endif
 
 	FF_IOMAN_InitBufferDescriptors(pIoman);
 	pIoman->FirstFile = 0;
