@@ -39,20 +39,20 @@ const struct _FFMODULETAB
 	const FF_T_UINT8		ucModuleID;
 } gcpFullFATModuleTable[] =
 {
-	{"Unknown Module",									1},
-	{"ff_ioman.c:   I/O Manager",						FF_GETMODULE(FF_MODULE_IOMAN)},
-	{"ff_dir.c:     Directory Handling",				FF_GETMODULE(FF_MODULE_DIR)},
-	{"ff_file.c:    File Handling",						FF_GETMODULE(FF_MODULE_FILE)},
-	{"ff_fat.c:     FAT (Allocation Table) Handling",	FF_GETMODULE(FF_MODULE_FAT)},
-	{"ff_crc.c:     CRC Hash Algorithms",				FF_GETMODULE(FF_MODULE_CRC)},
-	{"ff_format.c:  Filesystem Format",					FF_GETMODULE(FF_MODULE_FORMAT)},
-	{"ff_hash.c:    Hash Table (Hash Cache)",			FF_GETMODULE(FF_MODULE_HASH)},
-	{"ff_memory.c:  Endian Indpendent Memory access",	FF_GETMODULE(FF_MODULE_MEMORY)},
-	{"ff_string.c:  FF String Library",					FF_GETMODULE(FF_MODULE_STRING)},
-	{"ff_unicode.c: Unicode support",					FF_GETMODULE(FF_MODULE_UNICODE)},
-	{"ff_safety.c:  Thread-Safety routines",			FF_GETMODULE(FF_MODULE_SAFETY)},
-	{"ff_time.c:    Date/Time providers",				FF_GETMODULE(FF_MODULE_TIME)},
-	{"Driver:       Developer provided driver",			FF_GETMODULE(FF_MODULE_DRIVER)},
+	{"Unknown Module",		1},									// 1 here is ok, as the GetError functions start at the end of the table.
+	{"ff_ioman.c",			FF_GETMODULE(FF_MODULE_IOMAN)},
+	{"ff_dir.c",			FF_GETMODULE(FF_MODULE_DIR)},
+	{"ff_file.c",			FF_GETMODULE(FF_MODULE_FILE)},
+	{"ff_fat.c",			FF_GETMODULE(FF_MODULE_FAT)},
+	{"ff_crc.c",			FF_GETMODULE(FF_MODULE_CRC)},
+	{"ff_format.c",			FF_GETMODULE(FF_MODULE_FORMAT)},
+	{"ff_hash.c",			FF_GETMODULE(FF_MODULE_HASH)},
+	{"ff_memory.c",			FF_GETMODULE(FF_MODULE_MEMORY)},
+	{"ff_string.c",			FF_GETMODULE(FF_MODULE_STRING)},
+	{"ff_unicode.c",		FF_GETMODULE(FF_MODULE_UNICODE)},
+	{"ff_safety.c",			FF_GETMODULE(FF_MODULE_SAFETY)},
+	{"ff_time.c",			FF_GETMODULE(FF_MODULE_TIME)},
+	{"Platform Driver",		FF_GETMODULE(FF_MODULE_DRIVER)},
 };
 
 const struct _FFFUNCTIONTAB
