@@ -22,7 +22,7 @@
 int mv_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	const char			*szpSource, *szpDestination, *szpWildCard;
 	char				szsrcPath[FF_MAX_PATH], szdestPath[FF_MAX_PATH];
-	FF_DIRENT			findData;
+	//FF_DIRENT			findData;
 	
 	FFT_GETOPT_CONTEXT	optionContext;	// CommandLine processing
 	FF_T_BOOL			bRecursive = FF_FALSE, bVerbose = FF_FALSE;	// Option Flags.

@@ -109,9 +109,9 @@ int	AppendFilename(char *path, char *filename) {
 void ProcessPath(wchar_t *dest, const wchar_t *src, FF_ENVIRONMENT *pEnv) {
 	if(src[0] != '\\' && src[0] != '/') {
 		if(wcslen(pEnv->WorkingDir) == 1) {
-			swprintf(dest, FF_MAX_PATH, L"\\%ls", src);
+			swprintf(dest, FF_MAX_PATH, L"\\%ls\0", src);
 		} else {
-			swprintf(dest, FF_MAX_PATH, L"%ls\\%ls", pEnv->WorkingDir, src);
+			swprintf(dest, FF_MAX_PATH, L"%ls\\%ls\0", pEnv->WorkingDir, src);
 		}
 	} else {
 		swprintf(dest, FF_MAX_PATH, L"%ls", src);

@@ -28,7 +28,11 @@ static int copy_dir	(const char *srcPath, const char *destPath, FF_T_BOOL bRecur
 static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
 
 int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+#ifdef FF_UNICODE_SUPPORT
+	const wchar_t			*szpSource, *szpDestination, *szpWildCard;
+#else
 	const char			*szpSource, *szpDestination, *szpWildCard;
+#endif
 	char				szsrcPath[FF_MAX_PATH], szdestPath[FF_MAX_PATH];
 	FF_DIRENT			findData;
 	
