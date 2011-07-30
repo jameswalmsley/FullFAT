@@ -178,6 +178,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\License.txt"
+				>
+			</File>
+			<File
 				RelativePath=".\md5.c"
 				>
 			</File>
@@ -293,6 +297,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\cmd\geterror_cmd.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\cmd\ls_cmd.c"
 					>
 				</File>
@@ -306,6 +314,10 @@
 				</File>
 				<File
 					RelativePath="..\..\cmd\mkdir_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\mv_cmd.c"
 					>
 				</File>
 				<File
@@ -343,17 +355,9 @@
 				RelativePath=".\test_threads.h"
 				>
 			</File>
-			<File
-				RelativePath=".\testdriver_win32.h"
-				>
-			</File>
 			<Filter
 				Name="FullFAT"
 				>
-				<File
-					RelativePath="..\..\..\src\fat.h"
-					>
-				</File>
 				<File
 					RelativePath="..\..\..\src\ff_blk.h"
 					>
@@ -376,6 +380,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\src\ff_fat.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\src\ff_fatdef.h"
 					>
 				</File>
 				<File
@@ -471,6 +479,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\cmd\geterror_cmd.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\cmd\ls_cmd.h"
 					>
 				</File>
@@ -488,6 +500,10 @@
 				</File>
 				<File
 					RelativePath="..\..\cmd\more_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\mv_cmd.h"
 					>
 				</File>
 				<File

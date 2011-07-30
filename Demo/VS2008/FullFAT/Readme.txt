@@ -1,6 +1,6 @@
-This is the Visual Studio Demo for version 1.0.0 of FullFAT.
+This is the Visual Studio Demo for version 2.0.0 of FullFAT.
 
-To make this demo work, you need to edit line 55 and or line 58 to provide access
+To make this demo work, you need to edit line 61 to provide access
 to a disk or disk image on your system.
 
 Alternatively simply extract FullFAT.7z to c:\FullFAT.img (See 7-zip.org) and run.

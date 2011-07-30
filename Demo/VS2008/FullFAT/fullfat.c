@@ -1,32 +1,20 @@
 ﻿/*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
- *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
  *                                                                           *
- *  This program is free software: you can redistribute it and/or modify     *
- *  it under the terms of the GNU General Public License as published by     *
- *  the Free Software Foundation, either version 3 of the License, or        *
- *  (at your option) any later version.                                      *
- *                                                                           *
- *  This program is distributed in the hope that it will be useful,          *
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
- *  GNU General Public License for more details.                             *
- *                                                                           *
- *  You should have received a copy of the GNU General Public License        *
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
- *                                                                           *
- *  IMPORTANT NOTICE:                                                        *
- *  =================                                                        *
- *  Alternative Licensing is available directly from the Copyright holder,   *
- *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
- *  a Commercial license.                                                    *
+ *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
+ *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
- *  Removing the above notice is illegal and will invalidate this license.   *
+ *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
- *  See http://worm.me.uk/fullfat for more information.                      *
+ *  See http://www.fullfat-fs.co.uk/ for more information.                   *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
+ *****************************************************************************
+ * As of 19-July-2011 FullFAT has abandoned the GNU GPL License in favour of *
+ * the more flexible Apache 2.0 license. See License.txt for full terms.     *
+ *                                                                           *
+ *            YOU ARE FREE TO USE FULLFAT IN COMMERCIAL PROJECTS             *
  *****************************************************************************/
 
 
@@ -49,17 +37,14 @@ int *getfds() {
 
 int main(void) {
 	
-	FFT_CONSOLE		*pConsole;							// FFTerm Console Pointer.										
+	FFT_CONSOLE		*pConsole;							// FFTerm Console Pointer.
+
 	FF_ERROR		Error = FF_ERR_NONE;				// ERROR code value.
 	FF_IOMAN		*pIoman;							// FullFAT I/O Manager Pointer, to be created.
+
 	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
+
 	HANDLE			hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
-
-	char			utf8string[30];
-
-	wchar_t c[] = L"\\Grüßen_aus_Österreich";
-	int i,y;
-
 	
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
@@ -69,20 +54,11 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 #endif
 
-	setlocale(LC_ALL, "");
-	//wprintf(L"This is a Unicode String! Ich heiße Jämes!\n");
-
-	//FF_wildcompare(L"*s?.c", L"test.c");
-
-	//FF_Utf16ctoUtf8c(utf8string, L"𐀀", 10);
-	
-	//c = getwc(stdin);
-
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("c:\\1gbImage.img", 512);
+	//hDisk = fnOpen("c:\\1gbImage.img", 512);
 	
-	//hDisk = fnOpen("\\\\.\\H:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);
@@ -113,15 +89,6 @@ int main(void) {
 			}
 
 			Env.pIoman = pIoman;
-			
-			i = 0;
-			y = 0;
-			while(c[y]) {
-				i += FF_Utf16ctoUtf8c((FF_T_UINT8 *) &utf8string[i], &c[y], 30 - y);
-				y += FF_GetUtf16SequenceLen(c[y]);
-			}
-			utf8string[i] = '\0';
-//			FF_MkDir(pIoman, "\\A simple Ascii String");
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
@@ -132,9 +99,11 @@ int main(void) {
 
 				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
 				FFTerm_AddExCmd(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd, 	cpInfo,			&Env);
+				FFTerm_AddExCmd(pConsole, "geterror", (FFT_FN_COMMAND_EX) geterror_cmd, geterrorInfo, &Env);
 				FFTerm_AddExCmd(pConsole, "ls", 	(FFT_FN_COMMAND_EX) ls_cmd, 	lsInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "md5sum", (FFT_FN_COMMAND_EX) md5sum_cmd, md5sumInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "mkdir", 	(FFT_FN_COMMAND_EX) mkdir_cmd, 	mkdirInfo,		&Env);
+				FFTerm_AddExCmd(pConsole, "mv",		(FFT_FN_COMMAND_EX) mv_cmd,		mvInfo,			&Env);
 				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
@@ -142,7 +111,7 @@ int main(void) {
 //				fseek_test(&pIoman);
 
 				//---------- Start the console.
-				printf("Welcome to FullFAT 1.1.0. Type 'help' for a list of commands.\n");
+				printf("Welcome to FullFAT %s. Type 'help' for a list of commands.\n", FF_VERSION);
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
 				FF_UnmountPartition(pIoman);						// Dis-mount the mounted partition from FullFAT.
 				FF_DestroyIOMAN(pIoman);							// Clean-up the FF_IOMAN Object.
