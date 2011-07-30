@@ -210,6 +210,12 @@
 
 #endif
 
+#ifdef FF_UNICODE_UTF8_SUPPORT
+#ifdef FF_UNICODE_SUPPORT
+#error FullFAT Invalid ff_config.h file: Unicode support, select FF_UNICODE_SUPPORT for UTF16 or FF_UNICODE_UTF8_SUPPORT for UTF8.
+#endif
+#endif
+
 #endif
 
 //---------- END-OF-CONFIGURATION
