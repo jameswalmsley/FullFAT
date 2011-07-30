@@ -237,7 +237,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_T_UINT8	*lastSrc;
 #ifdef FF_UNICODE_UTF8_SUPPORT
 	FF_T_SINT32	utf8Error;
-	FF_T_UINT8	bSurrogate = FF_FALSE;
+	//FF_T_UINT8	bSurrogate = FF_FALSE;
 #endif
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	*ptr;		// Pointer to store a LFN
@@ -1097,8 +1097,10 @@ FF_ERROR FF_PopulateLongDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT16
 //	FF_T_WCHAR	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
 //	FF_T_WCHAR	*ptr;
 #else
+#ifndef FF_UNICODE_UTF8_SUPPORT	
 	FF_T_INT8	*lastPtr = pDirent->FileName + sizeof (pDirent->FileName);
 	FF_T_INT8	*ptr;
+#endif
 #endif
 #ifdef FF_UNICODE_UTF8_SUPPORT
 //	FF_T_SINT32	slRetVal;
@@ -2161,8 +2163,10 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	if(Error) {
 		return Error;
 	}
-#if defined(FF_UNICODE_SUPPORT) || defined(FF_UNICODE_UTF8_SUPPORT)
+#if defined(FF_UNICODE_SUPPORT)
 	NamePtr = (FF_T_INT16*)(usUtf16Name + 13 * (uiNumLFNs-1));
+#elif defined(FF_UNICODE_UTF8_SUPPORT)
+	NamePtr = (FF_T_INT8*)(usUtf16Name + 13 * (uiNumLFNs-1));
 #else
 	NamePtr = Name + 13 * (uiNumLFNs-1);
 #endif
