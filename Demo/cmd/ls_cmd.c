@@ -20,10 +20,19 @@
 
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
 
+typedef struct {
+	FF_T_BOOL bRecursive;
+	FF_T_BOOL bList;
+	FF_T_BOOL bShowHidden;
+	FF_T_BOOL bHumanReadable;
+} LS_OPTIONS;
+
+static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions);
+
 #ifdef FF_UNICODE_SUPPORT
-static int ls_dir(const wchar_t *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
+static int ls_dir(const wchar_t *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv);
 #else
-static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv);
+static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv);
 #endif
 
 int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
@@ -33,45 +42,53 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 #else
 	FF_T_INT8			path[FF_MAX_PATH];
 #endif
+	
+	int RetVal;
+	int option;
 
 	const char 			*szPath;
-
-	FF_T_BOOL			bRecursive = FF_FALSE, bList = FF_FALSE, bShowHidden = FF_FALSE;
 	FFT_GETOPT_CONTEXT	optionContext;
+	LS_OPTIONS			oOptions;
 
-	int RetVal;
-
-	int option;
+	oOptions.bRecursive		= FF_FALSE;		// Initialise option flags with default values.
+	oOptions.bList			= FF_FALSE;
+	oOptions.bShowHidden	= FF_FALSE;
+	oOptions.bHumanReadable = FF_FALSE;
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
 
 	// Process command line arguments
 
-	option = FFTerm_getopt(argc, argv, "rRlLaA", &optionContext);
+	option = FFTerm_getopt(argc, argv, "rRlLaAhH", &optionContext);
 
 	if(option != EOF) {
 		do {
 			switch(option) {
 				case 'r':
 				case 'R':
-					bRecursive = FF_TRUE;
+					oOptions.bRecursive = FF_TRUE;
 					break;
 
 				case 'l':
 				case 'L':
-					bList = FF_TRUE;
+					oOptions.bList = FF_TRUE;
 					break;
 
 				case 'a':
 				case 'A':
-					bShowHidden = FF_TRUE;
+					oOptions.bShowHidden = FF_TRUE;
+					break;
+
+				case 'h':
+				case 'H':
+					oOptions.bHumanReadable = FF_TRUE;
 					break;
 
 				default:
 					break;
 			}
 
-			option = FFTerm_getopt(argc, argv, "rRlLaA", &optionContext);
+			option = FFTerm_getopt(argc, argv, "rRlLaAhH", &optionContext);
 		} while(option != EOF);
 	}
 
@@ -84,12 +101,12 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 #else
 		ProcessPath(path, szPath, pEnv);
 #endif
-		RetVal = ls_dir(path, bList, bRecursive, bShowHidden, pEnv);
+		RetVal = ls_dir(path, &oOptions, pEnv);
 	} else {
-		RetVal = ls_dir(pEnv->WorkingDir, bList, bRecursive, bShowHidden, pEnv);
+		RetVal = ls_dir(pEnv->WorkingDir, &oOptions, pEnv);
 	}
 
-	if(RetVal == -5) { // Not FounD!
+	if(RetVal == -5) { // Not Found!
 		if(szPath) {
 			printf("%s: cannot access %s: no such file or directory\n", argv[0], szPath);
 		}
@@ -136,9 +153,9 @@ static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
 	This function simply lists an entire directory, with specified wildCard.
 */
 #ifdef FF_UNICODE_SUPPORT
-static int ls_dir(const wchar_t *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
+static int ls_dir(const wchar_t *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv) {
 #else
-static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_T_BOOL bShowHidden, FF_ENVIRONMENT *pEnv) {
+static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv) {
 #endif
 	FF_DIRENT	findData;
 	FF_ERROR	Result;
@@ -248,10 +265,10 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 
 	RetVal = SD_FindFirst(Dir, &Dirent);
 
-	if(!bList) {
+	if(!poOptions->bList) {
 		do {
 			for(i = 0; i < columns; i++) {
-				if(bShowHidden) {
+				if(poOptions->bShowHidden) {
 					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
 						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 					}
@@ -288,15 +305,15 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 
 	} else {
 		do {
-			if(bShowHidden) {
-				if(!(bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
-					SD_PrintDirent(&Dirent);
+			if(poOptions->bShowHidden) {
+				if(!(poOptions->bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
+					ls_printDirent(&Dirent, poOptions);
 				}
 			} else {
 									
 				if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
-					if(!(bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
-						SD_PrintDirent(&Dirent);
+					if(!(poOptions->bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
+						ls_printDirent(&Dirent, poOptions);
 					}
 				}
 			}
@@ -307,7 +324,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	
 	printf("%lu items.\n", SD_GetTotalItems(Dir));
 
-	if(bRecursive) {
+	if(poOptions->bRecursive) {
 		RetVal = SD_FindFirst(Dir, &Dirent);
 
 		do {
@@ -337,7 +354,7 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 					
 					printf(".%s:\n", recursivePath);
 #endif
-					ls_dir(recursivePath, bList, bRecursive, bShowHidden, pEnv);
+					ls_dir(recursivePath, poOptions, pEnv);
 				}
 			}
 			
@@ -348,4 +365,32 @@ static int ls_dir(const char *szPath, FF_T_BOOL bList, FF_T_BOOL bRecursive, FF_
 	SD_CleanupDir(Dir);	// Cleanup the directory!
 
 	return 0;
+}
+
+static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions) {
+	
+	SD_SIZEUNIT eUnit = SD_BYTES;	// Default to bytes.
+
+	if(pDirent->ulFileSize >= 1024) {	// Decide which size unit to print?
+		eUnit = SD_KILOBYTES;
+	}
+	
+	if(pDirent->ulFileSize >= (1024*1024)) { // 1MB
+		eUnit = SD_MEGABYTES;
+	}
+
+	if(pDirent->ulFileSize >= (1024*1024*1024)) {
+		eUnit = SD_GIGABYTES;
+	}
+
+	if((unsigned long long) pDirent->ulFileSize >= (unsigned long long)((unsigned long long)1024*1024*1024*1024)) {
+		eUnit = SD_TERABYTES;
+	}
+
+	if(!poOptions->bHumanReadable) {
+		eUnit = SD_BYTES;
+	}
+
+	SD_PrintDirent(pDirent, eUnit, !(poOptions->bHumanReadable));
+	
 }

@@ -186,7 +186,7 @@ static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bV
 	FF_FILE	*pfDestination;
 	FF_ERROR ffError;
 	FF_T_SINT32	slBytesRead, slBytesWritten;
-	unsigned char	buffer[8192];
+	unsigned char	buffer[CP_BUFFER_SIZE];
 
 	if(!strcmp(szsrcPath, szdestPath)) {							// Ensure that source and destination are not the same file.
 		printf("cp: Source and Destination files are identical: illegal operation.\n");
@@ -210,7 +210,7 @@ static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bV
 
 	// Source and Destination files are open, copy the data from Source to Dest!
 	do {
-		slBytesRead 	= FF_Read(pfSource, 1, 8192, buffer);
+		slBytesRead 	= FF_Read(pfSource, 1, CP_BUFFER_SIZE, buffer);
 		slBytesWritten 	= FF_Write(pfDestination, 1, slBytesRead, buffer);
 		
 		if(slBytesWritten != slBytesRead) {

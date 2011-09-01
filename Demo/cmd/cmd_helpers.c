@@ -168,7 +168,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 #endif
 }
 
-void SD_PrintDirent(SD_DIRENT *pDirent) {
+void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };	// String of Attribute Flags.
 	if(pDirent->ulAttributes & SD_ATTRIBUTE_RDONLY)
 		attr[0] = 'R';
@@ -180,7 +180,39 @@ void SD_PrintDirent(SD_DIRENT *pDirent) {
 		attr[3] = 'D';
 	}
 
-	printf("%02d.%02d.%02d  %02d:%02d  %s  %12lu", pDirent->tmCreated.cDay, pDirent->tmCreated.cMonth, pDirent->tmCreated.iYear, pDirent->tmCreated.cHour, pDirent->tmCreated.cMinute, attr, pDirent->ulFileSize);
+	printf("%02d.%02d.%02d  %02d:%02d  %s ", pDirent->tmCreated.cDay, pDirent->tmCreated.cMonth, pDirent->tmCreated.iYear, pDirent->tmCreated.cHour, pDirent->tmCreated.cMinute, attr /*, pDirent->ulFileSize*/);
+
+	switch(eUnit) {
+		case SD_TERABYTES:
+			printf("%7llu ", (unsigned long long)((unsigned long long)pDirent->ulFileSize / (unsigned long long)((unsigned long long)1024*1024*1024*1024)));
+			printf("TB");
+			break;
+
+		case SD_GIGABYTES:
+			printf("%7.2f ", (float)((float)pDirent->ulFileSize / (1024.0*1024.0*1024.0)));
+			printf("GB");
+			break;
+
+		case SD_MEGABYTES:
+			printf("%7.2f ", (float)((float)pDirent->ulFileSize / (1024.0*1024.0)));
+			printf("MB");
+			break;
+
+		case SD_KILOBYTES:
+			printf("%7.2f ", (float)((float)pDirent->ulFileSize / (1024.0)));
+			printf("KB");
+			break;
+
+		case SD_BYTES:
+		default:
+			if(cForcedBytes) {
+				printf("%12lu ", pDirent->ulFileSize);
+			} else {
+				printf("%7lu ", pDirent->ulFileSize);
+				printf("B ");
+			}
+			break;
+	}
 	
 	if(pDirent->ulAttributes & SD_ATTRIBUTE_DIR) {
 		FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);

@@ -1013,6 +1013,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster;
 	FF_T_UINT32	nClusterDiff;
+	FF_T_UINT8	ucOffset, ucRemain;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1152,8 +1153,15 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		}
 
 		//---------- Read Remaining Blocks
-		if(nBytes >= pIoman->BlkSize) {
+		while(nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
+			{
+				ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster;
+				ucRemain = pIoman->pPartition->SectorsPerCluster - ucOffset;
+                if (sSectors > ucRemain) {
+                    sSectors = ucRemain;
+                }
+            }
 			
 			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
 			if(nClusterDiff) {
@@ -1365,6 +1373,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_T_UINT16	sSectors;
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster, nClusterDiff, nClusters;
+	FF_T_UINT8	ucOffset, ucRemain;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1517,8 +1526,15 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		}
 
 		//---------- Write Remaining Blocks
-		if(nBytes >= pIoman->BlkSize) {
+		while(nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
+			{
+				ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster;
+				ucRemain = pIoman->pPartition->SectorsPerCluster - ucOffset;
+                if(sSectors > ucRemain) {
+                    sSectors = ucRemain;
+                }
+            }
 			
 			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
 			if(nClusterDiff) {

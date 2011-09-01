@@ -40,7 +40,16 @@ int	AppendFilename(char *path, char *filename);
 void ExpandPath(char *acPath);
 const char *GetWildcard(const char *String);
 
-void SD_PrintDirent(SD_DIRENT *pDirent);
+
+typedef enum {
+	SD_BYTES,
+	SD_KILOBYTES,
+	SD_MEGABYTES,
+	SD_GIGABYTES,
+	SD_TERABYTES,
+} SD_SIZEUNIT;
+
+void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes);
 void FF_PrintDir(FF_DIRENT *pDirent);
 
 

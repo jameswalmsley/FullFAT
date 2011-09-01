@@ -8,4 +8,6 @@
 int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv);
 extern const FFT_ERR_TABLE cpInfo[];
 
+#define CP_BUFFER_SIZE	(8192 * 16)
+
 #endif
