@@ -947,10 +947,7 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 }
 
 FF_T_BOOL FF_isEndOfDir(FF_T_UINT8 *EntryBuffer) {
-	if(EntryBuffer[0] == 0x00) {
-		return FF_TRUE;
-	}
-	return FF_FALSE;
+	return !(EntryBuffer[0]);
 }
 
 #ifdef FF_HASH_CACHE
@@ -1648,11 +1645,7 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 				FF_CaseShortName(pDirent->FileName, FF_getChar(EntryBuffer, FF_FAT_CASE_OFFS));
 #endif
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
-#ifdef FF_UNICODE_SUPPORT
-				if(wcscmp(pDirent->szWildCard, L"")) {
-#else
-				if(strcmp(pDirent->szWildCard, "")) {
-#endif
+				if(pDirent->szWildCard[0]) {
 					if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
 						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 						pDirent->CurrentItem += 1;
@@ -1834,6 +1827,7 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 #endif
 	FF_T_UINT16 NameLen;
 	FF_T_BOOL	FitsShort = FF_TRUE;
+	FF_T_BOOL	SizeOk = FF_TRUE;
 	FF_DIRENT	MyDir;
 //	FF_T_BOOL   found;
 	//FF_T_SINT8	RetVal = 0;
@@ -1857,7 +1851,7 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 	}
 
 	if (NameLen > 12 || NameLen-x > 1 || NameLen-last_dot > 4 || last_dot > 8) {
-		FitsShort = FF_FALSE;
+		SizeOk = FF_FALSE;
 	}
 
 	for(i = 0, x = 0; i < 11; x++) {
@@ -1865,6 +1859,9 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 		if (!ch)
 			break;
 		if (x == last_dot) {
+			// Remember where we put the first space
+			if (first_tilde > i)
+				first_tilde = i;
 			while (i < 8)
 				ShortName[i++] = 0x20;
 #if defined(FF_SHORTNAME_CASE)
@@ -1911,26 +1908,30 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 	// Tail :
 	memcpy(MyShortName, ShortName, 11);
 	FF_ProcessShortName(MyShortName);
-	if(FitsShort) {
+	if(FitsShort && SizeOk) {
 		if (!FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir, &Error)) {
 			return caseAttrib | 0x01;
 		}
 		return FF_ERR_DIR_OBJECT_EXISTS | FF_CREATESHORTNAME;
 	}
-	for(i = 1; i < 0x0000FFFF; i++) { // Max Number of Entries in a DIR!
-		sprintf(NumberBuf, "%d", i);
-		NameLen = (FF_T_UINT16) strlen(NumberBuf);
-		x = 7 - NameLen;
-		if (x > first_tilde)
-			x = first_tilde;
-		ShortName[x++] = '~';
-		for(y = 0; y < NameLen; y++) {
-			ShortName[x+y] = NumberBuf[y];
+	for(i = (SizeOk ? 0 : 1); i < 0x0000FFFF; i++) { // Max Number of Entries in a DIR!
+		// In the first round, check if the original name can be used
+		// Makefile will be stored as "makefile" and not as "makefi~1"
+		if (i) {
+			sprintf(NumberBuf, "%d", i);
+			NameLen = (FF_T_UINT16) strlen(NumberBuf);
+			x = 7 - NameLen;
+			if (x > first_tilde)
+				x = first_tilde;
+			ShortName[x++] = '~';
+			for(y = 0; y < NameLen; y++) {
+				ShortName[x+y] = NumberBuf[y];
+			}
 		}
 		memcpy(MyShortName, ShortName, 11);
 		FF_ProcessShortName(MyShortName);
 		if(!FF_ShortNameExists(pIoman, DirCluster, MyShortName, &Error)) {
-/*
+
 // HT: should do this later when everything has been checked
 // if not, hash entries might become incorrect
 #ifdef FF_HASH_CACHE
@@ -1940,7 +1941,7 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 			FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32) FF_GetCRC8((FF_T_UINT8*)MyShortName, strlen(MyShortName)));
 #endif
 #endif
-*/
+
 			return 0;
 		}
 	}
