@@ -47,6 +47,10 @@
 #define FF_MODE_TRUNCATE		0x10		///< FILE Mode Truncate an Existing file.
 #define FF_MODE_DIR				0x80		///< Special Mode to open a Dir. (Internal use ONLY!)
 
+#define FF_MODE_RD_WR			(FF_MODE_READ|FF_MODE_WRITE) ///< Just for bit filtering
+
+#define	FF_MODE_WR_ONLY			(0x40|FF_MODE_WRITE)		///< Buffer for Write-only Access (Internal use ONLY!)
+
 #define FF_BUF_MAX_HANDLES		0xFFFF		///< Maximum number handles sharing a buffer. (16 bit integer, we don't want to overflow it!)
 
 /**
@@ -212,6 +216,11 @@ FF_ERROR	FF_UnregisterBlkDevice	(FF_IOMAN *pIoman);
 FF_ERROR	FF_MountPartition		(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber);
 FF_ERROR	FF_UnmountPartition		(FF_IOMAN *pIoman);
 FF_ERROR	FF_FlushCache			(FF_IOMAN *pIoman);
+FF_INLINE FF_T_BOOL	FF_Mounted		(FF_IOMAN *pIoman)
+{
+	return pIoman && pIoman->pPartition && pIoman->pPartition->PartitionMounted;
+}
+
 FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman);
 
 #ifdef FF_64_NUM_SUPPORT

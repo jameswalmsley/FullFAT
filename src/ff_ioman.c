@@ -59,9 +59,6 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	FF_IOMAN	*pIoman = NULL;
 	FF_T_UINT32 *pLong	= NULL;
-#ifdef FF_PATH_CACHE
-	FF_T_UINT32	i;
-#endif
 
 	if(pError) {
 		*pError = FF_ERR_NONE;
@@ -105,19 +102,6 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 	memset (pIoman->pPartition, '\0', sizeof(FF_PARTITION));
 
 	pIoman->MemAllocation |= FF_IOMAN_ALLOC_PART;	// If succeeded, flag that allocation.
-	pIoman->pPartition->LastFreeCluster = 0;
-	pIoman->pPartition->PartitionMounted = FF_FALSE;	// This should be checked by FF_Open();
-#ifdef FF_PATH_CACHE
-	pIoman->pPartition->PCIndex = 0;
-	for(i = 0; i < FF_PATH_CACHE_DEPTH; i++) {
-		pIoman->pPartition->PathCache[i].DirCluster = 0;
-		pIoman->pPartition->PathCache[i].Path[0] = '\0';
-/*#ifdef FF_HASH_TABLE_SUPPORT
-		pIoman->pPartition->PathCache[i].pHashTable = FF_CreateHashTable();
-		pIoman->pPartition->PathCache[i].bHashed = FF_FALSE;
-#endif*/
-	}
-#endif
 
 #ifdef FF_HASH_CACHE
 	for(i = 0; i < FF_HASH_CACHE_DEPTH; i++) {
@@ -366,9 +350,10 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 				}
 
 				if(pBufMatch->NumHandles == 0) {
-					pBufMatch->Mode = Mode;
-					if(Mode == FF_MODE_WRITE)	// This buffer has no attached handles.
+					pBufMatch->Mode = (Mode & FF_MODE_RD_WR);
+					if((Mode & FF_MODE_WRITE) != 0) {	// This buffer has no attached handles.
 						pBufMatch->Modified = FF_TRUE;
+					}
 					pBufMatch->NumHandles = 1;
 					pBufMatch->Persistance += 1;
 					break;
@@ -398,25 +383,29 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 				if(pBufLRU) {
 					// Process the suitable candidate.
 					if(pBufLRU->Modified == FF_TRUE) {
-						// Along with the FF_TRUE parameter to indicate sempahore has been claimed
+						// Along with the FF_TRUE parameter to indicate semapahore has been claimed
 						RetVal = FF_BlockWrite(pIoman, pBufLRU->Sector, 1, pBufLRU->pBuffer, FF_TRUE);
 						if (RetVal < 0) {
 							pBufMatch = NULL;
 							break;
 						}
 					}
-					RetVal = FF_BlockRead(pIoman, Sector, 1, pBufLRU->pBuffer, FF_TRUE);
-					if (RetVal < 0) {
-						pBufMatch = NULL;
-						break;
+					if (Mode == FF_MODE_WR_ONLY) {
+						memset (pBufLRU->pBuffer, '\0', pIoman->BlkSize);
+					} else {
+						RetVal = FF_BlockRead(pIoman, Sector, 1, pBufLRU->pBuffer, FF_TRUE);
+						if (RetVal < 0) {
+							pBufMatch = NULL;
+							break;
+						}
 					}
-					pBufLRU->Mode = Mode;
+					pBufLRU->Mode = (Mode & FF_MODE_RD_WR);
 					pBufLRU->Persistance = 1;
 					pBufLRU->LRU = 0;
 					pBufLRU->NumHandles = 1;
 					pBufLRU->Sector = Sector;
 
-					pBufLRU->Modified = (Mode == FF_MODE_WRITE);
+					pBufLRU->Modified = (Mode & FF_MODE_WRITE) != 0;
 
 					pBufLRU->Valid = FF_TRUE;
 					pBufMatch = pBufLRU;
@@ -599,8 +588,6 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 #ifdef FF_FAT12_SUPPORT
 			return FF_ERR_NONE;
 #endif
-//		HT: Why was this changed, testing?
-//		} else if(/*pPart->NumClusters < 65525*/1) {
 		} else if(pPart->NumClusters < 65525) {
 			// FAT 16
 			pPart->Type = FF_T_FAT16;
@@ -613,13 +600,9 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			if(testLong != 0xFFF8) {
-				return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
-			} else {
+			if(testLong == 0xFFF8)
 				return FF_ERR_NONE;
-			}
 #endif
-			//return FF_ERR_NONE;
 		}
 		else {
 			// FAT 32!
@@ -916,7 +899,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	if(Error) {
 		return Error;
 	}
-
+	pPart->PartitionMounted = FF_TRUE;
 #ifdef FF_MOUNT_FIND_FREE
 	pPart->LastFreeCluster	= FF_FindFreeCluster(pIoman);
 	pPart->FreeClusterCount = FF_CountFreeClusters(pIoman);
@@ -998,9 +981,11 @@ static FF_T_BOOL FF_ActiveHandles(FF_IOMAN *pIoman) {
 FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 	FF_ERROR RetVal = FF_ERR_NONE;
 
-	if(!pIoman) {
+	if(!pIoman || !pIoman->pPartition) {
 		return FF_ERR_NULL_POINTER | FF_UNMOUNTPARTITION;
 	}
+	if (!pIoman->pPartition->PartitionMounted)
+		return FF_ERR_NONE;
 
 	FF_PendSemaphore(pIoman->pSemaphore);	// Ensure that there are no File Handles
 	{
