@@ -53,9 +53,10 @@
 #define FF_MODULE_SHIFT		24
 #define FF_FUNCTION_SHIFT	16
 
-#define FF_GETERROR(x)		(x & 0xFFFF)
-#define FF_GETMODULE(x)		( (x >> FF_MODULE_SHIFT) & 0xFF)
-#define FF_GETFUNCTION(x)	( (x >> FF_FUNCTION_SHIFT) & 0xFF)
+#define FF_GETERROR(x)		(((unsigned)x) & 0xFFFF)
+#define FF_GETMODULE(x)		( (((unsigned)x) >> FF_MODULE_SHIFT) & 0xFF)
+#define FF_GETFUNCTION(x)	( (((unsigned)x) >> FF_FUNCTION_SHIFT) & 0xFF)
+#define FF_GETMOD_FUNC(x)	( (((unsigned)x) >> FF_FUNCTION_SHIFT) & 0xFFFF)
 #define FF_ERRFLAG			0x80000000									// Used for Signed errors (FF_SINT32) returns.
 #define FF_isERR(x)			(x & FF_ERRFLAG)
 
@@ -156,6 +157,7 @@
 #define FF_UTF32CTOUTF16C			((3	<< FF_FUNCTION_SHIFT) | FF_MODULE_UNICODE)
 #define FF_UTF16CTOUTF32C			((4	<< FF_FUNCTION_SHIFT) | FF_MODULE_UNICODE)
 
+//----- FF_FORMAT - The FullFAT format routine
 #define FF_FORMATPARTITION			((1	<< FF_FUNCTION_SHIFT) | FF_MODULE_FORMAT)
 
 /*	FullFAT defines different Error-Code spaces for each module. This ensures
@@ -228,6 +230,7 @@
 const FF_T_INT8 *FF_GetErrMessage	(FF_ERROR iErrorCode);
 const FF_T_INT8 *FF_GetErrModule	(FF_ERROR iErrorCode);
 const FF_T_INT8 *FF_GetErrFunction	(FF_ERROR iErrorCode);
+const FF_T_INT8 *FF_GetErrDescription(FF_ERROR iErrorCode, char *apBuf, int aMaxlen); // Get the complete description
 #else
 #define FF_GetErrMessage(X)		""				// A special MACRO incase FF_GetErrMessage() isn't gated with FF_DEBUG
 #define FF_GetErrModule(X)		""
