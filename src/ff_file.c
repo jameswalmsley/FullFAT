@@ -940,10 +940,13 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 			}
 		}
 		FF_unlockFAT(pIoman);
-		
 		pFile->iChainLength += i;
 		Error = FF_DecreaseFreeClusters(pIoman, i);	// Keep Tab of Numbers for fast FreeSize()
 		if(Error) {
+			return Error;
+		}
+		Error = FF_FlushCache(pIoman);
+		if (Error) {
 			return Error;
 		}
 	}
@@ -1013,7 +1016,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster;
 	FF_T_UINT32	nClusterDiff;
-	FF_T_UINT8	ucOffset, ucRemain;
+	FF_T_UINT	/*uOffset,*/ uRemain;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1153,13 +1156,14 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		}
 
 		//---------- Read Remaining Blocks
-		while(nBytes >= pIoman->BlkSize) {
+		while (nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
 			{
-				ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster;
-				ucRemain = pIoman->pPartition->SectorsPerCluster - ucOffset;
-                if (sSectors > ucRemain) {
-                    sSectors = ucRemain;
+				//FF_PARTITION *pPart				= pIoman->pPartition;
+				//uOffset = 
+				uRemain = pIoman->pPartition->SectorsPerCluster - (/*uOffset*/ ((pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster));
+                if (sSectors > (FF_T_UINT16) uRemain) {
+                    sSectors = (FF_T_UINT16) uRemain;
                 }
             }
 			
@@ -1176,7 +1180,6 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-
 			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
 
 			if(RetVal < 0) {
@@ -1373,7 +1376,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_T_UINT16	sSectors;
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster, nClusterDiff, nClusters;
-	FF_T_UINT8	ucOffset, ucRemain;
+	FF_T_UINT	/*uOffset, */uRemain;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1425,8 +1428,12 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 	nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
-	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to read are within a block and less than a block size.
-		pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
+	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
+		if (!nRelBlockPos && pFile->FilePointer >= pFile->Filesize) {
+			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WR_ONLY);
+		} else {
+			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
+		}
 		{
 			if(!pBuffer) {
 				return (FF_ERR_DEVICE_DRIVER_FAILED | FF_WRITE);
@@ -1526,13 +1533,14 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		}
 
 		//---------- Write Remaining Blocks
-		while(nBytes >= pIoman->BlkSize) {
+		while (nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
 			{
-				ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster;
-				ucRemain = pIoman->pPartition->SectorsPerCluster - ucOffset;
-                if(sSectors > ucRemain) {
-                    sSectors = ucRemain;
+				//FF_PARTITION *pPart				= pIoman->pPartition;
+				//uOffset = 
+				uRemain = pIoman->pPartition->SectorsPerCluster - (/*uOffset*/ ((pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster));
+                if (sSectors > (FF_T_UINT16) uRemain) {
+                    sSectors = (FF_T_UINT16) uRemain;
                 }
             }
 			
@@ -1591,7 +1599,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			pFile->FilePointer	+= nBytesToWrite;
 			nBytes				-= nBytesToWrite;
 			buffer				+= nBytesToWrite;
-			nBytesWritten			+= nBytesToWrite;
+			nBytesWritten		+= nBytesToWrite;
 
 		}
 	}
@@ -1887,7 +1895,7 @@ FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTim
 	FF_ERROR	Error;
 	FF_T_UINT32     DirCluster;
 	FF_T_UINT32     FileCluster;
-	FF_T_UINT16        i;
+	FF_T_UINT        i;
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	filename[FF_MAX_FILENAME];
 #else
@@ -1916,7 +1924,7 @@ FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTim
 		i = 1;
 	}
 	
-	DirCluster = FF_FindDir(pIoman, path, i, &Error);
+	DirCluster = FF_FindDir(pIoman, path, (FF_T_UINT16) i, &Error);
 	if (Error)
 		return Error;
 
