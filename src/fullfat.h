@@ -24,17 +24,20 @@
 extern "C" {
 #endif
 
-#define FF_VERSION		"2.0.0-beta1"
+#define FF_VERSION		"2.0.0-beta2"	// The official version number for this release.
+#define FF_REVISION		"SVN-r390"		// The official version control commit code for this release.
 
 #include "ff_config.h"
 #include "ff_ioman.h"
+#include "ff_crc.h"
+#include "ff_dir.h"
+#include "ff_error.h"
 #include "ff_fat.h"
 #include "ff_file.h"
-#include "ff_dir.h"
-#include "ff_time.h"
-#include "ff_crc.h"
 #include "ff_hash.h"
+#include "ff_time.h"
 #include "ff_string.h"
+#include "ff_types.h"
 #include "ff_unicode.h"
 //#include "ff_format.h"
 
