@@ -6,7 +6,9 @@
 #define _CMD_HELPERS_
 #include <stdio.h>
 #include "../../src/fullfat.h"
+#include "../../../FFTerm/src/ffterm.h"
 #include "dir.h"
+#include "cmd_config.h"
 
 #ifdef FF_UNICODE_SUPPORT
 #include <wchar.h>
@@ -17,6 +19,11 @@ void PrintError(FF_ERROR Error);
 #define DIR_COLOUR 			FFT_FOREGROUND_BLUE | FFT_FOREGROUND_GREEN | FFT_FOREGROUND_INTENSITY
 #define COPY_BUFFER_SIZE 	8192
 
+typedef struct {
+	char		cDriveLetter;
+	FF_IOMAN	*pIoman;		// Mounted partition pointer.
+	FF_ERROR	Error;			// Error code for transactions on this mountpoint.
+} FF_MOUNTPOINT;
 
 typedef struct {							// Provides an environment for the FullFAT commands.
 	FF_IOMAN	*pIoman;
@@ -24,6 +31,7 @@ typedef struct {							// Provides an environment for the FullFAT commands.
 	FF_T_WCHAR	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
 #else
 	FF_T_INT8	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
+	FFT_CONSOLE	*pConsole;
 #endif
 } FF_ENVIRONMENT;
 
@@ -49,7 +57,7 @@ typedef enum {
 	SD_TERABYTES,
 } SD_SIZEUNIT;
 
-void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes);
+void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes, FF_ENVIRONMENT *pEnv);
 void FF_PrintDir(FF_DIRENT *pDirent);
 
 

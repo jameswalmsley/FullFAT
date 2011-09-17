@@ -206,7 +206,7 @@ static int md5_getHash(const wchar_t *path, char *szpHash, FF_ENVIRONMENT *pEnv)
 #else
 static int md5_getHash(const char *path, char *szpHash, FF_ENVIRONMENT *pEnv) {
 #endif
-	FF_T_UINT8			readBuf[8192];
+	FF_T_UINT8			readBuf[FF_CMD_BUFFER_SIZE];
 	FF_FILE				*pFile;
 	FF_ERROR			ffError;
 

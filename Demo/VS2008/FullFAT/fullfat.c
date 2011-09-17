@@ -6,15 +6,32 @@
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
+ *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                                                                           *
  *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
  *  See http://www.fullfat-fs.co.uk/ for more information.                   *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************
- * As of 19-July-2011 FullFAT has abandoned the GNU GPL License in favour of *
- * the more flexible Apache 2.0 license. See License.txt for full terms.     *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
  *                                                                           *
- *            YOU ARE FREE TO USE FULLFAT IN COMMERCIAL PROJECTS             *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ *                                                                           *
+ *  IMPORTANT NOTICE:                                                        *
+ *  =================                                                        *
+ *  Alternative Licensing is available directly from the Copyright holder,   *
+ *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
+ *  a Commercial license.                                                    *
+ *                                                                           *
  *****************************************************************************/
 
 
@@ -22,6 +39,7 @@
 
 #include "../../../src/fullfat.h"						// Include everything required for FullFAT.
 #include "../../../../FFTerm/src/FFTerm.h"				// Include the FFTerm project header.
+#include "../../../../FFTerm/Platforms/Win32/FFTerm-Platform-win32.h"
 #include "../../../Drivers/Windows/blkdev_win32.h"		// Prototypes for our Windows 32-bit driver.
 
 #include <locale.h>
@@ -29,11 +47,8 @@
 
 #define PARTITION_NUMBER	0
 
-int fds[3] = { 0, 1, 2 };
-
-int *getfds() {
-	return fds;
-}
+int version(int argc, char **argv);
+extern const FFT_ERR_TABLE versionInfo[];
 
 int main(void) {
 	
@@ -92,9 +107,12 @@ int main(void) {
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
+			Env.pConsole = pConsole;
 
 			if(pConsole) {
-				FFTerm_SetConsoleMode(pConsole, 0);
+				FFTerm_RegisterPlatformSpecification(pConsole, w32_getSpec());
+
+//				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
 
 				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
@@ -107,6 +125,7 @@ int main(void) {
 				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
+				FFTerm_AddCmd(pConsole, "version",	(FFT_FN_COMMAND) version, versionInfo);
 
 //				fseek_test(&pIoman);
 
@@ -139,3 +158,17 @@ int main(void) {
 	getchar();
 	return -1;
 }
+
+int version(int argc, char **argv) {
+	printf("FullFAT version: %s\n", FF_VERSION);
+	printf("Code base      : %s\n", FF_REVISION);
+	argc = 0;		// Prevent some compiler warnings.
+	argv = NULL;
+	return 0;
+}
+const FFT_ERR_TABLE versionInfo[] =
+{
+	{"Generic or Unknown Error",										-1},
+	{"Displays version information for this release.",					FFT_COMMAND_DESCRIPTION},
+	{ NULL }
+};

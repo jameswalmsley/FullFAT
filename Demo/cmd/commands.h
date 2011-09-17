@@ -11,6 +11,7 @@
 //#include "more_cmd.h"
 #include "pwd_cmd.h"
 #include "mv_cmd.h"
+#include "cmd_mount.h"
 
 #ifdef WIN32
 #include "cmd_Windows/md5sum_win_cmd.h"

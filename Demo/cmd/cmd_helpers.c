@@ -168,7 +168,7 @@ void FF_PrintDir(FF_DIRENT *pDirent) {
 #endif
 }
 
-void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes) {
+void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes, FF_ENVIRONMENT *pEnv) {
 	unsigned char attr[5] = { '-','-','-','-', '\0' };	// String of Attribute Flags.
 	if(pDirent->ulAttributes & SD_ATTRIBUTE_RDONLY)
 		attr[0] = 'R';
@@ -215,7 +215,7 @@ void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes) {
 	}
 	
 	if(pDirent->ulAttributes & SD_ATTRIBUTE_DIR) {
-		FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
+		FFTerm_SetConsoleColour(pEnv->pConsole, DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 	}
 	
 #ifdef FF_UNICODE_SUPPORT
@@ -224,7 +224,7 @@ void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes) {
 	printf("  %s\n",  pDirent->szFileName);
 #endif
 	
-	FFTerm_SetConsoleColour(FFT_FOREGROUND_GREY);
+	FFTerm_SetConsoleColour(pEnv->pConsole, FFT_FOREGROUND_GREY);
 }
 
 /*

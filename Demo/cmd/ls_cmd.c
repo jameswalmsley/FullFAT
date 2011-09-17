@@ -6,16 +6,34 @@
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
+ *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                                                                           *
  *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
  *  See http://www.fullfat-fs.co.uk/ for more information.                   *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************
- * As of 19-July-2011 FullFAT has abandoned the GNU GPL License in favour of *
- * the more flexible Apache 2.0 license. See License.txt for full terms.     *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
  *                                                                           *
- *            YOU ARE FREE TO USE FULLFAT IN COMMERCIAL PROJECTS             *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ *                                                                           *
+ *  IMPORTANT NOTICE:                                                        *
+ *  =================                                                        *
+ *  Alternative Licensing is available directly from the Copyright holder,   *
+ *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
+ *  a Commercial license.                                                    *
+ *                                                                           *
  *****************************************************************************/
+
 #include "ls_cmd.h"
 
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
@@ -27,7 +45,7 @@ typedef struct {
 	FF_T_BOOL bHumanReadable;
 } LS_OPTIONS;
 
-static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions);
+static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv);
 
 #ifdef FF_UNICODE_SUPPORT
 static int ls_dir(const wchar_t *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv);
@@ -247,7 +265,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 
 	// Second Pass to print the columns nicely.
 
-	columns = (FFTerm_GetConsoleWidth()-1) / (SD_GetMaxFileName(Dir) + 1);
+	columns = (FFTerm_GetConsoleWidth(pEnv->pConsole)-1) / (SD_GetMaxFileName(Dir) + 1);
 
 	if(columns > 5) {
 		columns = 5;
@@ -257,7 +275,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 		columns = 1;
 	}
 
-	columnWidth = (FFTerm_GetConsoleWidth()-1)/ columns;
+	columnWidth = (FFTerm_GetConsoleWidth(pEnv->pConsole)-1)/ columns;
 	
 	if(!columns) {
 		columns++;
@@ -270,7 +288,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 			for(i = 0; i < columns; i++) {
 				if(poOptions->bShowHidden) {
 					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
-						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
+						FFTerm_SetConsoleColour(pEnv->pConsole, DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 					}
 #ifdef FF_UNICODE_SUPPORT
 					printf("%-*ls", columnWidth, Dirent.szFileName);
@@ -279,7 +297,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 #endif
 				} else {
 					if(Dirent.ulAttributes & SD_ATTRIBUTE_DIR) {
-						FFTerm_SetConsoleColour(DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
+						FFTerm_SetConsoleColour(pEnv->pConsole, DIR_COLOUR | FFT_FOREGROUND_INTENSITY);
 					}
 					if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
 #ifdef FF_UNICODE_SUPPORT
@@ -292,7 +310,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 					}
 				}
 				
-				FFTerm_SetConsoleColour(FFT_FOREGROUND_GREY);
+				FFTerm_SetConsoleColour(pEnv->pConsole, FFT_FOREGROUND_GREY);
 				RetVal = SD_FindNext(Dir, &Dirent);
 				if(RetVal) {
 					break;
@@ -307,13 +325,13 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 		do {
 			if(poOptions->bShowHidden) {
 				if(!(poOptions->bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
-					ls_printDirent(&Dirent, poOptions);
+					ls_printDirent(&Dirent, poOptions, pEnv);
 				}
 			} else {
 									
 				if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
 					if(!(poOptions->bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
-						ls_printDirent(&Dirent, poOptions);
+						ls_printDirent(&Dirent, poOptions, pEnv);
 					}
 				}
 			}
@@ -367,7 +385,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 	return 0;
 }
 
-static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions) {
+static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv) {
 	
 	SD_SIZEUNIT eUnit = SD_BYTES;	// Default to bytes.
 
@@ -391,6 +409,6 @@ static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions) {
 		eUnit = SD_BYTES;
 	}
 
-	SD_PrintDirent(pDirent, eUnit, !(poOptions->bHumanReadable));
+	SD_PrintDirent(pDirent, eUnit, !(poOptions->bHumanReadable), pEnv);
 	
 }

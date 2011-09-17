@@ -1,7 +1,18 @@
 /*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
- *  Copyright (C) 2009  James Walmsley (james@worm.me.uk)                    *
  *                                                                           *
+ *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
+ *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
+ *                                                                           *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
+ *                                                                           *
+ *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                                                                           *
+ *  Removing this notice is illegal and will invalidate this license.        *
+ *****************************************************************************
+ *  See http://www.fullfat-fs.co.uk/ for more information.                   *
+ *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
+ *****************************************************************************
  *  This program is free software: you can redistribute it and/or modify     *
  *  it under the terms of the GNU General Public License as published by     *
  *  the Free Software Foundation, either version 3 of the License, or        *
@@ -21,12 +32,6 @@
  *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
  *  a Commercial license.                                                    *
  *                                                                           *
- *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
- *                                                                           *
- *  Removing the above notice is illegal and will invalidate this license.   *
- *****************************************************************************
- *  See http://worm.me.uk/fullfat for more information.                      *
- *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************/
 #include "pwd_cmd.h"
 

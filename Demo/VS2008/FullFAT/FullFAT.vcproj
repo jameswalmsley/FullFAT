@@ -260,6 +260,18 @@
 					RelativePath="..\..\..\..\FFTerm\src\FFTerm.c"
 					>
 				</File>
+				<Filter
+					Name="Platforms"
+					>
+					<File
+						RelativePath="..\..\..\..\FFTerm\Platforms\Win32\FFTerm-Platform-win32.c"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\..\FFTerm\Platforms\Win32\FFTerm-Platform-win32.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Driver"
@@ -282,6 +294,10 @@
 				>
 				<File
 					RelativePath="..\..\cmd\cd_cmd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cmd_mount.c"
 					>
 				</File>
 				<File
@@ -460,6 +476,14 @@
 				>
 				<File
 					RelativePath="..\..\cmd\cd_cmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cmd_config.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\cmd\cmd_mount.h"
 					>
 				</File>
 				<File
