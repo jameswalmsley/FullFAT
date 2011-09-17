@@ -6,15 +6,32 @@
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
+ *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                                                                           *
  *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
  *  See http://www.fullfat-fs.co.uk/ for more information.                   *
  *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
  *****************************************************************************
- * As of 19-July-2011 FullFAT has abandoned the GNU GPL License in favour of *
- * the more flexible Apache 2.0 license. See License.txt for full terms.     *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
  *                                                                           *
- *            YOU ARE FREE TO USE FULLFAT IN COMMERCIAL PROJECTS             *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ *                                                                           *
+ *  IMPORTANT NOTICE:                                                        *
+ *  =================                                                        *
+ *  Alternative Licensing is available directly from the Copyright holder,   *
+ *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
+ *  a Commercial license.                                                    *
+ *                                                                           *
  *****************************************************************************/
 
 #ifndef _FF_ERROR_H_

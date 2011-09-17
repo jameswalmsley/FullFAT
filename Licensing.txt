@@ -1,9 +1,61 @@
-Commercial licensing is available for FullFAT from the Copyright holder (James Walmsley).
+/*****************************************************************************
+ *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *                                                                           *
+ *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
+ *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
+ *                                                                           *
+ *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
+ *                                                                           *
+ *                FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                                                                           *
+ *****************************************************************************/
 
-For more information on how to use FullFAT commercially, please contact James:
+How do I obtain a commercial license for FullFAT?
 
-james@fullfat-fs.co.uk
+	You can contact James Walmsley via email (james@fullfat-fs.co.uk).
 
-Or see http://www.fullfat-fs.co.uk/
+How much does a commercial licence cost?
+	
+	* License Type				* License cost
+*************************************************************************
+	* Single Product Licence		* €250/annum.		*
+	* Company License			* €1000/annum.		*
+	* Unlimited Single Product Licence	* €1000			*
+	* Unlimited Company License		* €10000		*
+*************************************************************************
 
-A standard license is £100.
+What are the License terms?
+
+	Product Licence:  
+		If you have purchased a Product Licence, you have the right to 
+		modify the source code of the Software, and to incorporate the 
+		Software (modified or unmodified) as compiled object code into the 
+		named product in respect of which you have purchased the Licence, 
+		and during the Licence Period to distribute the Software as so 
+		incorporated to an unlmited number of your own customers for their use.  
+
+
+	Company Licence:  
+		If you have purchased a Company Licence, you have the right to modify
+		the source code of the Software, and to incorporate the Software 
+		(modified or unmodified) as compiled object code into an unlimited number 
+		of your products, and during the Licence Period to distribute the Software 
+		as so incorporated to an unlimited number of your own customers for their use.
+
+	Unlimited Product Licence:  
+		If you have purchased an Unlimited Product Licence, you have the right to
+		modify the source code of the Software, and to incorporate the Software 
+		(modified or unmodified) as compiled object code into the named product in 
+		respect of which you have purchased the Licence, and to distribute the Software 
+		as so incorporated to an unlmited number of your own customers for their use 
+		throughout the lifetime of the named product.
+
+	Unlimited Company Licence:  
+		If you have purchased an Unlimited Company Licence, you have the right to modify
+		the source code of the Software, and to incorporate the Software 
+		(modified or unmodified) as compiled object code into an unlimited number of your
+		products, and to distribute the Software as so incorporated to an unlimited number 
+		of your own customers for their use throughout the lifetime of the named company.
+
+To get a full copy of a sample license agreement, please contact james@fullfat-fs.co.uk
+
