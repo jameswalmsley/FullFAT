@@ -42,7 +42,7 @@ extern "C" {
 #endif
 
 #define FF_VERSION		"2.0.0-beta2"	// The official version number for this release.
-#define FF_REVISION		"SVN-r396"	// The official version control commit code for this release.
+#define FF_REVISION		"SVN-r399"	// The official version control commit code for this release.
 
 #include "ff_config.h"
 #include "ff_ioman.h"
