@@ -1,7 +1,7 @@
 /*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *                                                                           *
- *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
+ *  Copyright(C) 2009  James Walmsley  (james@fullfat-fs.co.uk)              *
  *	Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *

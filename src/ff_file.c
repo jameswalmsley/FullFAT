@@ -1,12 +1,12 @@
 /*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *                                                                           *
- *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
- *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
+ *  Copyright(C) 2009  James Walmsley  (james@fullfat-fs.co.uk)              *
+ *  Many Thanks to     Hein Tibosch    (hein_tibosch@yahoo.es)               *
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
- *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
  *                                                                           *
  *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
@@ -218,7 +218,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	
 
 	DirCluster = FF_FindDir(pIoman, path, i, &Error);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		if(pError) {
 			*pError = Error;
 		}
@@ -229,7 +229,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	if(DirCluster) {
 
 		FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object, &Error);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			if(pError) {
 				*pError = Error;	
 			}
@@ -254,7 +254,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		if(!FileCluster) {
 			if((pFile->Mode & FF_MODE_CREATE)) {
 				FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object, &Error);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					if(pError) {
 						*pError = Error;
 					}
@@ -430,7 +430,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			}
 			FF_unlockFAT(pIoman);
 
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;				
@@ -439,7 +439,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			// Initialise the dirent Fetch Context object for faster removal of dirents.
 
 			Error = FF_InitEntryFetch(pIoman, pFile->DirCluster, &FetchContext);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
@@ -447,14 +447,14 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			
 			// Edit the Directory Entry! (So it appears as deleted);
 			Error = FF_RmLFNs(pIoman, pFile->DirEntry, &FetchContext);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
 			}
 			Error = FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
@@ -462,7 +462,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			}
 			EntryBuffer[0] = 0xE5;
 			Error = FF_PushEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
@@ -487,7 +487,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 #endif
 			
 			Error = FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
@@ -497,7 +497,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 
 			Error = FF_FlushCache(pIoman);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
@@ -508,8 +508,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	}
 	FF_unlockDIR(pIoman);
 	Error = FF_Close(pFile); // Free the file pointer resources
-
-	if(Error) {
+	if(FF_isERR(Error)) {
 		return Error;
 	}
 
@@ -542,7 +541,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 		}
 		FF_unlockFAT(pIoman);
 
-		if(Error) {
+		if(FF_isERR(Error)) {
 			FF_Close(pFile);
 			return Error;
 		}
@@ -552,20 +551,20 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_lockDIR(pIoman);
 	{
 		Error = FF_InitEntryFetch(pIoman, pFile->DirCluster, &FetchContext);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
 			return Error;
 		}
 		Error = FF_RmLFNs(pIoman, pFile->DirEntry, &FetchContext);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
 			return Error;
 		}
 		Error = FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
@@ -574,7 +573,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 		EntryBuffer[0] = 0xE5;
 		
 		Error = FF_PushEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
@@ -586,7 +585,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_unlockDIR(pIoman);
 
 	Error = FF_FlushCache(pIoman);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		FF_Close(pFile);
 		return Error;
 	}
@@ -652,12 +651,12 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 
 	// Create the new dirent.
 	Error = FF_InitEntryFetch(pIoman, pSrcFile->DirCluster, &FetchContext);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		FF_Close(pSrcFile);
 		return Error;
 	}
 	Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		FF_Close(pSrcFile);
 		FF_CleanupEntryFetch(pIoman, &FetchContext);
 		return Error;
@@ -693,7 +692,7 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 	
 
 	DirCluster = FF_FindDir(pIoman, szDestinationFile, i, &Error);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		FF_Close(pSrcFile);
 		FF_CleanupEntryFetch(pIoman, &FetchContext);
 		return Error;
@@ -704,7 +703,7 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 		FF_CleanupEntryFetch(pIoman, &FetchContext);
 		// Destination Dir was found, we can now create the new entry.
 		Error = FF_CreateDirent(pIoman, DirCluster, &MyFile);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			FF_Close(pSrcFile);
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 			return Error;	// FAILED
@@ -715,14 +714,14 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 		{
 
 			Error = FF_RmLFNs(pIoman, pSrcFile->DirEntry, &FetchContext);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
 				return Error;
 			}
 			Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
@@ -731,7 +730,7 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 			EntryBuffer[0] = 0xE5;
 			//FF_PushEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
 			Error = FF_PushEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
@@ -836,7 +835,7 @@ static FF_ERROR FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *b
 	while(Count != 0) {
 		if((Count - 1) > 0) {
 			SequentialClusters = FF_GetSequentialClusters(pFile->pIoman, pFile->AddrCurrentCluster, (Count - 1), &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 		}
@@ -851,7 +850,7 @@ static FF_ERROR FF_ReadClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *b
 		
 		Count -= (SequentialClusters + 1);
 		pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, (SequentialClusters + 1), &Error);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 		pFile->CurrentCluster += (SequentialClusters + 1);
@@ -881,7 +880,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		// Create a Cluster chain!
 		pFile->AddrCurrentCluster = FF_CreateClusterChain(pFile->pIoman, &Error);
 
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 
@@ -892,7 +891,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 			Error = FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		}
 
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 
@@ -904,7 +903,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	
 	if(pFile->iChainLength == 0) {	// First extension requiring the chain length, 
 		pFile->iChainLength = FF_GetChainLength(pIoman, pFile->ObjectCluster, &pFile->iEndOfChain, &Error);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 	}
@@ -920,7 +919,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 			// Thus not always asking for 1 extra cluster
 			for(i = 0; i < nClusterToExtend; i++) {
 				CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster, &Error);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					FF_unlockFAT(pIoman);
 					FF_DecreaseFreeClusters(pIoman, i);
 					return Error;
@@ -929,20 +928,20 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 				if(!Error && !NextCluster) {
 					Error = FF_ERR_FAT_NO_FREE_CLUSTERS | FF_EXTENDFILE;
 				}
-				if(Error) {
+				if(FF_isERR(Error)) {
 					FF_unlockFAT(pIoman);
 					FF_DecreaseFreeClusters(pIoman, i);
 					return Error;
 				}
 				
 				Error = FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					FF_unlockFAT(pIoman);
 					FF_DecreaseFreeClusters(pIoman, i);
 					return Error;
 				}
 				Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					FF_unlockFAT(pIoman);
 					FF_DecreaseFreeClusters(pIoman, i);
 					return Error;
@@ -950,7 +949,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 			}
 			
 			pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				FF_unlockFAT(pIoman);
 				FF_DecreaseFreeClusters(pIoman, i);
 				return Error;
@@ -959,7 +958,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		FF_unlockFAT(pIoman);
 		pFile->iChainLength += i;
 		Error = FF_DecreaseFreeClusters(pIoman, i);	// Keep Tab of Numbers for fast FreeSize()
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 		Error = FF_FlushCache(pIoman);
@@ -981,7 +980,7 @@ static FF_ERROR FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *
 	while(Count != 0) {
 		if((Count - 1) > 0) {
 			SequentialClusters = FF_GetSequentialClusters(pFile->pIoman, pFile->AddrCurrentCluster, (Count - 1), &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 		}
@@ -997,7 +996,7 @@ static FF_ERROR FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *
 		
 		Count -= (SequentialClusters + 1);
 		pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, (SequentialClusters + 1), &Error);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 		pFile->CurrentCluster += (SequentialClusters + 1);
@@ -1061,7 +1060,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	if(nClusterDiff) {
 		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 			pFile->CurrentCluster += nClusterDiff;
@@ -1119,7 +1118,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;	// Returning an error, ensuring we are signed (error flag).
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1151,7 +1150,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1188,7 +1187,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1217,7 +1216,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1290,7 +1289,7 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	if(nClusterDiff) {
 		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 			pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 			pFile->CurrentCluster += nClusterDiff;
@@ -1425,7 +1424,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	// HT: + 1 byte because the code assumes there is always a next cluster
 	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes + 1);
 
-	if(Error) {
+	if(FF_isERR(Error)) {
 		return Error;	
 	}
 
@@ -1435,7 +1434,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	if(nClusterDiff) {
 		if(pFile->CurrentCluster != FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 			pFile->CurrentCluster += nClusterDiff;
@@ -1493,7 +1492,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1525,7 +1524,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1565,7 +1564,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1594,7 +1593,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			if(nClusterDiff) {
 				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(Error) {
+					if(FF_isERR(Error)) {
 						return Error;
 					}
 					pFile->CurrentCluster += nClusterDiff;
@@ -1658,7 +1657,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	if((pFile->Mode & FF_MODE_APPEND)) {
 		if(pFile->FilePointer < pFile->Filesize) {
 			Error = FF_Seek(pFile, 0, FF_SEEK_END);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 		}
@@ -1668,7 +1667,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	
 	// Handle File Space Allocation.
 	Error = FF_ExtendFile(pFile, pFile->FilePointer + 1);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		return Error;
 	}
 	
@@ -1676,7 +1675,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	if(nClusterDiff) {
 		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
 			pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 			pFile->CurrentCluster += nClusterDiff;
@@ -1727,7 +1726,7 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	}
 
 	Error = FF_FlushCache(pFile->pIoman);
-	if(Error) {
+	if(FF_isERR(Error)) {
 		return Error;
 	}
 
@@ -1737,7 +1736,7 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 				pFile->FilePointer = Offset;
 				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
 				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster, &Error);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					return Error;
 				}
 			} else {
@@ -1750,7 +1749,7 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 				pFile->FilePointer = Offset + pFile->FilePointer;
 				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
 				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster, &Error);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					return Error;
 				}
 			} else {
@@ -1763,7 +1762,7 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 				pFile->FilePointer = Offset + pFile->Filesize;
 				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
 				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster, &Error);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					return Error;
 				}
 			} else {

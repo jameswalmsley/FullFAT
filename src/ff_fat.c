@@ -1,12 +1,12 @@
 /*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *                                                                           *
- *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
- *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
+ *  Copyright(C) 2009  James Walmsley  (james@fullfat-fs.co.uk)              *
+ *  Many Thanks to     Hein Tibosch    (hein_tibosch@yahoo.es)               *
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
- *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
  *                                                                           *
  *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
@@ -247,7 +247,11 @@ FF_ERROR FF_ClearCluster(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 	pBuffer->Modified = FF_FALSE;
 	FF_ReleaseBuffer(pIoman, pBuffer);
 
-	return slRetVal;
+	if(FF_isERR(slRetVal)) {
+		return slRetVal;
+	}
+
+	return FF_ERR_NONE;
 }
 
 /**
@@ -571,7 +575,7 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_lockFAT(pIoman);
 	{
 		iStartCluster = FF_FindFreeCluster(pIoman, &Error);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			*pError = Error;
 			FF_unlockFAT(pIoman);
 			return 0;
@@ -579,7 +583,7 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman, FF_ERROR *pError) {
 
 		if(iStartCluster) {
 			Error = FF_putFatEntry(pIoman, iStartCluster, 0xFFFFFFFF); // Mark the cluster as End-Of-Chain
-			if(Error) {
+			if(FF_isERR(Error)) {
 				*pError = Error;
 				FF_unlockFAT(pIoman);
 				return 0;
@@ -590,7 +594,7 @@ FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman, FF_ERROR *pError) {
 
 	if(iStartCluster) {
 		Error = FF_DecreaseFreeClusters(pIoman, 1);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			*pError = Error;
 			return 0;
 		}
@@ -690,11 +694,11 @@ FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_
 		fatEntry = currentCluster;
         do {
 			fatEntry = FF_getFatEntry(pIoman, fatEntry, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 			Error = FF_putFatEntry(pIoman, currentCluster, 0x00000000);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 
@@ -708,14 +712,14 @@ FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_
 			pIoman->pPartition->LastFreeCluster = lastFree;
 		}
 		Error = FF_IncreaseFreeClusters(pIoman, iLen);
-		if(Error) {
+		if(FF_isERR(Error)) {
 			return Error;
 		}
 	} else {
 		// Truncation - This is quite hard, because we can only do it backwards.
 		do {
 			fatEntry = FF_getFatEntry(pIoman, fatEntry, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 			chainLength++;
@@ -810,7 +814,7 @@ FF_T_UINT64 FF_GetFreeSize(FF_IOMAN *pIoman, FF_ERROR *pError) {
 		{	
 			if(!pIoman->pPartition->FreeClusterCount) {
 				pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
-				if(Error) {
+				if(FF_isERR(Error)) {
 					if(pError) {
 						*pError = Error;
 					}

@@ -1,12 +1,12 @@
 /*****************************************************************************
  *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
  *                                                                           *
- *  Copyright(C) 2009 James Walmsley  (james@fullfat-fs.co.uk)               *
- *  Copyright(C) 2010 Hein Tibosch    (hein_tibosch@yahoo.es)                *
+ *  Copyright(C) 2009  James Walmsley  (james@fullfat-fs.co.uk)              *
+ *  Many Thanks to     Hein Tibosch    (hein_tibosch@yahoo.es)               *
  *                                                                           *
  *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
  *                                                                           *
- *	              FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *                FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
  *                                                                           *
  *  Removing this notice is illegal and will invalidate this license.        *
  *****************************************************************************
@@ -845,7 +845,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 			pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA);
 			Error = FF_GetEfiPartitionEntry(pIoman, PartitionNumber);
 
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 		}
@@ -913,7 +913,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 
 	Error = FF_DetermineFatType(pIoman);
 	
-	if(Error) {
+	if(FF_isERR(Error)) {
 		return Error;
 	}
 	pPart->PartitionMounted = FF_TRUE;
@@ -1034,7 +1034,7 @@ FF_ERROR FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 	//{
 		if(!pIoman->pPartition->FreeClusterCount) {
 			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 		} else {
@@ -1054,7 +1054,7 @@ FF_ERROR FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 	//{
 		if(!pIoman->pPartition->FreeClusterCount) {
 			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				return Error;
 			}
 		} else {
