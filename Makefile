@@ -16,7 +16,10 @@ fullfat.build:                                    # Build the entire FullFAT lib
 	@echo "Not yet implemented."
 
 fullfat.lib:                                      # Build a static FullFAT library for linking with a commercial project.
-	@echo "Not yet implemented."
+	make -C src/ libfullfat.a
+
+clean:
+	make -C src/ clean
 
 config:                                           # Enable/Disable FullFAT features (interactively)
 	@echo "Not yet implemented."
