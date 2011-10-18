@@ -3,5 +3,21 @@
 #
 
 default:
-	@echo "FullFAT build environment for linux."
+	@echo "###################################################"
+	@echo "# FullFAT build environment for linux.            #"
+	@echo "# by James Walmsley v0.2.1                        #"
+	@echo "###################################################"
+	@cat Makefile | grep ":" | grep -v "default:"
+
+fullfat:                                          # Default FullFAT build command (calls fullfat.build).
+	make fullfat.build
+
+fullfat.build:                                    # Build the entire FullFAT library, with integrated demo.
+	@echo "Not yet implemented."
+
+fullfat.lib:                                      # Build a static FullFAT library for linking with a commercial project.
+	@echo "Not yet implemented."
+
+config:                                           # Enable/Disable FullFAT features (interactively)
+	@echo "Not yet implemented."
 
