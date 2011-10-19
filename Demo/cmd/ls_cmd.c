@@ -36,13 +36,10 @@
 
 #include "ls_cmd.h"
 
-static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
+//static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
 
 typedef struct {
-	FF_T_BOOL bRecursive;
-	FF_T_BOOL bList;
-	FF_T_BOOL bShowHidden;
-	FF_T_BOOL bHumanReadable;
+	 int bShowHidden, bList, bRecursive, bHumanReadable;
 } LS_OPTIONS;
 
 static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv);
@@ -68,17 +65,17 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FFT_GETOPT_CONTEXT	optionContext;
 	LS_OPTIONS			oOptions;
 
-	oOptions.bRecursive		= FF_FALSE;		// Initialise option flags with default values.
-	oOptions.bList			= FF_FALSE;
-	oOptions.bShowHidden	= FF_FALSE;
-	oOptions.bHumanReadable = FF_FALSE;
+	oOptions.bRecursive	 	= 0;		// Initialise option flags with default values.
+	oOptions.bList				= 0;
+	oOptions.bShowHidden		= 0;
+	oOptions.bHumanReadable = 0;
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
 
 	// Process command line arguments
 
-	option = FFTerm_getopt(argc, argv, "rRlLaAhH", &optionContext);
-
+	option = FFTerm_getopt(argc, (const char **) argv, "rRlLaAhH", &optionContext);
+	
 	if(option != EOF) {
 		do {
 			switch(option) {
@@ -119,17 +116,18 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 #else
 		ProcessPath(path, szPath, pEnv);
 #endif
+
 		RetVal = ls_dir(path, &oOptions, pEnv);
 	} else {
-		RetVal = ls_dir(pEnv->WorkingDir, &oOptions, pEnv);
-	}
 
-	if(RetVal == -5) { // Not Found!
-		if(szPath) {
-			printf("%s: cannot access %s: no such file or directory\n", argv[0], szPath);
-		}
-	}
+		 RetVal = ls_dir(pEnv->WorkingDir, &oOptions, pEnv);
 
+		 if(RetVal == -5) { // Not Found!
+			  if(szPath) {
+					printf("%s: cannot access %s: no such file or directory\n", argv[0], szPath);
+			  }
+		 }
+	}
 	return 0;
 }
 const FFT_ERR_TABLE lsInfo[] =
@@ -194,7 +192,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 	
 	int columns, columnWidth;
 	int i;
-	
+
 #ifdef FF_UNICODE_SUPPORT
 	wcscpy(path, szPath);	// Place szPath into a modifiable buffer so we can correctly format it.
 #else
@@ -211,13 +209,18 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 #ifdef FF_UNICODE_SUPPORT	
 	szpWildCard = wcsGetWildcard(szPath);
 #else
+
 	szpWildCard = GetWildcard(szPath);
+
 #endif
 
 	// A directory should be opened with /path/to/dir/ or /path/to/dir/*, not /path/to/dir
 	// Check if entry is a dir, and the wildCard specified a specific dir.
 	// If so we should open that dir for iteration.
+
+
 #ifdef FF_UNICODE_SUPPORT
+
 	if(!wcsicmp(findData.FileName, szpWildCard) && (findData.Attrib & FF_FAT_ATTR_DIR)) {
 		wcscat(path, L"\\*");	// Add a backslash to the end!
 #else
@@ -225,7 +228,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 		strcat(path, "\\*");	// Add a backslash to the end!
 #endif
 		//strcpy(recursivePath, szPath);	// Copy szPath, to recursivePath so \* can be added.
-		
+
 		Result = FF_FindFirst(pEnv->pIoman, &findData, path);
 		if(Result) {
 			return -5;
@@ -322,6 +325,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 		} while(!RetVal);
 
 	} else {
+
 		do {
 			if(poOptions->bShowHidden) {
 				if(!(poOptions->bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
@@ -331,7 +335,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 									
 				if(Dirent.szFileName[0] != '.' && !(Dirent.ulAttributes & SD_ATTRIBUTE_HIDDEN)) {
 					if(!(poOptions->bRecursive && (Dirent.ulAttributes & SD_ATTRIBUTE_DIR))) {
-						ls_printDirent(&Dirent, poOptions, pEnv);
+						 ls_printDirent(&Dirent, poOptions, pEnv);
 					}
 				}
 			}
@@ -385,7 +389,7 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 	return 0;
 }
 
-static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv) {
+void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEnv) {
 	
 	SD_SIZEUNIT eUnit = SD_BYTES;	// Default to bytes.
 
@@ -410,5 +414,4 @@ static void ls_printDirent(SD_DIRENT *pDirent, LS_OPTIONS *poOptions, FF_ENVIRON
 	}
 
 	SD_PrintDirent(pDirent, eUnit, !(poOptions->bHumanReadable), pEnv);
-	
 }

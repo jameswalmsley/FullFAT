@@ -6,7 +6,7 @@
 #define _CMD_HELPERS_
 #include <stdio.h>
 #include "../../src/fullfat.h"
-#include "../../../FFTerm/src/ffterm.h"
+#include "../../../ffterm/src/ffterm.h"
 #include "dir.h"
 #include "cmd_config.h"
 

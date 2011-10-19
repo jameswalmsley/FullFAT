@@ -1,9 +1,3 @@
-/*
-	Sorted Directory Listings for FullFAT Terminal
-
-	// This code may be used as a template for creating ordered directory traversals.
-*/
-
 #include <stdlib.h>
 #include <string.h>
 #include "dir.h"

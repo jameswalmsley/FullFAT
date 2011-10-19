@@ -56,7 +56,6 @@ int cd_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 #else
 	FF_T_INT8	path[FF_MAX_PATH];
 #endif
-	
 
 	if(argc == 2) {
 #ifdef FF_UNICODE_SUPPORT

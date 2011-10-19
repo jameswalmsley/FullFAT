@@ -180,6 +180,7 @@ void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes, FF
 		attr[3] = 'D';
 	}
 
+	
 	printf("%02d.%02d.%02d  %02d:%02d  %s ", pDirent->tmCreated.cDay, pDirent->tmCreated.cMonth, pDirent->tmCreated.iYear, pDirent->tmCreated.cHour, pDirent->tmCreated.cMinute, attr /*, pDirent->ulFileSize*/);
 
 	switch(eUnit) {

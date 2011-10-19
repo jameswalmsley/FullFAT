@@ -37,6 +37,7 @@
 #include "../../src/fullfat.h"					// Include everything required for FullFAT.
 #include "../../../ffterm/src/ffterm.h"			// Include the FFTerm project header.
 #include "../../Drivers/Linux/blkdev_linux.h"	// Prototypes for our Windows 32-bit driver.
+#include "../../../ffterm/Platforms/linux/FFTerm-Platform-linux.h"
 
 #include <locale.h>
 
@@ -94,7 +95,7 @@ int main(void) {
 	setlocale(LC_ALL, NULL);
 	
 	
-	hDisk = fnOpen("/home/james/new1gb.img.bak", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	hDisk = fnOpen("ffimage.img", 512);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("/dev/sdc", 512);
@@ -128,8 +129,15 @@ int main(void) {
 
 			//---------- Create the Console. (FFTerm - FullFAT Terminal).
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
+			Env.pConsole = pConsole;
+
+			printf("pConsole = %08x cprompt: %s\n", pConsole, pConsole->strCmdPrompt);
+
 
 			if(pConsole) {
+
+				 //FFTerm_RegisterPlatformSpecification(pConsole, linux_getSpec());
+
 				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
 				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
