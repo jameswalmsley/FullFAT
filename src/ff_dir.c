@@ -2083,7 +2083,7 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 #endif
 */
 
-
+#ifdef FF_LFN_SUPPORT
 #ifdef FF_UNICODE_SUPPORT
 static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
 #else
@@ -2139,7 +2139,6 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 	}
 #endif
 #endif
-
 	// Convert the name into UTF-16 format.
 #ifdef FF_UNICODE_UTF8_SUPPORT
 	// Simply convert the UTF8 to UTF16 and be done with it.
@@ -2212,6 +2211,7 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 
 	return FF_ERR_NONE;
 }
+#endif
 
 FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	FF_T_UINT32 CurrentCluster;

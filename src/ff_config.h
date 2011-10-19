@@ -53,7 +53,7 @@
 //#define FF_INCLUDE_SHORT_NAME			// HT addition, in 'FF_DIRENT', beside FileName, ShortName will be filled as well
                                      	// Useful for debugging, but also some situations its useful to know both.
 //---------- SHORTNAMES CAN USE THE CASE BITS
-#define FF_SHORTNAME_CASE				// Works for XP+ e.g. short.TXT or SHORT.txt.
+//#define FF_SHORTNAME_CASE				// Works for XP+ e.g. short.TXT or SHORT.txt.
 
 
 //---------- UNICODE SUPPORT
@@ -73,7 +73,7 @@
 
 
 //---------- FAT12 SUPPORT
-#define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
+//#define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
 										// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
 										// therefore savings can be made by not having it.
 
@@ -82,7 +82,7 @@
 #define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
 										// Note, by default ff_time.c is set-up for the Windows Demonstration. Please see ff_time.c to disable.
 
-#define FF_REMOVABLE_MEDIA				// Enable removable media support.
+//#define FF_REMOVABLE_MEDIA				// Enable removable media support.
 
 
 //---------- FILE SPACE ALLOCATION PERFORMANCE
@@ -101,13 +101,13 @@
 
 
 //---------- FIND API WILD-CARD SUPPORT
-#define FF_FINDAPI_ALLOW_WILDCARDS		// Defined to enable Wild-cards in the API. Disabling this, makes the API consistent with 1.0.x series.
+//#define FF_FINDAPI_ALLOW_WILDCARDS		// Defined to enable Wild-cards in the API. Disabling this, makes the API consistent with 1.0.x series.
 
-#define FF_WILDCARD_CASE_INSENSITIVE	// Alter the case insensitivity of the Wild-card checking behaviour.
+//#define FF_WILDCARD_CASE_INSENSITIVE	// Alter the case insensitivity of the Wild-card checking behaviour.
 
 
 //---------- PATH CACHE ----------
-#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
+//#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 										// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
@@ -135,8 +135,8 @@
 
 //---------- IN-LINE FUNCTIONS
 //---------- INLINE KeyWord				// Define FF_INLINE as your compiler's inline keyword. This is placed before the type qualifier.
-#define FF_INLINE static __forceinline	// Keywords to inline functions (Windows)
-//#define FF_INLINE static inline		// Standard for GCC
+//#define FF_INLINE static __forceinline	// Keywords to inline functions (Windows)
+#define FF_INLINE static inline		// Standard for GCC
 
 //---------- Inline Memory Independence Routines for better performance, but bigger codesize.
 //#define FF_INLINE_MEMORY_ACCESS
@@ -155,7 +155,7 @@
 
 
 //---------- DEBUGGING FEATURES (HELPFUL ERROR MESSAGES)
-#define FF_DEBUG						// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
+//#define FF_DEBUG						// Enable the Error Code string functions. const FF_T_INT8 *FF_GetErrMessage( FF_T_SINT32 iErrorCode);
 										// Uncommenting this just stops FullFAT error strings being compiled.
 										// Further calls to FF_GetErrMessage() are safe, and simply returns a pointer to a NULL string. ("").
 										// This should be disabled to reduce code-size dramatically.

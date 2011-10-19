@@ -56,7 +56,7 @@
 #define stricmp _stricmp
 #define FF_stricmp	stricmp
 #else
-#define strcasecmp strcasecmp
+//#define strcasecmp strcasecmp
 #define FF_stricmp strcasecmp
 #endif
 
