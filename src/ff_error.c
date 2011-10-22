@@ -49,7 +49,7 @@
 #include "ff_types.h"
 #include "ff_error.h"
 
-#define	ARRAY_SIZE(x)	(int)(sizeof(x)/sizeof(x)[0])
+#define ARRAY_SIZE(x)	(int)(sizeof(x)/sizeof(x)[0])
 
 #ifdef FF_DEBUG
 const struct _FFMODULETAB
@@ -59,18 +59,18 @@ const struct _FFMODULETAB
 } gcpFullFATModuleTable[] =
 {
 	{"Unknown Module",		1},									// 1 here is ok, as the GetError functions start at the end of the table.
-	{"ff_ioman.c",		FF_GETMODULE(FF_MODULE_IOMAN)},
-	{"ff_dir.c",		FF_GETMODULE(FF_MODULE_DIR)},
-	{"ff_file.c",		FF_GETMODULE(FF_MODULE_FILE)},
-	{"ff_fat.c",		FF_GETMODULE(FF_MODULE_FAT)},
-	{"ff_crc.c",		FF_GETMODULE(FF_MODULE_CRC)},
-	{"ff_format.c",		FF_GETMODULE(FF_MODULE_FORMAT)},
-	{"ff_hash.c",		FF_GETMODULE(FF_MODULE_HASH)},
-	{"ff_memory.c",		FF_GETMODULE(FF_MODULE_MEMORY)},
-	{"ff_string.c",		FF_GETMODULE(FF_MODULE_STRING)},
-	{"ff_unicode.c",	FF_GETMODULE(FF_MODULE_UNICODE)},
-	{"ff_safety.c",		FF_GETMODULE(FF_MODULE_SAFETY)},
-	{"ff_time.c",		FF_GETMODULE(FF_MODULE_TIME)},
+	{"ff_ioman.c",			FF_GETMODULE(FF_MODULE_IOMAN)},
+	{"ff_dir.c",			FF_GETMODULE(FF_MODULE_DIR)},
+	{"ff_file.c",			FF_GETMODULE(FF_MODULE_FILE)},
+	{"ff_fat.c",			FF_GETMODULE(FF_MODULE_FAT)},
+	{"ff_crc.c",			FF_GETMODULE(FF_MODULE_CRC)},
+	{"ff_format.c",			FF_GETMODULE(FF_MODULE_FORMAT)},
+	{"ff_hash.c",			FF_GETMODULE(FF_MODULE_HASH)},
+	{"ff_memory.c",			FF_GETMODULE(FF_MODULE_MEMORY)},
+	{"ff_string.c",			FF_GETMODULE(FF_MODULE_STRING)},
+	{"ff_unicode.c",		FF_GETMODULE(FF_MODULE_UNICODE)},
+	{"ff_safety.c",			FF_GETMODULE(FF_MODULE_SAFETY)},
+	{"ff_time.c",			FF_GETMODULE(FF_MODULE_TIME)},
 	{"Platform Driver",		FF_GETMODULE(FF_MODULE_DRIVER)},
 };
 
@@ -262,7 +262,6 @@ const FF_T_INT8 *FF_GetErrFunction(FF_ERROR iErrorCode) {
 	return gcpFullFATFunctionTable[0].strFunctionName;
 }
 
-/*
 const FF_T_INT8 *FF_GetErrDescription(FF_ERROR iErrorCode, char *apBuf, int aMaxlen) {
 	if (FF_isERR(iErrorCode)) {
 		snprintf (apBuf, aMaxlen, "%s::%s::%s",
@@ -274,5 +273,5 @@ const FF_T_INT8 *FF_GetErrDescription(FF_ERROR iErrorCode, char *apBuf, int aMax
 	}
 	return apBuf;
 }
-*/
+
 #endif
