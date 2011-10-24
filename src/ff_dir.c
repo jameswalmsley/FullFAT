@@ -114,10 +114,11 @@ static FF_T_UINT8 FF_CreateChkSum(const FF_T_UINT8 *pa_pShortName) {
 
 FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT *pFetchContext) {
 	
-	FF_T_UINT8		numLFNs;
 	FF_T_UINT8		EntryBuffer[32];
 	FF_ERROR		Error;
-
+#ifndef FF_LFN_SUPPORT
+	FF_T_UINT8		numLFNs;
+#endif
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER | FF_FINDNEXTINDIR;
 	}
@@ -136,9 +137,7 @@ FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT
 			}
 			pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
 			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
-				// LFN Processing
-				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
-				//pDirent->NumLFNs = numLFNs;
+
 #ifdef FF_LFN_SUPPORT
 				Error = FF_PopulateLongDirent(pIoman, pDirent, pDirent->CurrentItem, pFetchContext);
 				if(FF_isERR(Error)) {
@@ -146,6 +145,9 @@ FF_ERROR FF_FindNextInDir(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_FETCH_CONTEXT
 				}
 				return FF_ERR_NONE;
 #else 
+				// LFN Processing
+				numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
+				//pDirent->NumLFNs = numLFNs;
 				pDirent->CurrentItem += (numLFNs - 1);
 #endif
 			} else if((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
@@ -913,10 +915,12 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
  **/
 FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
 	FF_T_UINT8			EntryBuffer[32];
-	FF_T_UINT8			numLFNs;
 	FF_FETCH_CONTEXT	FetchContext;
-	FF_ERROR			Error;
+	FF_ERROR				Error;
 
+#ifndef FF_LFN_SUPPORT
+	FF_T_UINT8			numLFNs;
+#endif
 	Error = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
 	if(FF_isERR(Error)) {
 		return Error;
@@ -936,8 +940,6 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 		pDirent->Attrib = FF_getChar(EntryBuffer, (FF_T_UINT16)(FF_FAT_DIRENT_ATTRIB));
 		
 		if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
-			// LFN Processing
-			numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
 	#ifdef FF_LFN_SUPPORT
 			Error = FF_PopulateLongDirent(pIoman, pDirent, nEntry, &FetchContext);
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
@@ -946,6 +948,8 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 			}
 			return FF_ERR_NONE;
 	#else 
+			// LFN Processing
+			numLFNs = (FF_T_UINT8)(EntryBuffer[0] & ~0x40);
 			pDirent->CurrentItem += (numLFNs - 1);
 	#endif
 		} else if((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
@@ -1569,6 +1573,7 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 	pDirent->CurrentItem = 0;
 
 	return FF_FindNext(pIoman, pDirent);
+
 }
 
 /**

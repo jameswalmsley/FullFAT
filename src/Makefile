@@ -33,7 +33,7 @@ libfullfat.a: $(OBJS)
 #   sed:    add trailing colons
 %.o: %.c
 	@echo "  [CC]\t$*.c"
-	@gcc -c -g $(CFLAGS) $*.c -o $*.o
+	@gcc -Wall -c -g $(CFLAGS) $*.c -o $*.o
 	@gcc -MM $(CFLAGS) $*.c > $*.d
 	@cp -f $*.d $*.d.tmp
 	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \

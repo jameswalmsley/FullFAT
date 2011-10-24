@@ -162,7 +162,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	FF_FILE		*pFileChain;
 	FF_DIRENT	Object;
 	FF_T_UINT32 DirCluster, FileCluster;
-	FF_T_UINT32	nBytesPerCluster;
+
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	filename[FF_MAX_FILENAME];
 #else
@@ -297,7 +297,6 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 			pFile->Next					= NULL;
 			pFile->DirCluster			= DirCluster;
 			pFile->DirEntry				= Object.CurrentItem - 1;
-			nBytesPerCluster			= pFile->pIoman->pPartition->SectorsPerCluster / pIoman->BlkSize;
 			pFile->iChainLength			= 0;
 			pFile->iEndOfChain			= 0;
 			pFile->ValidFlags			&= ~(FF_VALID_FLAG_DELETED); //FF_FALSE;
@@ -1265,9 +1264,8 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT8		retChar;
 	FF_T_UINT32		relMinorBlockPos;
-	FF_T_UINT32     clusterNum;
 	FF_T_UINT32		nClusterDiff;
-	FF_ERROR		Error;
+	FF_ERROR			Error;
 	
 	
 	if(!pFile) {
@@ -1283,7 +1281,6 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	}
 
 	relMinorBlockPos	= FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
-	clusterNum			= FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
 
 	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
 	if(nClusterDiff) {

@@ -694,7 +694,6 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	FF_T_UINT32		ulBeginGPT;
 	FF_T_UINT32		ulEntrySector;
 	FF_T_UINT32		ulSectorOffset;
-	FF_T_UINT32		ulTotalPartitionEntries;
 	FF_T_UINT32		ulPartitionEntrySize;
 	FF_T_UINT32		ulGPTHeadCRC, ulGPTCrcCheck, ulGPTHeadLength;
 
@@ -715,7 +714,7 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 		}
 
 		ulBeginGPT					= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_PART_ENTRY_LBA);
-		ulTotalPartitionEntries		= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_TOTAL_ENTRIES);
+		
 		ulPartitionEntrySize		= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_ENTRY_SIZE);
 		ulGPTHeadCRC				= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_CRC);
 		ulGPTHeadLength				= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_LENGTH);

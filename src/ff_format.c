@@ -85,7 +85,6 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 	FF_T_UINT8	ucPartitionType;
 	FF_T_SINT8	scPartitionCount;
 
-	FF_T_UINT32 /*ulPartitionBeginLBA, ulPartitionLength,*/ ulPnum;
 
 	FF_ERROR	Error = FF_ERR_NONE;
 
@@ -105,13 +104,13 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 		if(ucPartitionType == 0xEE) {
 			// Handle Extended Partitions
-			ulPnum = 0;			
+			//ulPnum = 0;			
 		} else {
 			if(ulPartitionNumber > (FF_T_UINT32) scPartitionCount) {
 				FF_ReleaseBuffer(pIoman, pBuffer);
 				return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_FORMATPARTITION;
 			}
-			ulPnum = ulPartitionNumber;
+			//ulPnum = ulPartitionNumber;
 		}
 
 	}
@@ -124,11 +123,11 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 }
 
 FF_ERROR FF_Format(FF_IOMAN *pIoman, FF_T_UINT32 ulStartLBA, FF_T_UINT32 ulEndLBA, FF_T_UINT32 ulClusterSize) {
-	FF_T_UINT32 ulTotalSectors;
-	FF_T_UINT32 ulTotalClusters;
+	 //FF_T_UINT32 ulTotalSectors;
+	//FF_T_UINT32 ulTotalClusters;
 
-	ulTotalSectors	= ulEndLBA - ulStartLBA;
-	ulTotalClusters = ulTotalSectors / (ulClusterSize / pIoman->BlkSize);
+	//ulTotalSectors	= ulEndLBA - ulStartLBA;
+	//ulTotalClusters = ulTotalSectors / (ulClusterSize / pIoman->BlkSize);
 
 
 	return -1;
