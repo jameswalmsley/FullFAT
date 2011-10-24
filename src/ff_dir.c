@@ -258,24 +258,30 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_T_SINT32	utf8Error;
 	//FF_T_UINT8	bSurrogate = FF_FALSE;
 #endif
+
+
+#ifdef FF_LFN_SUPPORT
+
 #ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	*ptr;		// Pointer to store a LFN
-#else
-	FF_T_INT8	*ptr;		// Pointer to store a LFN
-#endif
-#ifdef FF_UNICODE_SUPPORT
 	FF_T_WCHAR	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
 #else
+	FF_T_INT8	*ptr;		// Pointer to store a LFN
 	FF_T_INT8	*lastPtr = pDirent->FileName + sizeof(pDirent->FileName);
 #endif
-#ifdef FF_LFN_SUPPORT
-	FF_T_UINT8	CheckSum = 0;
-#endif
-	FF_T_UINT8	lastAttrib;
-	FF_T_INT8	totalLFNs = 0;
-	FF_T_INT8	numLFNs = 0;
-	FF_T_INT32	i;
+
 	FF_T_UINT16	lfnItem = 0;
+	FF_T_UINT8	CheckSum = 0;
+	FF_T_INT8	numLFNs = 0;
+	FF_T_INT8	totalLFNs = 0;
+	FF_T_UINT8	lastAttrib;
+#endif
+
+
+#ifdef FF_UNICODE_UTF8_SUPPORT
+	FF_T_INT32	i;
+#endif
+
 
 	if(pError) {
 		*pError = FF_ERR_NONE;
@@ -300,7 +306,9 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 				pDirent->Attrib = 0;
 				continue;
 			}
+#ifdef FF_LFN_SUPPORT
 			lastAttrib = pDirent->Attrib;
+#endif
 			pDirent->Attrib = FF_getChar(src, FF_FAT_DIRENT_ATTRIB);
 			if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 				// LFN Processing
@@ -390,7 +398,9 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 				continue;
 			}
 			if ((pDirent->Attrib & FF_FAT_ATTR_VOLID) == FF_FAT_ATTR_VOLID) {
-				totalLFNs = 0;
+#ifdef FF_LFN_SUPPORT
+				 totalLFNs = 0;
+#endif
 				continue;
 			}
 #ifdef FF_LFN_SUPPORT
@@ -406,7 +416,9 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 				memcpy(pDirent->FileName, src, 11);
 				FF_ProcessShortName(pDirent->FileName);
 #endif
+#ifdef FF_LFN_SUPPORT
 				totalLFNs = 0;
+#endif
 			}
 
 			if((pDirent->Attrib & pa_Attrib) == pa_Attrib){
@@ -431,7 +443,9 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 					return pDirent->ObjectCluster;	// Return the cluster number
 				}
 			}
+#ifdef FF_LFN_SUPPORT
 			totalLFNs = 0;
+#endif
 		}
 	}	// for (src = FetchContext.pBuffer->pBuffer; src < lastSrc; src += 32, pDirent->CurrentItem++)
 
