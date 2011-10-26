@@ -78,8 +78,17 @@
 										// therefore savings can be made by not having it.
 
 //---------- WRITE BOTH FATS
-//#define FF_WRITE_BOTH_FATS
+#define FF_WRITE_BOTH_FATS		// Writes the 2nd FAT (backup) at runtime. Disabling this can improve performance. 
+                              // However, leaving it enabled guarantees that both FATs will match, and fs checkers
+                              // will not complain. (More compliant).
 
+#define FF_MIRROR_FATS_UMOUNT // This will cause all FAT tables to be duplicated on unmount. 
+                              // This is usually expensive in terms of time but will ensure that all FAT copies
+                              // are consistent. (If you can guarantee an unmount operation, use this while disabling FF_WRITE_BOTH_FATS).
+
+#define FF_WRITE_FREE_COUNT   // Enabling this option will modify the FreeCount on the disk at runtime.
+                              // This incurs a small performance penalty, and is not required. (All filesystems should not
+                              // trust the on-disk value anyway.
 
 //---------- TIME SUPPORT
 //#define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c

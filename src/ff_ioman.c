@@ -892,6 +892,10 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		}
 		memcpy (pPart->VolLabel, pBuffer->pBuffer + FF_FAT_16_VOL_LABEL, sizeof pPart->VolLabel);
 	}
+#ifdef FF_WRITE_FREE_COUNT
+	pPart->FSInfoLBA = FF_getShort(pBuffer->pBuffer, 48);
+	printf("FSInfoSector is: %lu\n", pPart->FSInfoLBA);
+#endif
 
 	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
 
@@ -999,6 +1003,10 @@ static FF_T_BOOL FF_ActiveHandles(FF_IOMAN *pIoman) {
  **/
 FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 	FF_ERROR RetVal = FF_ERR_NONE;
+#ifdef FF_MIRROR_FATS_UMOUNT
+	FF_T_UINT i, y;
+	FF_BUFFER *pBuffer;
+#endif 
 
 	if(!pIoman || !pIoman->pPartition) {
 		return FF_ERR_NULL_POINTER | FF_UNMOUNTPARTITION;
@@ -1016,6 +1024,21 @@ FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 				// Reclaim Semaphore
 				FF_PendSemaphore(pIoman->pSemaphore);
 				pIoman->pPartition->PartitionMounted = FF_FALSE;
+
+#ifdef FF_MIRROR_FATS_UMOUNT
+				FF_ReleaseSemaphore(pIoman->pSemaphore);
+				for(i = 0; i < pIoman->pPartition->SectorsPerFAT; i++) {
+					 pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FatBeginLBA + i, FF_MODE_READ);
+					 if(!pBuffer) {
+						  RetVal = FF_ERR_DEVICE_DRIVER_FAILED | FF_UNMOUNTPARTITION;
+						  break;
+					 }
+					 for(y = 0; y < pIoman->pPartition->NumFATS; y++) {
+						  FF_BlockWrite(pIoman, pIoman->pPartition->FatBeginLBA + (y*pIoman->pPartition->SectorsPerFAT) + i, 1, pBuffer->pBuffer, FF_FALSE);
+					 }					 
+				}
+				FF_PendSemaphore(pIoman->pSemaphore);
+#endif
 			} else {
 				RetVal = FF_ERR_IOMAN_ACTIVE_HANDLES | FF_UNMOUNTPARTITION;
 			}
@@ -1032,18 +1055,38 @@ FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 FF_ERROR FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 
 	FF_ERROR Error;
-	//FF_PendSemaphore(pIoman->pSemaphore);
-	//{
-		if(!pIoman->pPartition->FreeClusterCount) {
-			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-		} else {
-			pIoman->pPartition->FreeClusterCount += Count;
-		}
-	//}
-	//FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+#ifdef FF_WRITE_FREE_COUNT
+	FF_BUFFER *pBuffer;
+#endif
+
+	if(!pIoman->pPartition->FreeClusterCount) {
+		 pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
+		 if(FF_isERR(Error)) {
+			  return Error;
+		 }
+	} else {
+		 pIoman->pPartition->FreeClusterCount += Count;
+	}
+#ifdef FF_WRITE_FREE_COUNT
+	// FAT32 update the FSINFO sector.
+	if(pIoman->pPartition->Type == FF_T_FAT32) {
+		 // Find the FSINFO sector.
+		 pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FSInfoLBA, FF_MODE_WRITE);
+		 {
+			  if(!pBuffer) {
+					return FF_ERR_DEVICE_DRIVER_FAILED | FF_INCREASEFREECLUSTERS;
+			  }
+
+			  if(FF_getLong(pBuffer->pBuffer, 0) == 0x41615252 && FF_getLong(pBuffer->pBuffer, 484) == 0x61417272) {
+					// FSINFO sector magic nums we're verified. Safe to write.
+					FF_putLong(pBuffer->pBuffer, 488, pIoman->pPartition->FreeClusterCount);
+					FF_putLong(pBuffer->pBuffer, 492, pIoman->pPartition->LastFreeCluster);
+			  }
+		 }
+		 FF_ReleaseBuffer(pIoman, pBuffer);
+	}
+#endif
 
 	return FF_ERR_NONE;
 }
@@ -1051,20 +1094,38 @@ FF_ERROR FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 FF_ERROR FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 
 	FF_ERROR Error;
+#ifdef FF_WRITE_FREE_COUNT
+	FF_BUFFER *pBuffer;
+#endif
 
-	//FF_lockFAT(pIoman);
-	//{
-		if(!pIoman->pPartition->FreeClusterCount) {
-			pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-		} else {
-			pIoman->pPartition->FreeClusterCount -= Count;
-		}
-	//}
-	//FF_unlockFAT(pIoman);
+	if(!pIoman->pPartition->FreeClusterCount) {
+		 pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
+		 if(FF_isERR(Error)) {
+			  return Error;
+		 }
+	} else {
+		 pIoman->pPartition->FreeClusterCount -= Count;
+	}
 
+#ifdef FF_WRITE_FREE_COUNT
+	// FAT32 update the FSINFO sector.
+	if(pIoman->pPartition->Type == FF_T_FAT32) {
+		 // Find the FSINFO sector.
+		 pBuffer = FF_GetBuffer(pIoman, pIoman->pPartition->FSInfoLBA, FF_MODE_WRITE);
+		 {
+			  if(!pBuffer) {
+					return FF_ERR_DEVICE_DRIVER_FAILED | FF_DECREASEFREECLUSTERS;
+			  }
+
+			  if(FF_getLong(pBuffer->pBuffer, 0) == 0x41615252 && FF_getLong(pBuffer->pBuffer, 484) == 0x61417272) {
+					// FSINFO sector magic nums we're verified. Safe to write.
+					FF_putLong(pBuffer->pBuffer, 488, pIoman->pPartition->FreeClusterCount);
+					FF_putLong(pBuffer->pBuffer, 492, pIoman->pPartition->LastFreeCluster);
+			  }
+		 }
+		 FF_ReleaseBuffer(pIoman, pBuffer);
+	}
+#endif
 	return FF_ERR_NONE;
 }
 

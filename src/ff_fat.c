@@ -362,6 +362,10 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 #ifdef FF_FAT12_SUPPORT	
 	FF_T_UINT8	F12short[2];		// For FAT12 FAT Table Across sector boundary traversal.
 #endif
+
+#ifdef FF_WRITE_BOTH_FATS
+	FF_T_INT i;
+#endif
 	
 	// HT: avoid corrupting the disk
 	if (!nCluster || nCluster >= pIoman->pPartition->NumClusters) {
@@ -387,7 +391,8 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 #ifdef FF_FAT12_SUPPORT	
 	if(pIoman->pPartition->Type == FF_T_FAT12) {
 		if(relClusterEntry == (FF_T_UINT32) (pIoman->BlkSize - 1)) {
-			// Fat Entry SPANS a Sector!
+			
+         // Fat Entry SPANS a Sector!
 			// First Buffer get the last Byte in buffer (first byte of our address)!
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
 			{
@@ -420,6 +425,11 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 
 			FF_putShort((FF_T_UINT8 *)F12short, 0x0000, (FF_T_UINT16) (FatEntry | Value));
 
+#ifdef FF_WRITE_BOTH_FATS
+			 for (i = 0; i < pIoman->pPartition->NumFATs; i++) {
+				  FatSector += (i * pIoman->pPartition->SectorsPerFat);
+#endif
+
 			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
 			{
 				if(!pBuffer) {
@@ -428,8 +438,9 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 				FF_putChar(pBuffer->pBuffer, (FF_T_UINT16)(pIoman->BlkSize - 1), F12short[0]);				
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
+
 			// Second Buffer get the first Byte in buffer (second byte of out address)!
-			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_READ);
+			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_WRITE); // changed to MODE_WRITE -- BUG???
 			{
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
@@ -438,9 +449,18 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
 
+#ifdef FF_MODE_WRITE_BOTH_FATS
+			 }
+#endif
+
 			return FF_ERR_NONE;
 		}
 	}
+#endif
+
+#ifdef FF_WRITE_BOTH_FATS
+	for (i = 0; i < pIoman->pPartition->NumFATS; i++) {
+		 FatSector += (i * pIoman->pPartition->SectorsPerFAT);
 #endif
 	
 	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
@@ -468,6 +488,10 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 		}
 	}
 	FF_ReleaseBuffer(pIoman, pBuffer);
+
+#ifdef FF_WRITE_BOTH_FATS
+	}
+#endif
 
 	return FF_ERR_NONE;
 }

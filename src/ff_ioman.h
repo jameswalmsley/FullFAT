@@ -139,32 +139,35 @@ typedef struct {
  *	@note	This may shrink as development and optimisation goes on.
  **/
 typedef struct {
-	//FF_T_UINT8		ID;					///< Partition Incremental ID number.
-	FF_T_UINT8		Type;				///< Partition Type Identifier.
-	FF_T_UINT16		BlkSize;			///< Size of a Sector Block in bytes.
-	FF_T_UINT8      BlkFactor;			///< Scale Factor for blocksizes above 512!
-	//FF_T_INT8		Name[FF_MAX_PARTITION_NAME];	///< Partition Identifier e.g. c: sd0: etc.
-	FF_T_INT8		VolLabel[12];		///< Volume Label of the partition.
-	FF_T_UINT32		BeginLBA;			///< LBA start address of the partition.
-	FF_T_UINT32		PartSize;			///< Size of Partition in number of sectors.
-	FF_T_UINT32		FatBeginLBA;		///< LBA of the FAT tables.
-	FF_T_UINT8		NumFATS;			///< Number of FAT tables.
-	FF_T_UINT32		SectorsPerFAT;		///< Number of sectors per Fat.
-	FF_T_UINT8		SectorsPerCluster;	///< Number of sectors per Cluster.
-	FF_T_UINT32		TotalSectors;
-	FF_T_UINT32		DataSectors;
-	FF_T_UINT32		RootDirSectors;
-	FF_T_UINT32		FirstDataSector;
-	FF_T_UINT16		ReservedSectors;
-	FF_T_UINT32		ClusterBeginLBA;	///< LBA of first cluster.
-	FF_T_UINT32		NumClusters;		///< Number of clusters.
-	FF_T_UINT32		RootDirCluster;		///< Cluster number of the root directory entry.
-	FF_T_UINT32		LastFreeCluster;
-	FF_T_UINT32		FreeClusterCount;	///< Records free space on mount.
-	FF_T_BOOL		PartitionMounted;	///< FF_TRUE if the partition is mounted, otherwise FF_FALSE.
+	 //FF_T_UINT8		ID;					///< Partition Incremental ID number.
+	 FF_T_UINT8			Type;						///< Partition Type Identifier.
+	 FF_T_UINT16		BlkSize;					///< Size of a Sector Block in bytes.
+	 FF_T_UINT8      	BlkFactor;				///< Scale Factor for blocksizes above 512!
+	 //FF_T_INT8		Name[FF_MAX_PARTITION_NAME];	///< Partition Identifier e.g. c: sd0: etc.
+	 FF_T_INT8			VolLabel[12];			///< Volume Label of the partition.
+	 FF_T_UINT32		BeginLBA;				///< LBA start address of the partition.
+	 FF_T_UINT32		PartSize;				///< Size of Partition in number of sectors.
+	 FF_T_UINT32		FatBeginLBA;			///< LBA of the FAT tables.
+	 FF_T_UINT8			NumFATS;					///< Number of FAT tables.
+	 FF_T_UINT32		SectorsPerFAT;			///< Number of sectors per Fat.
+	 FF_T_UINT8			SectorsPerCluster;	///< Number of sectors per Cluster.
+	 FF_T_UINT32		TotalSectors;
+	 FF_T_UINT32		DataSectors;
+#ifdef FF_WRITE_FREE_COUNT
+	 FF_T_UINT32    	FSInfoLBA;				///< LBA of the FSINFO sector.
+#endif
+	 FF_T_UINT32		RootDirSectors;
+	 FF_T_UINT32		FirstDataSector;
+	 FF_T_UINT16		ReservedSectors;
+	 FF_T_UINT32		ClusterBeginLBA;	///< LBA of first cluster.
+	 FF_T_UINT32		NumClusters;		///< Number of clusters.
+	 FF_T_UINT32		RootDirCluster;		///< Cluster number of the root directory entry.
+	 FF_T_UINT32		LastFreeCluster;
+	 FF_T_UINT32		FreeClusterCount;	///< Records free space on mount.
+	 FF_T_BOOL			PartitionMounted;	///< FF_TRUE if the partition is mounted, otherwise FF_FALSE.
 #ifdef FF_PATH_CACHE
-	FF_PATHCACHE	PathCache[FF_PATH_CACHE_DEPTH];
-	FF_T_UINT32		PCIndex;
+	 FF_PATHCACHE		PathCache[FF_PATH_CACHE_DEPTH];
+	 FF_T_UINT32		PCIndex;
 #endif
 } FF_PARTITION;
 
