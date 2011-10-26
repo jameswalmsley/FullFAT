@@ -56,12 +56,22 @@ extern "C" {
 #include "ff_dir.h"
 #include "ff_format.h"
 
+typedef struct _FF_PARTITION_ENTRY {
+	FF_T_UINT32 ulStartLBA;
+	FF_T_UINT32 ulLength;
+	FF_T_UINT8  ucStatus;
+	FF_T_UINT8  ucType;
+} FF_PARTITION_ENTRY;
+
+typedef struct _FF_PARTITION_TABLE {
+	FF_PARTITION_ENTRY arrPEntries[4];
+} FF_PARTITION_TABLE;
 //---------- PROTOTYPES
 // PUBLIC (Interfaces):
 
 //FF_ERROR FF_Format (FF_IOMAN *pIoman, FF_T_UINT32 SectorCount, FF_T_BOOL TryFat16);
 FF_ERROR FF_Format(FF_IOMAN *pIoman, FF_T_UINT32 ulStartLBA, FF_T_UINT32 ulEndLBA, FF_T_UINT32 ulClusterSize);
-
+FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_T_UINT32 ulClusterSize);
 // Private :
 
 #ifdef	__cplusplus
