@@ -111,6 +111,10 @@ int main(void) {
 				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %ld.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 			}
 
+			printf("Attempt to format the first partition!\n");
+
+			FF_FormatPartition(pIoman, 0, 512);
+
 			//---------- Try to Mount the Partition with FullFAT.
 			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);
 			if(Error) {
@@ -131,9 +135,7 @@ int main(void) {
 			pConsole = FFTerm_CreateConsole("FullFAT>", stdin, stdout, &Error);					// Create a console with a "FullFAT> prompt.
 			Env.pConsole = pConsole;
 
-			printf("pConsole = %08x cprompt: %s\n", pConsole, pConsole->strCmdPrompt);
-
-
+		
 			if(pConsole) {
 
 				 //FFTerm_RegisterPlatformSpecification(pConsole, linux_getSpec());

@@ -101,11 +101,16 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 	FF_T_UINT8	ucPartitionType;
 	FF_T_SINT8	scPartitionCount;
 	FF_T_UINT32 maxClusters, f16MaxClusters, f32MaxClusters;
+	FF_T_UINT32 fatSize = 32; // Default to a fat32 format.
 
 	FF_PARTITION_ENTRY partitionGeom;
 
-	FF_T_UINT32 fat32Size, fat16Size, newFat32Size, newFat16Size;
+	FF_T_UINT32 ulBPRLba; ///< The LBA of the boot partition record.
+
+	FF_T_UINT32 fat32Size, fat16Size, newFat32Size, newFat16Size, finalFatSize;
 	FF_T_UINT32 sectorsPerCluster = ulClusterSize / pIoman->BlkSize;
+
+	FF_T_UINT32 ulReservedSectors, ulTotalSectors;
 
 	FF_T_UINT32 ul32DataSectors, ul16DataSectors;
 	FF_T_UINT32 i;
@@ -129,12 +134,18 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 		if(!scPartitionCount) {
 			// Get Partition Geom from volume boot record.
+			ulBPRLba = 0;
 			partitionGeom.ulStartLBA = FF_getShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS); // Get offset to start of where we can actually put the FAT table.
+			ulReservedSectors = partitionGeom.ulStartLBA;
 			partitionGeom.ulLength = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, FF_FAT_16_TOTAL_SECTORS);
 
 			if(partitionGeom.ulLength == 0) { // 32-bit entry was used.
 				partitionGeom.ulLength = FF_getLong(pBuffer->pBuffer, FF_FAT_32_TOTAL_SECTORS);
 			}
+
+			ulTotalSectors = partitionGeom.ulLength;
+
+			printf("BPR lba: %lu\n", ulBPRLba);
 
 			partitionGeom.ulLength -= partitionGeom.ulStartLBA; // Remove the reserved sectors from the count.
 
@@ -153,14 +164,14 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 		printf("maxClusters: %lu\n", maxClusters);
 
 		// Determine the size of a FAT table required to support this.
-		fat32Size = (maxClusters * 32) / pIoman->BlkSize; // Potential size in sectors of a fat32 table.
-		if((maxClusters *32) % pIoman->BlkSize) {
+		fat32Size = (maxClusters * 4) / pIoman->BlkSize; // Potential size in sectors of a fat32 table.
+		if((maxClusters * 4) % pIoman->BlkSize) {
 			fat32Size++;
 		}
 		fat32Size *= 2;	// Officially there are 2 copies of the FAT.
 
-		fat16Size = (maxClusters * 16) / pIoman->BlkSize; // Potential size in bytes of a fat16 table.
-		if((maxClusters * 32) % pIoman->BlkSize) {
+		fat16Size = (maxClusters * 2) / pIoman->BlkSize; // Potential size in bytes of a fat16 table.
+		if((maxClusters * 2) % pIoman->BlkSize) {
 			fat16Size++;
 		}
 		fat16Size *= 2;
@@ -176,91 +187,168 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 		f32MaxClusters = ul32DataSectors / sectorsPerCluster;
 
 		printf("f16-clusts: %lu, f32-clusts: %lu\n", f16MaxClusters, f32MaxClusters);
-		newFat16Size = (f16MaxClusters * 16) / pIoman->BlkSize;
-		if((f16MaxClusters * 16) % pIoman->BlkSize) {
+		newFat16Size = (f16MaxClusters * 2) / pIoman->BlkSize;
+		if((f16MaxClusters * 2) % pIoman->BlkSize) {
 			newFat16Size++;
 		}
 
-		newFat32Size = (f32MaxClusters * 32) / pIoman->BlkSize;
-		if((f32MaxClusters * 32) % pIoman->BlkSize) {
+		newFat32Size = (f32MaxClusters * 4) / pIoman->BlkSize;
+		if((f32MaxClusters * 4) % pIoman->BlkSize) {
 			newFat32Size++;
 		}
 
 		// Now determine if this should be fat16/32 format?
 
 		if(f16MaxClusters < 65525) {
-			// Go-ahead with FAT16 format.
-			FF_ReleaseBuffer(pIoman, pBuffer);
-			for(i = 0; i < newFat16Size*2; i++) { // Ensure these values are clear!
-				if(i == 0) {
-					pBuffer = FF_GetBuffer(pIoman, partitionGeom.ulStartLBA, FF_MODE_WR_ONLY);
-					if(!pBuffer) {
-						return FF_ERR_DEVICE_DRIVER_FAILED;
-					}
-
-					memset(pBuffer->pBuffer, 0, pIoman->BlkSize);
-				} else {
-					FF_BlockWrite(pIoman, partitionGeom.ulStartLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
-				}
-			}
-
-			FF_putShort(pBuffer->pBuffer, 0, 0xFFF8); // First FAT entry.
-			FF_putShort(pBuffer->pBuffer, 2, 0xFFFF); // Allocation of root dir.
-			FF_ReleaseBuffer(pIoman, pBuffer);
-				
-			// Clear and initialise the root dir.
-			ulClusterBeginLBA = partitionGeom.ulStartLBA + (newFat16Size*2);
-				
-			for(i = 0; i < sectorsPerCluster; i++) {
-				if(i == 0) {
-					pBuffer = FF_GetBuffer(pIoman, ulClusterBeginLBA, FF_MODE_WR_ONLY);
-					memset(pBuffer->pBuffer, 0, pIoman->BlkSize);
-				} else  {
-					FF_BlockWrite(pIoman, ulClusterBeginLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
-				}
-					
-			}
-
-			FF_ReleaseBuffer(pIoman, pBuffer);
-				
-			// Correctly modify the second FAT item again.
-
-
-			// Modify the fields in the VBR/PBR for correct mounting.
-			pBuffer = FF_GetBuffer(pIoman, 0, FF_MODE_WRITE); // Modify the FAT descriptions.
-			{
-				//printf("modify the br!\n");
-				FF_putShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS, partitionGeom.ulStartLBA);
-				FF_putShort(pBuffer->pBuffer, FF_FAT_NUMBER_OF_FATS, 2);
-				FF_putShort(pBuffer->pBuffer, FF_FAT_16_SECTORS_PER_FAT, newFat16Size);
-				FF_putChar(pBuffer->pBuffer, FF_FAT_SECTORS_PER_CLUS, sectorsPerCluster);
-				FF_putLong(pBuffer->pBuffer, FF_FAT_ROOT_DIR_CLUSTER, 1);
-						
-
-			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
-				
-
-			FF_FlushCache(pIoman);
-				
-				// Done :D (Wasn't so hard!).
-
-
+			fatSize = 16;
+			finalFatSize = newFat16Size;
 		} else {
-			// Go-ahead with FAT32 format.
-
+			fatSize = 32;
+			finalFatSize = newFat32Size;
+		}
+		
+		FF_ReleaseBuffer(pIoman, pBuffer);
+		for(i = 0; i < finalFatSize*2; i++) { // Ensure the FAT table is clear.
+			if(i == 0) {
+				pBuffer = FF_GetBuffer(pIoman, partitionGeom.ulStartLBA, FF_MODE_WR_ONLY);
+				if(!pBuffer) {
+					return FF_ERR_DEVICE_DRIVER_FAILED;
+				}
+				
+				memset(pBuffer->pBuffer, 0, pIoman->BlkSize);
+			} else {
+				FF_BlockWrite(pIoman, partitionGeom.ulStartLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
+			}
 		}
 
-		// FAT16 format:
+		switch(fatSize) {
+		case 16: {
+			FF_putShort(pBuffer->pBuffer, 0, 0xFFF8); // First FAT entry.
+			FF_putShort(pBuffer->pBuffer, 2, 0xFFFF); // RESERVED alloc.
+			break;
+		}
 
-		// Write out the initial FAT table.
+		case 32: {
+			FF_putLong(pBuffer->pBuffer, 0, 0x0FFFFFF8); // FAT32 FAT sig.
+			FF_putLong(pBuffer->pBuffer, 4, 0xFFFFFFFF); // RESERVED alloc.
+			FF_putLong(pBuffer->pBuffer, 8, 0x0FFFFFFF); // Root dir allocation.
+			break;
+		}
+
+		default:
+			break;
+		}
+
+		FF_ReleaseBuffer(pIoman, pBuffer);
+			
+				
+		// Clear and initialise the root dir.
+		ulClusterBeginLBA = partitionGeom.ulStartLBA + (finalFatSize*2);
+
+		printf("Cluster Begin LBA = %lu\n", ulClusterBeginLBA);
+
+		for(i = 0; i < sectorsPerCluster; i++) {
+			if(i == 0) {
+				pBuffer = FF_GetBuffer(pIoman, ulClusterBeginLBA, FF_MODE_WR_ONLY);
+				memset(pBuffer->pBuffer, 0, pIoman->BlkSize);
+			} else  {
+				FF_BlockWrite(pIoman, ulClusterBeginLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
+			}
+			
+		}
+
+		FF_ReleaseBuffer(pIoman, pBuffer);
+				
+		// Correctly modify the second FAT item again.
+		pBuffer = FF_GetBuffer(pIoman, partitionGeom.ulStartLBA + finalFatSize, FF_MODE_WRITE);
+		{
+			switch(fatSize) {
+			case 16: {
+				FF_putShort(pBuffer->pBuffer, 0, 0xFFF8);
+				FF_putShort(pBuffer->pBuffer, 2, 0xFFFF);
+				break;
+			}
+			   
+			case 32:
+				FF_putLong(pBuffer->pBuffer, 0, 0x0FFFFFF8);
+				FF_putLong(pBuffer->pBuffer, 4, 0xFFFFFFFF);
+				FF_putLong(pBuffer->pBuffer, 8, 0x0FFFFFFF); // Root dir allocation.
+			}
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
 
 
+		// Modify the fields in the VBR/PBR for correct mounting.
+		pBuffer = FF_GetBuffer(pIoman, ulBPRLba, FF_MODE_WRITE); 		// Modify the FAT descriptions.
+		{
+
+			// -- First section Common vars to Fat12/16 and 32.
+			memset(pBuffer->pBuffer, 0, pIoman->BlkSize); 				// Clear the boot record.
+			
+			FF_putChar(pBuffer->pBuffer, 0, 0xEB);						// Place the Jump to bootstrap x86 instruction.
+			FF_putChar(pBuffer->pBuffer, 1, 0x3C);						// Even though we won't populate the bootstrap code.
+			FF_putChar(pBuffer->pBuffer, 2, 0x90);						// Some devices look for this as a signature.
+
+			memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+3), "FULLFAT2", 8); // Place the FullFAT OEM code.
+
+			FF_putShort(pBuffer->pBuffer, 11, pIoman->BlkSize);
+			FF_putChar(pBuffer->pBuffer, 13, sectorsPerCluster);
+			
+			FF_putShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS, partitionGeom.ulStartLBA); 	// Number of reserved sectors. (1 for fat12/16, 32 for f32).
+			FF_putShort(pBuffer->pBuffer, FF_FAT_NUMBER_OF_FATS, 2); 	// Always 2 copies.
+
+			
+			//FF_putShort(pBuffer->pBuffer, 19, 0);						// Number of sectors in partition if size < 32mb.
+
+			FF_putChar(pBuffer->pBuffer, 21, 0xF8);             		// Media type -- HDD.
+		   
+
+			FF_putShort(pBuffer->pBuffer, 510, 0xAA55);					// MBR sig.
+			FF_putLong(pBuffer->pBuffer, 32, partitionGeom.ulLength+partitionGeom.ulStartLBA); // Total sectors of this partition.
+
+			if(fatSize == 32) {
+				FF_putShort(pBuffer->pBuffer, 36, finalFatSize);		// Number of sectors per fat. 
+				FF_putShort(pBuffer->pBuffer, 44, 2);					// Root dir cluster (2).
+				FF_putShort(pBuffer->pBuffer, 48, 1);					// FSINFO sector at LBA1.
+				FF_putShort(pBuffer->pBuffer, 50, 6);					// 0 for no backup boot sector.
+				FF_putChar(pBuffer->pBuffer, 66, 0x29);					// Indicate extended signature is present.
+				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+71), "FullFAT2-V", 10); // Volume name.
+				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+81), "FAT32   ", 8);				
+
+				// Put backup boot sector.
+				FF_BlockWrite(pIoman, 6, 1, pBuffer->pBuffer, FF_FALSE);
+			} else {
+				FF_putChar(pBuffer->pBuffer, 38, 0x28);					// Signal this contains an extended signature.
+				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+43), "FullFAT2-V", 10); // Volume name.
+				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+54), "FAT16   ", 8);
+				FF_putShort(pBuffer->pBuffer, FF_FAT_16_SECTORS_PER_FAT, finalFatSize);
+				FF_putShort(pBuffer->pBuffer, 17, 512);				 		// Number of Dir entries. (FAT32 0).
+				//FF_putShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT, 
+			}
+		}
 	}
-	//FF_ReleaseBuffer(pIoman, pBuffer);
+	FF_ReleaseBuffer(pIoman, pBuffer);
+
+	if(fatSize == 32) {
+		// Finally if FAT32, create an FSINFO sector.
+		pBuffer = FF_GetBuffer(pIoman, 1, FF_MODE_WRITE);
+		{
+			memset(pBuffer->pBuffer, 0, pIoman->BlkSize);
+			FF_putLong(pBuffer->pBuffer, 0, 0x41615252);	// FSINFO sect magic number.
+			FF_putLong(pBuffer->pBuffer, 484, 0x61417272);	// FSINFO second sig.
+			// Calculate total sectors, -1 for the root dir allocation. (Free sectors count).
+			FF_putLong(pBuffer->pBuffer, 488, ((ulTotalSectors - (ulReservedSectors + (2*finalFatSize))) / sectorsPerCluster)-1);
+			FF_putLong(pBuffer->pBuffer, 492, 2);			// Hint for next free cluster.
+			FF_putShort(pBuffer->pBuffer, 510, 0xAA55);
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
+	}
+
+	FF_FlushCache(pIoman);
+				
+	// Done :D (Wasn't so hard!).
 
 	return Error;
-	
 }
 
 FF_ERROR FF_Format(FF_IOMAN *pIoman, FF_T_UINT32 ulStartLBA, FF_T_UINT32 ulEndLBA, FF_T_UINT32 ulClusterSize) {

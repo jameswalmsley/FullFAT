@@ -56,7 +56,7 @@ extern "C" {
 #include "ff_string.h"
 #include "ff_types.h"
 #include "ff_unicode.h"
-//#include "ff_format.h"
+#include "ff_format.h"
 
 #ifdef	__cplusplus
 }	// extern "C"

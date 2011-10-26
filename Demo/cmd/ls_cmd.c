@@ -143,6 +143,7 @@ const FFT_ERR_TABLE lsInfo[] =
 	list).
 */
 static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
+#ifdef FF_TIME_SUPPORT
 	pDest->tmCreated.cDay = (unsigned char) pSource->CreateTime.Day;
 	pDest->tmCreated.cMonth = (unsigned char) pSource->CreateTime.Month;
 	pDest->tmCreated.iYear = (int) pSource->CreateTime.Year;
@@ -163,6 +164,9 @@ static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest) {
 	pDest->tmCreated.cHour = (unsigned char) pSource->CreateTime.Hour;
 	pDest->tmCreated.cMinute = (unsigned char) pSource->CreateTime.Minute;
 	pDest->tmCreated.cSecond = (unsigned char) pSource->CreateTime.Second;
+#else
+
+#endif
 }
 
 /*

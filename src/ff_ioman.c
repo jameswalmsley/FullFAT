@@ -840,7 +840,6 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		if(ucPartitionType == 0xEE) {
-
 			pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA);
 			Error = FF_GetEfiPartitionEntry(pIoman, PartitionNumber);
 
@@ -899,10 +898,12 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	if(!pPart->BlkSize) {
 		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 	}
-	
+
 	pPart->RootDirSectors	= ((FF_getShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT) * 32) + pPart->BlkSize - 1) / pPart->BlkSize;
 	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
+
+	printf("DSEcs: %lu TS:%lu : RDS: %lu\n", pPart->DataSectors, pPart->TotalSectors, pPart->RootDirSectors);
 	
 	if(!pPart->SectorsPerCluster) {
 		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
@@ -923,6 +924,8 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->LastFreeCluster	= 0;
 	pPart->FreeClusterCount = 0;
 #endif
+
+	printf("rdc: %ul (LBA %lu)\n", pPart->RootDirCluster, FF_Cluster2LBA(pIoman, pPart->RootDirCluster));
 
 	return FF_ERR_NONE;
 }
@@ -1099,12 +1102,11 @@ FF_T_SINT32 FF_GetPartitionBlockSize(FF_IOMAN *pIoman) {
  **/
 FF_T_UINT64 FF_GetVolumeSize(FF_IOMAN *pIoman) {
 	if(pIoman) {
-		FF_T_UINT32 TotalClusters = pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster;
+		FF_T_UINT32 TotalClusters = (pIoman->pPartition->DataSectors / pIoman->pPartition->SectorsPerCluster);
 		return (FF_T_UINT64) ((FF_T_UINT64)TotalClusters * (FF_T_UINT64)((FF_T_UINT64)pIoman->pPartition->SectorsPerCluster * (FF_T_UINT64)pIoman->pPartition->BlkSize));
 	}
 	return 0;
 }
-
 #else
 FF_T_UINT32 FF_GetVolumeSize(FF_IOMAN *pIoman) {
 	if(pIoman) {

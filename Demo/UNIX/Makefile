@@ -22,7 +22,7 @@ DEPFOLDER = .deps
 
 # link
 FullFAT: $(OBJS) $(LIBS)
-	@echo "  [CC]\tFullFAT"
+	@echo -e "  [CC]\tFullFAT"
 	@gcc $(OBJS) $(LIBS) -o FullFAT
 
 # pull in dependency info for *existing* .o files
@@ -37,7 +37,7 @@ FullFAT: $(OBJS) $(LIBS)
 #   sed:    strip leading spaces
 #   sed:    add trailing colons
 %.o: %.c
-	@echo "  [CC]\t$*.c"
+	@echo -e "  [CC]\t$*.c"
 	gcc -c -g $(CFLAGS) $*.c -o $*.o
 	@gcc -MM $(CFLAGS) $*.c > $*.d
 	@cp -f $*.d $*.d.tmp
@@ -48,6 +48,7 @@ FullFAT: $(OBJS) $(LIBS)
 # remove compilation products
 clean:
 	rm -f *.a *.o *.d
+	rm -f FullFAT
 	rm -f ../cmd/*.o ../cmd/*.d
 	make -C ../../ clean
 	make -C ../../../ffterm/src clean
@@ -62,4 +63,4 @@ libffterm.a:
 
 image:
 	dd if=/dev/zero of=ffimage.img bs=512 count=100000
-	mkfs.vfat ffimage.img
+	mkfs.vfat -s 1 -F 32 ffimage.img

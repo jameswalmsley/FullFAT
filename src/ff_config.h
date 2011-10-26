@@ -77,6 +77,9 @@
 										// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
 										// therefore savings can be made by not having it.
 
+//---------- WRITE BOTH FATS
+//#define FF_WRITE_BOTH_FATS
+
 
 //---------- TIME SUPPORT
 //#define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c

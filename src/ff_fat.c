@@ -237,7 +237,7 @@ FF_ERROR FF_ClearCluster(FF_IOMAN *pIoman, FF_T_UINT32 nCluster) {
 			if(!pBuffer) {
 				return FF_ERR_DEVICE_DRIVER_FAILED | FF_CLEARCLUSTER;
 			}
-			memset(pBuffer->pBuffer, 0x00, 512);
+			memset(pBuffer->pBuffer, 0x00, pIoman->BlkSize);
 		}
 		slRetVal = FF_BlockWrite(pIoman, BaseLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
 		if(slRetVal < 0) {
