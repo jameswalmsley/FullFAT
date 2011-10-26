@@ -98,8 +98,7 @@ FF_ERROR FF_CreatePartitionTable(FF_IOMAN *pIoman, FF_T_UINT32 ulTotalDeviceBloc
 FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_T_UINT32 ulClusterSize) {
 	
 	FF_BUFFER *pBuffer;
-	FF_T_UINT8	ucPartitionType;
-	FF_T_SINT8	scPartitionCount;
+  	FF_T_SINT8	scPartitionCount;
 	FF_T_UINT32 maxClusters, f16MaxClusters, f32MaxClusters;
 	FF_T_UINT32 fatSize = 32; // Default to a fat32 format.
 
@@ -127,10 +126,8 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 			return FF_ERR_DEVICE_DRIVER_FAILED | FF_FORMATPARTITION;
 		}
 
-		printf("Sig: %x\n", (unsigned long) (*((unsigned short *) (pBuffer->pBuffer + 510)) ));
-
+		
 		scPartitionCount = FF_PartitionCount(pBuffer->pBuffer);
-		printf("Found %d partitions\n", scPartitionCount);
 
 		if(!scPartitionCount) {
 			// Get Partition Geom from volume boot record.
@@ -145,23 +142,15 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 			ulTotalSectors = partitionGeom.ulLength;
 
-			printf("BPR lba: %lu\n", ulBPRLba);
-
 			partitionGeom.ulLength -= partitionGeom.ulStartLBA; // Remove the reserved sectors from the count.
-
-			printf("Partition-format-start: %lu\n", partitionGeom.ulStartLBA);
 
 		} else {
 			// Get partition Geom from the partition table entry.
 			
 		}
 
-		printf("pLEN: %lu, clusterSize %lu\n", partitionGeom.ulLength, ulClusterSize);
-
 		// Calculate the max possiblenumber of clusters based on clustersize.
 		maxClusters = partitionGeom.ulLength / sectorsPerCluster;
-
-		printf("maxClusters: %lu\n", maxClusters);
 
 		// Determine the size of a FAT table required to support this.
 		fat32Size = (maxClusters * 4) / pIoman->BlkSize; // Potential size in sectors of a fat32 table.
@@ -176,17 +165,13 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 		}
 		fat16Size *= 2;
 
-		printf("fat32size: %lu, fat16size: %lu\n", fat32Size, fat16Size);
-
 		// A real number of sectors to be available is therefore ~~
 		ul16DataSectors = partitionGeom.ulLength - fat16Size;
 		ul32DataSectors = partitionGeom.ulLength - fat32Size;
 
-		printf("fat16-sects: %lu, fat32-sects: %lu\n", ul16DataSectors, ul32DataSectors);
 		f16MaxClusters = ul16DataSectors / sectorsPerCluster;
 		f32MaxClusters = ul32DataSectors / sectorsPerCluster;
 
-		printf("f16-clusts: %lu, f32-clusts: %lu\n", f16MaxClusters, f32MaxClusters);
 		newFat16Size = (f16MaxClusters * 2) / pIoman->BlkSize;
 		if((f16MaxClusters * 2) % pIoman->BlkSize) {
 			newFat16Size++;
@@ -244,8 +229,6 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 				
 		// Clear and initialise the root dir.
 		ulClusterBeginLBA = partitionGeom.ulStartLBA + (finalFatSize*2);
-
-		printf("Cluster Begin LBA = %lu\n", ulClusterBeginLBA);
 
 		for(i = 0; i < sectorsPerCluster; i++) {
 			if(i == 0) {
@@ -346,20 +329,6 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 	FF_FlushCache(pIoman);
 				
-	// Done :D (Wasn't so hard!).
-
 	return Error;
 }
 
-FF_ERROR FF_Format(FF_IOMAN *pIoman, FF_T_UINT32 ulStartLBA, FF_T_UINT32 ulEndLBA, FF_T_UINT32 ulClusterSize) {
-	 //FF_T_UINT32 ulTotalSectors;
-	//FF_T_UINT32 ulTotalClusters;
-
-	//ulTotalSectors	= ulEndLBA - ulStartLBA;
-	//ulTotalClusters = ulTotalSectors / (ulClusterSize / pIoman->BlkSize);
-
-
-	return -1;
-
-
-}

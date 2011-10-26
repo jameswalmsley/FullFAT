@@ -389,111 +389,110 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 	FatSector = FF_getRealLBA(pIoman, FatSector); // LBA * pIoman->pPartition->BlkFactor;
 
 #ifdef FF_FAT12_SUPPORT	
-	if(pIoman->pPartition->Type == FF_T_FAT12) {
-		if(relClusterEntry == (FF_T_UINT32) (pIoman->BlkSize - 1)) {
+	 if(pIoman->pPartition->Type == FF_T_FAT12) {
+		  if(relClusterEntry == (FF_T_UINT32) (pIoman->BlkSize - 1)) {
 			
-         // Fat Entry SPANS a Sector!
-			// First Buffer get the last Byte in buffer (first byte of our address)!
-			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
-			{
-				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+				// Fat Entry SPANS a Sector!
+				// First Buffer get the last Byte in buffer (first byte of our address)!
+				pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_READ);
+				{
+					 if(!pBuffer) {
+						  return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+					 }
+					 F12short[0] = FF_getChar(pBuffer->pBuffer, pIoman->BlkSize - 1);
 				}
-				F12short[0] = FF_getChar(pBuffer->pBuffer, pIoman->BlkSize - 1);
-			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
-			// Second Buffer get the first Byte in buffer (second byte of out address)!
-			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_READ);
-			{
-				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+				FF_ReleaseBuffer(pIoman, pBuffer);
+				// Second Buffer get the first Byte in buffer (second byte of out address)!
+				pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_READ);
+				{
+					 if(!pBuffer) {
+						  return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+					 }
+					 F12short[1] = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16) 0x0000);				
 				}
-				F12short[1] = FF_getChar(pBuffer->pBuffer, (FF_T_UINT16) 0x0000);				
-			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
-
+				FF_ReleaseBuffer(pIoman, pBuffer);
 					
-			FatEntry = FF_getShort((FF_T_UINT8*)&F12short, (FF_T_UINT16) 0x0000);	// Guarantee correct Endianess!
-			if(nCluster & 0x0001) {
-				FatEntry   &= 0x000F;
-				Value		= (Value << 4);
-				Value	   &= 0xFFF0;
-			}  else {
-				FatEntry	&= 0xF000;
-				Value		&= 0x0FFF;
-			}
+				FatEntry = FF_getShort((FF_T_UINT8*)&F12short, (FF_T_UINT16) 0x0000);	// Guarantee correct Endianess!
+				if(nCluster & 0x0001) {
+					 FatEntry   &= 0x000F;
+					 Value		= (Value << 4);
+					 Value	   &= 0xFFF0;
+				}  else {
+					 FatEntry	&= 0xF000;
+					 Value		&= 0x0FFF;
+				}
 
-			FF_putShort((FF_T_UINT8 *)F12short, 0x0000, (FF_T_UINT16) (FatEntry | Value));
+				FF_putShort((FF_T_UINT8 *)F12short, 0x0000, (FF_T_UINT16) (FatEntry | Value));
 
 #ifdef FF_WRITE_BOTH_FATS
-			 for (i = 0; i < pIoman->pPartition->NumFATs; i++) {
-				  FatSector += (i * pIoman->pPartition->SectorsPerFat);
+				for (i = 0; i < pIoman->pPartition->NumFATS; i++) {
+					 FatSector += (i * pIoman->pPartition->SectorsPerFAT);
 #endif
 
-			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
-			{
-				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
-				}
-				FF_putChar(pBuffer->pBuffer, (FF_T_UINT16)(pIoman->BlkSize - 1), F12short[0]);				
-			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+					 pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
+					 {
+						  if(!pBuffer) {
+								return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+						  }
+						  FF_putChar(pBuffer->pBuffer, (FF_T_UINT16)(pIoman->BlkSize - 1), F12short[0]);				
+					 }
+					 FF_ReleaseBuffer(pIoman, pBuffer);
 
-			// Second Buffer get the first Byte in buffer (second byte of out address)!
-			pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_WRITE); // changed to MODE_WRITE -- BUG???
-			{
-				if(!pBuffer) {
-					return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
-				}
-				FF_putChar(pBuffer->pBuffer, 0x0000, F12short[1]);				
-			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+					 // Second Buffer get the first Byte in buffer (second byte of out address)!
+					 pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust + 1, FF_MODE_WRITE); // changed to MODE_WRITE -- BUG???
+					 {
+						  if(!pBuffer) {
+								return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+						  }
+						  FF_putChar(pBuffer->pBuffer, 0x0000, F12short[1]);				
+					 }
+					 FF_ReleaseBuffer(pIoman, pBuffer);
 
-#ifdef FF_MODE_WRITE_BOTH_FATS
-			 }
+#ifdef FF_WRITE_BOTH_FATS
+				}
 #endif
 
-			return FF_ERR_NONE;
-		}
-	}
+				return FF_ERR_NONE;
+		  }
+	 }
 #endif
 
 #ifdef FF_WRITE_BOTH_FATS
-	for (i = 0; i < pIoman->pPartition->NumFATS; i++) {
-		 FatSector += (i * pIoman->pPartition->SectorsPerFAT);
+	 for (i = 0; i < pIoman->pPartition->NumFATS; i++) {
+		  FatSector += (i * pIoman->pPartition->SectorsPerFAT);
 #endif
 	
-	pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
-	{
-		if(!pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
-		}
-		if(pIoman->pPartition->Type == FF_T_FAT32) {
-			Value &= 0x0fffffff;	// Clear the top 4 bits.
-			FF_putLong(pBuffer->pBuffer, relClusterEntry, Value);
-		} else if(pIoman->pPartition->Type == FF_T_FAT16) {
-			FF_putShort(pBuffer->pBuffer, relClusterEntry, (FF_T_UINT16) Value);
-		} else {
-			FatEntry	= (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, relClusterEntry);
-			if(nCluster & 0x0001) {
-				FatEntry   &= 0x000F;
-				Value		= (Value << 4);
-				Value	   &= 0xFFF0;
-			}  else {
-				FatEntry	&= 0xF000;
-				Value		&= 0x0FFF;
-			}
+		  pBuffer = FF_GetBuffer(pIoman, FatSector + LBAadjust, FF_MODE_WRITE);
+		  {
+				if(!pBuffer) {
+					 return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTFATENTRY;
+				}
+				if(pIoman->pPartition->Type == FF_T_FAT32) {
+					 Value &= 0x0fffffff;	// Clear the top 4 bits.
+					 FF_putLong(pBuffer->pBuffer, relClusterEntry, Value);
+				} else if(pIoman->pPartition->Type == FF_T_FAT16) {
+					 FF_putShort(pBuffer->pBuffer, relClusterEntry, (FF_T_UINT16) Value);
+				} else {
+					 FatEntry	= (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, relClusterEntry);
+					 if(nCluster & 0x0001) {
+						  FatEntry   &= 0x000F;
+						  Value		= (Value << 4);
+						  Value	   &= 0xFFF0;
+					 }  else {
+						  FatEntry	&= 0xF000;
+						  Value		&= 0x0FFF;
+					 }
 			
-			FF_putShort(pBuffer->pBuffer, relClusterEntry, (FF_T_UINT16) (FatEntry | Value));
-		}
-	}
-	FF_ReleaseBuffer(pIoman, pBuffer);
+					 FF_putShort(pBuffer->pBuffer, relClusterEntry, (FF_T_UINT16) (FatEntry | Value));
+				}
+		  }
+		  FF_ReleaseBuffer(pIoman, pBuffer);
 
 #ifdef FF_WRITE_BOTH_FATS
-	}
+	 }
 #endif
 
-	return FF_ERR_NONE;
+	 return FF_ERR_NONE;
 }
 
 
@@ -508,7 +507,7 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
  *	@return 0 on error.
  **/
 #ifdef FF_FAT12_SUPPORT
-static FF_T_UINT32 FF_FindFreeClusterOLD(FF_IOMAN *pIoman, FF_ERROR *pError) {
+FF_T_UINT32 FF_FindFreeClusterOLD(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_T_UINT32 nCluster;
 	FF_T_UINT32 fatEntry;
 
@@ -855,7 +854,7 @@ FF_T_UINT64 FF_GetFreeSize(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	return 0;
 }
 #else
-FF_T_UINT32 FF_GetFreeSize(FF_IOMAN *pIoman) {
+FF_T_UINT32 FF_GetFreeSize(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_T_UINT32 FreeClusters;
 	FF_T_UINT32 FreeSize;
 	
@@ -863,7 +862,11 @@ FF_T_UINT32 FF_GetFreeSize(FF_IOMAN *pIoman) {
 		FF_lockFAT(pIoman);
 		{	
 			if(!pIoman->pPartition->FreeClusterCount) {
-				pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman);
+				 pIoman->pPartition->FreeClusterCount = FF_CountFreeClusters(pIoman, pError);
+				 if(FF_isERR(*pError)) {
+					  FF_unlockFAT(pIoman);
+					  return 0;
+				 }
 			}
 			FreeClusters = pIoman->pPartition->FreeClusterCount;
 		}

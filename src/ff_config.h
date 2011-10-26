@@ -47,10 +47,10 @@
 
 
 //---------- LFN (Long File-name) SUPPORT
-//#define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
+#define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
 										// FullFAT works great with LFNs and without. You choose, its your project!
 
-//#define FF_INCLUDE_SHORT_NAME			// HT addition, in 'FF_DIRENT', beside FileName, ShortName will be filled as well
+#define FF_INCLUDE_SHORT_NAME			// HT addition, in 'FF_DIRENT', beside FileName, ShortName will be filled as well
                                      	// Useful for debugging, but also some situations its useful to know both.
 //---------- SHORTNAMES CAN USE THE CASE BITS
 #define FF_SHORTNAME_CASE				// Works for XP+ e.g. short.TXT or SHORT.txt.
@@ -64,16 +64,9 @@
 										// To use UNICODE (UTF-16, or UTF-32 depending on the size of wchar_t) you must have a C99 compliant
 										// compiler and library.
 
-//#define FF_UNICODE_UTF8_SUPPORT		// If this is defined, then all of FullFAT's API's will expect to receive UTF-8 formatted strings.
-										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-8 format.
-
-										// Note the 2 UNICODE options are mutually exclusive. Only one can be enabled.
-
-										// Ensure that dirents are big enough to hold the maximum UTF-8 sequence.
-
 
 //---------- FAT12 SUPPORT
-//#define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
+#define FF_FAT12_SUPPORT				// Enable FAT12 Suppport. You can reduce the code-size by commenting this out.
 										// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
 										// therefore savings can be made by not having it.
 
@@ -91,7 +84,7 @@
                               // trust the on-disk value anyway.
 
 //---------- TIME SUPPORT
-//#define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
+#define FF_TIME_SUPPORT					// Should FullFAT use time stamping. Only if you have provided the relevant time drivers in ff_time.c
 										// Note, by default ff_time.c is set-up for the Windows Demonstration. Please see ff_time.c to disable.
 
 #define FF_REMOVABLE_MEDIA				// Enable removable media support.
@@ -108,7 +101,7 @@
 
 
 //---------- FREE SPACE CALCULATION
-//#define FF_MOUNT_FIND_FREE			// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
+#define FF_MOUNT_FIND_FREE			// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
 										// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
 
 
@@ -119,7 +112,7 @@
 
 
 //---------- PATH CACHE ----------
-//#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
+#define FF_PATH_CACHE					// Enables a simply Path Caching mechanism that increases performance of repeated operations
 										// within the same path. E.g. a copy \dir1\*.* \dir2\*.* command.
 										// This command requires FF_MAX_PATH number of bytes of memory. (Defined below, default 2600).
 
@@ -127,7 +120,7 @@
 
 
 //---------- HASH CACHE					// Speed up File-creation with a HASH table. Provides up to 20x performance boost.
-//#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
+#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
 #define FF_HASH_CACHE_DEPTH		10		// Number of Directories to be Hashed. (For CRC16 memory is 8KB * DEPTH)
 #define FF_HASH_FUNCTION		CRC16	// Choose a 16-bit hash. 
 //#define FF_HASH_FUNCTION		CRC8	// Choose an 8-bit hash.
@@ -150,9 +143,9 @@
 #define FF_INLINE static inline		// Standard for GCC
 
 //---------- Inline Memory Independence Routines for better performance, but bigger codesize.
-//#define FF_INLINE_MEMORY_ACCESS
+#define FF_INLINE_MEMORY_ACCESS
 //---------- Inline Block Calculation Routines for slightly better performance in critical sections.
-//#define FF_INLINE_BLOCK_CALCULATIONS
+#define FF_INLINE_BLOCK_CALCULATIONS
 
 
 //---------- 64-Bit Number Support

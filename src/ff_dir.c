@@ -275,11 +275,9 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 	FF_T_INT8	numLFNs = 0;
 	FF_T_INT8	totalLFNs = 0;
 	FF_T_UINT8	lastAttrib;
-#endif
-
-
-#ifdef FF_UNICODE_UTF8_SUPPORT
+	
 	FF_T_INT32	i;
+
 #endif
 
 
@@ -928,7 +926,8 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
  *	@private
  **/
 FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
-	FF_T_UINT8			EntryBuffer[32];
+	FF_T_UINT8		
+	EntryBuffer[32];
 	FF_FETCH_CONTEXT	FetchContext;
 	FF_ERROR				Error;
 

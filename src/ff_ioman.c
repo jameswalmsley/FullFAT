@@ -53,9 +53,7 @@
 #include "ff_ioman.h"	// Includes ff_types.h, ff_safety.h, <stdio.h>
 #include "ff_fatdef.h"
 #include "ff_crc.h"
-
-//extern FF_T_UINT32 FF_FindFreeCluster		(FF_IOMAN *pIoman);
-extern FF_T_UINT32 FF_CountFreeClusters		(FF_IOMAN *pIoman, FF_ERROR *pError);
+#include "ff_fat.h"
 
 static void FF_IOMAN_InitBufferDescriptors(FF_IOMAN *pIoman);
 
@@ -76,6 +74,9 @@ FF_IOMAN *FF_CreateIOMAN(FF_T_UINT8 *pCacheMem, FF_T_UINT32 Size, FF_T_UINT16 Bl
 
 	FF_IOMAN	*pIoman = NULL;
 	FF_T_UINT32 *pLong	= NULL;
+#ifdef FF_HASH_CACHE
+	FF_T_UINT i;
+#endif
 
 	if(pError) {
 		*pError = FF_ERR_NONE;
@@ -894,7 +895,6 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	}
 #ifdef FF_WRITE_FREE_COUNT
 	pPart->FSInfoLBA = FF_getShort(pBuffer->pBuffer, 48);
-	printf("FSInfoSector is: %lu\n", pPart->FSInfoLBA);
 #endif
 
 	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
@@ -907,8 +907,6 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->FirstDataSector	= pPart->ClusterBeginLBA + pPart->RootDirSectors;
 	pPart->DataSectors		= pPart->TotalSectors - (pPart->ReservedSectors + (pPart->NumFATS * pPart->SectorsPerFAT) + pPart->RootDirSectors);
 
-	printf("DSEcs: %lu TS:%lu : RDS: %lu\n", pPart->DataSectors, pPart->TotalSectors, pPart->RootDirSectors);
-	
 	if(!pPart->SectorsPerCluster) {
 		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 	}
@@ -922,14 +920,18 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	}
 	pPart->PartitionMounted = FF_TRUE;
 #ifdef FF_MOUNT_FIND_FREE
-	pPart->LastFreeCluster	= FF_FindFreeCluster(pIoman);
-	pPart->FreeClusterCount = FF_CountFreeClusters(pIoman);
+	pPart->LastFreeCluster	= FF_FindFreeCluster(pIoman, &Error);
+	if(FF_isERR(Error)) {
+		 return Error;
+	}
+	pPart->FreeClusterCount = FF_CountFreeClusters(pIoman, &Error);
+	if(FF_isERR(Error)) {
+		 return Error;
+	}
 #else
 	pPart->LastFreeCluster	= 0;
 	pPart->FreeClusterCount = 0;
 #endif
-
-	printf("rdc: %ul (LBA %lu)\n", pPart->RootDirCluster, FF_Cluster2LBA(pIoman, pPart->RootDirCluster));
 
 	return FF_ERR_NONE;
 }
