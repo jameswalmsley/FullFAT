@@ -58,6 +58,7 @@
 #ifdef WIN32
 #define wcsicmp _wcsicmp
 #else
+#define wcsicmp wcscasecmp
 #include <ctype.h>  // tolower()
 int strcasecmp(const char *s1, const char *s2)
 {
@@ -714,7 +715,6 @@ void FF_PopulateShortDirent(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT8 *En
 	memcpy(pDirent->ShortName, EntryBuffer, 11);
 	pDirent->ShortName[11] = '\0';
 	FF_ProcessShortName(pDirent->ShortName);	// For debuggers only
-
 #endif
 	FF_ProcessShortName(pDirent->FileName);		// Format the shortname, for pleasant viewing.
 

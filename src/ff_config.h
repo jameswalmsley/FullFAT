@@ -50,7 +50,7 @@
 #define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
 										// FullFAT works great with LFNs and without. You choose, its your project!
 
-#define FF_INCLUDE_SHORT_NAME			// HT addition, in 'FF_DIRENT', beside FileName, ShortName will be filled as well
+//#define FF_INCLUDE_SHORT_NAME			// HT addition, in 'FF_DIRENT', beside FileName, ShortName will be filled as well
                                      	// Useful for debugging, but also some situations its useful to know both.
 //---------- SHORTNAMES CAN USE THE CASE BITS
 #define FF_SHORTNAME_CASE				// Works for XP+ e.g. short.TXT or SHORT.txt.
@@ -120,7 +120,7 @@
 
 
 //---------- HASH CACHE					// Speed up File-creation with a HASH table. Provides up to 20x performance boost.
-#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
+//#define FF_HASH_CACHE					// Enable HASH to speed up file creation.
 #define FF_HASH_CACHE_DEPTH		10		// Number of Directories to be Hashed. (For CRC16 memory is 8KB * DEPTH)
 #define FF_HASH_FUNCTION		CRC16	// Choose a 16-bit hash. 
 //#define FF_HASH_FUNCTION		CRC8	// Choose an 8-bit hash.
@@ -198,6 +198,13 @@
 #endif
 
 #ifdef FF_UNICODE_SUPPORT
+#ifdef FF_HASH_CACHE
+#error FullFAT Invalid ff_config.h file: HASH cache feature is not UNICODE compatible, please disable it.
+#endif
+#ifdef FF_INCLUDE_SHORT_NAME
+#error FullFAT Invalid ff_config.h file: INCLUDE SHORT NAME is not UNICODE compatible, please disable it.
+#endif
+
 #ifdef FF_UNICODE_UTF8_SUPPORT
 #error FullFAT Invalid ff_config.h file: Must choose a single UNICODE support option. FF_UNICODE_SUPPORT for UTF-16, FF_UNICODE_UTF8_SUPPORT for UTF-8.
 #endif

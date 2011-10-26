@@ -26,13 +26,13 @@ typedef struct {
 } FF_MOUNTPOINT;
 
 typedef struct {							// Provides an environment for the FullFAT commands.
-	FF_IOMAN	*pIoman;
+	 FF_IOMAN	*pIoman;
 #ifdef FF_UNICODE_SUPPORT	
-	FF_T_WCHAR	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
+	 FF_T_WCHAR	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
 #else
-	FF_T_INT8	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
-	FFT_CONSOLE	*pConsole;
+	 FF_T_INT8	WorkingDir[FF_MAX_PATH];	// A working directory Environment variable.
 #endif
+	 FFT_CONSOLE	*pConsole;
 } FF_ENVIRONMENT;
 
 #ifdef FF_UNICODE_SUPPORT

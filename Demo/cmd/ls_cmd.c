@@ -37,6 +37,11 @@
 #include "ls_cmd.h"
 
 //static void transferdatetime(FF_DIRENT *pSource, SD_DIRENT *pDest);
+#ifdef WIN32
+
+#else
+#define wcsicmp wcscasecmp
+#endif
 
 typedef struct {
 	 int bShowHidden, bList, bRecursive, bHumanReadable;
@@ -103,11 +108,11 @@ int ls_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					break;
 			}
 
-			option = FFTerm_getopt(argc, argv, "rRlLaAhH", &optionContext);
+			option = FFTerm_getopt(argc, (const char **) argv, "rRlLaAhH", &optionContext);
 		} while(option != EOF);
 	}
 
-	szPath = FFTerm_getarg(argc, argv, 0, &optionContext);
+	szPath = FFTerm_getarg(argc, (const char **) argv, 0, &optionContext);
 
 	if(szPath) {
 #ifdef FF_UNICODE_SUPPORT

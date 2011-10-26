@@ -2,6 +2,8 @@
 #	FullFAT root Makefile for the Linux demo.
 #
 
+MAKEFLAGS += -rR --no-print-directory
+
 default:
 	@echo "###################################################"
 	@echo "# FullFAT build environment for linux.            #"

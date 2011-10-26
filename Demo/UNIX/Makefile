@@ -1,3 +1,5 @@
+MAKEFLAGS += -rR --no-print-directory
+
 OBJS := main.o
 OBJS += ../../Drivers/Linux/blkdev_linux.o
 OBJS += ../../../ffterm/Platforms/linux/FFTerm-Platform-linux.o
@@ -22,7 +24,7 @@ DEPFOLDER = .deps
 
 # link
 FullFAT: $(OBJS) $(LIBS)
-	@echo -e "  [CC]\tFullFAT"
+	@echo "  [CC]\tFullFAT"
 	@gcc $(OBJS) $(LIBS) -o FullFAT
 
 # pull in dependency info for *existing* .o files
@@ -37,8 +39,8 @@ FullFAT: $(OBJS) $(LIBS)
 #   sed:    strip leading spaces
 #   sed:    add trailing colons
 %.o: %.c
-	@echo -e "  [CC]\t$*.c"
-	gcc -c -g $(CFLAGS) $*.c -o $*.o
+	@echo "  [CC]\t$*.c"
+	@gcc -c -g $(CFLAGS) $*.c -o $*.o
 	@gcc -MM $(CFLAGS) $*.c > $*.d
 	@cp -f $*.d $*.d.tmp
 	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \
@@ -47,20 +49,20 @@ FullFAT: $(OBJS) $(LIBS)
 
 # remove compilation products
 clean:
-	rm -f *.a *.o *.d
-	rm -f FullFAT
-	rm -f ../cmd/*.o ../cmd/*.d
-	make -C ../../ clean
-	make -C ../../../ffterm/src clean
+	@rm -f *.a *.o *.d
+	@rm -f FullFAT
+	@rm -f ../cmd/*.o ../cmd/*.d
+	@make -C ../../ clean
+	@make -C ../../../ffterm/src clean
 
 libfullfat.a:
-	make -C ../../src/
-	cp ../../src/libfullfat.a .
+	@make -C ../../src/
+	@cp ../../src/libfullfat.a .
 
 libffterm.a:
-	make -C ../../../ffterm/src/
-	cp ../../../ffterm/src/libffterm.a .
+	@make -C ../../../ffterm/src/
+	@cp ../../../ffterm/src/libffterm.a .
 
 image:
-	dd if=/dev/zero of=ffimage.img bs=512 count=100000
-	mkfs.vfat -s 1 -F 32 ffimage.img
+	@dd if=/dev/zero of=ffimage.img bs=512 count=100000
+	@mkfs.vfat -s 1 -F 32 ffimage.img

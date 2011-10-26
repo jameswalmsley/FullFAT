@@ -17,10 +17,10 @@
 */
 
 void PrintError(FF_ERROR Error) {
-	printf("Error    : %08X encountered.\n", Error);
-	printf("Message  : %s.\n", FF_GetErrMessage(Error));
-	printf("Module   : %s.\n", FF_GetErrModule(Error));
-	printf("Function : %s()\n", FF_GetErrFunction(Error));
+	 printf("Error    : %08X encountered.\n", (unsigned int) Error);
+	 printf("Message  : %s.\n", FF_GetErrMessage(Error));
+	 printf("Module   : %s.\n", FF_GetErrModule(Error));
+	 printf("Function : %s()\n", FF_GetErrFunction(Error));
 }
 
 

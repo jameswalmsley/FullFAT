@@ -47,7 +47,7 @@ int mv_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));			// Initialise the option context to zero.
 
-	option = FFTerm_getopt(argc, argv, "rRv", &optionContext);		// Get the command line option charachters.
+	option = FFTerm_getopt(argc, (const char **) argv, "rRv", &optionContext);		// Get the command line option charachters.
 
 	while(option != EOF) {											// Process Commandline options
 		switch(option) {
@@ -64,11 +64,11 @@ int mv_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 				break;
 		}
 
-		option = FFTerm_getopt(argc, argv, "rRv", &optionContext);	// Get the next option.
+		option = FFTerm_getopt(argc, (const char **) argv, "rRv", &optionContext);	// Get the next option.
 	}
 
-	szpSource 		= FFTerm_getarg(argc, argv, 0, &optionContext);	// The remaining options or non optional arguments.
-	szpDestination 	= FFTerm_getarg(argc, argv, 1, &optionContext);	// getarg() retrieves them intelligently.
+	szpSource 		= FFTerm_getarg(argc, (const char **) argv, 0, &optionContext);	// The remaining options or non optional arguments.
+	szpDestination 	= FFTerm_getarg(argc, (const char **) argv, 1, &optionContext);	// getarg() retrieves them intelligently.
 	
 	if(!szpSource) {
 		printf("%s: No source file argument.\n", argv[0]);			// No source file provided.

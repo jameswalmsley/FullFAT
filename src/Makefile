@@ -1,3 +1,6 @@
+MAKEFLAGS += -rR --no-print-directory
+
+
 OBJS := ff_blk.o
 OBJS += ff_crc.o
 OBJS += ff_dir.o
@@ -42,4 +45,4 @@ libfullfat.a: $(OBJS)
 
 # remove compilation products
 clean:
-	rm -f *.a *.o *.d
+	@rm -f *.a *.o *.d

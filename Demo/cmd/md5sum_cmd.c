@@ -73,7 +73,7 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
 
-	option = FFTerm_getopt(argc, argv, "bctwo:", &optionContext);
+	option = FFTerm_getopt(argc, (const char **) argv, "bctwo:", &optionContext);
 
 	if(option != EOF) {
 		do {
@@ -98,11 +98,11 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 					break;
 			}
 
-			option = FFTerm_getopt(argc, argv, "bctwo:", &optionContext);
+			option = FFTerm_getopt(argc, (const char ** ) argv, "bctwo:", &optionContext);
 		} while(option != EOF);
 	}
 
-	szargPath = FFTerm_getarg(argc, argv, 0, &optionContext);	// Get the available non-option arguments remaining.
+	szargPath = FFTerm_getarg(argc, (const char **) argv, 0, &optionContext);	// Get the available non-option arguments remaining.
 		
 	if(szargPath) {
 

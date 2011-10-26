@@ -15,7 +15,7 @@ int geterror_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	//option = FFTerm_getopt(argc, argv, "", &optionContext);			// Get the command line option charachters.
 
-	szpSource 		= FFTerm_getarg(argc, argv, 0, &optionContext);	// The remaining options or non optional arguments.
+	szpSource 		= FFTerm_getarg(argc, (const char **) argv, 0, &optionContext);	// The remaining options or non optional arguments.
 	if(!szpSource) {
 		printf("Please provide an error code like: 0x81010002\n");
 		return 0;
@@ -25,7 +25,7 @@ int geterror_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		szpSource += 2;
 	}
 
-	sscanf(szpSource, "%08X", &Error);
+	sscanf(szpSource, "%08X", (unsigned int *) &Error);
 
 	if(!Error) {
 		printf("Please provide an error code like: 0x81010002\n");
