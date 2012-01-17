@@ -1,0 +1,7 @@
+FullFAT code style settings.
+
+* TABS: yes we use actual <TABS> they are actually useful :D
+* TABS: Yes ours are 4-spaces (width).
+
+Just set your editor to this when using FullFAT, and the code will looks relatively
+clean.
