@@ -808,6 +808,7 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 	ulRelItem						= FF_getMinorBlockEntry		(pIoman, ulEntry, (FF_T_UINT16)32);
 
 	if(ulClusterNum != pContext->ulCurrentClusterNum) {
+
 		// Traverse the fat gently!
 		if(ulClusterNum > pContext->ulCurrentClusterNum) {
 			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulCurrentClusterLCN, (ulClusterNum - pContext->ulCurrentClusterNum), &Error);
@@ -842,6 +843,11 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 	ulItemLBA = FF_Cluster2LBA	(pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
 	ulItemLBA = FF_getRealLBA	(pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
 
+	if(pIoman->pPartition->Type != FF_T_FAT32) {
+		ulClusterNum = FF_getClusterChainNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+		ulItemLBA = ulItemLBA + (pIoman->pPartition->SectorsPerCluster * ulClusterNum);
+	}
+	
 	if(!pContext->pBuffer || (pContext->pBuffer->Sector != ulItemLBA)) {
 		if(pContext->pBuffer) {
 			FF_ReleaseBuffer(pIoman, pContext->pBuffer);
