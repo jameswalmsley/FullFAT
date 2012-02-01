@@ -528,12 +528,12 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 	
 	if(pIoman->pBlkDevice->fnpReadBlocks) do {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
-		if (!aSemLocked)
+		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
 			FF_PendSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		slRetVal = pIoman->pBlkDevice->fnpReadBlocks(pBuffer, ulSectorLBA, ulNumSectors, pIoman->pBlkDevice->pParam);
 #ifdef	FF_BLKDEV_USES_SEM
-		if (!aSemLocked)
+		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
 			FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		if(FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY)
@@ -555,12 +555,12 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 	
 	if(pIoman->pBlkDevice->fnpWriteBlocks) do {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
-		if (!aSemLocked)
+		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
 			FF_PendSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		slRetVal = pIoman->pBlkDevice->fnpWriteBlocks(pBuffer, ulSectorLBA, ulNumSectors, pIoman->pBlkDevice->pParam);
 #ifdef	FF_BLKDEV_USES_SEM
-		if (!aSemLocked)
+		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
 			FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
 		if(FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY)

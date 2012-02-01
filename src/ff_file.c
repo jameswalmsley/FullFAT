@@ -1174,13 +1174,15 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		while (nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
 			{
-				//FF_PARTITION *pPart				= pIoman->pPartition;
-				//uOffset = 
-				uRemain = pIoman->pPartition->SectorsPerCluster - (/*uOffset*/ ((pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster));
-                if (sSectors > (FF_T_UINT16) uRemain) {
-                    sSectors = (FF_T_UINT16) uRemain;
-                }
-            }
+				// HT: I'd leave these pPart/ucOffset for readability
+				// and shorter code lines
+				FF_PARTITION *pPart = pIoman->pPartition;
+				FF_T_UINT ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
+				ucRemain = pPart->SectorsPerCluster - ucOffset;
+				if (sSectors > ucRemain) {
+					sSectors = ucRemain;
+				}
+			}
 			
 			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
 			if(nClusterDiff) {
@@ -1457,7 +1459,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 		pFile->FilePointer += nBytes;
 		nBytesWritten = nBytes;
-		//return nBytes;		// Return the number of bytes read.
+		//return nBytes;		// Return the number of bytes written.
 
 	} else {
 
@@ -1549,13 +1551,16 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		while (nBytes >= pIoman->BlkSize) {
 			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
 			{
-				//FF_PARTITION *pPart				= pIoman->pPartition;
-				//uOffset = 
-				uRemain = pIoman->pPartition->SectorsPerCluster - (/*uOffset*/ ((pFile->FilePointer / pIoman->BlkSize) % pIoman->pPartition->SectorsPerCluster));
-                if (sSectors > (FF_T_UINT16) uRemain) {
-                    sSectors = (FF_T_UINT16) uRemain;
-                }
-            }
+				// HT: I'd leave these pPart/ucOffset for readability...
+				FF_PARTITION *pPart				= pIoman->pPartition;
+				FF_T_UINT8 ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
+				ucRemain = pPart->SectorsPerCluster - ucOffset;
+				if (sSectors > ucRemain) {
+//					logPrintf ("FF_Write: fp = %lu ofs %u sSectors %u remain %u (correcting)\n",
+//						pFile->FilePointer, offset, sSectors, remain);
+					sSectors = ucRemain;
+				}
+			}
 			
 			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
 			if(nClusterDiff) {

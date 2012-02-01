@@ -1910,14 +1910,19 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 #endif
 		} else {
 			if (i == 8) {
-				x = last_dot;
-				ch = (FF_T_INT8) LongName[x];
-				if (!ch)
-					break;
-				ch = (FF_T_INT8) LongName[++x];
+				// HT change
+				// Code hung with this filename:
+				// 'Chopin, Frederic - The Piano Works Op. 55, Op. 62, Op'
+				if (x <= last_dot) {
+					x = last_dot;
+					ch = (FF_T_INT8) LongName[x];
+					if (!ch)
+						break;
+					ch = (FF_T_INT8) LongName[++x];
 #if defined(FF_SHORTNAME_CASE)
-				testAttrib = FF_FAT_CASE_ATTR_EXT;
+					testAttrib = FF_FAT_CASE_ATTR_EXT;
 #endif
+				}
 			}
 			if (!FF_ValidShortChar (ch)) {
 				FitsShort = FF_FALSE;
@@ -1972,8 +1977,8 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 		memcpy(MyShortName, ShortName, 11);
 		FF_ProcessShortName(MyShortName);
 		if(!FF_ShortNameExists(pIoman, DirCluster, MyShortName, &Error)) {
-
-// HT: should do this later when everything has been checked
+/*
+// HT: will do this later when everything has been checked
 // if not, hash entries might become incorrect
 #ifdef FF_HASH_CACHE
 #if FF_HASH_FUNCTION == CRC16
@@ -1982,7 +1987,7 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 			FF_AddDirentHash(pIoman, DirCluster, (FF_T_UINT32) FF_GetCRC8((FF_T_UINT8*)MyShortName, strlen(MyShortName)));
 #endif
 #endif
-
+*/
 			return 0;
 		}
 	}
@@ -2301,30 +2306,27 @@ FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	return FF_ERR_NONE;
 }
 
+static const FF_T_UINT8 forbiddenChrs[] = {
+//  Windows says: don't use these characters: '\/:*?"<>|'
+//    "     *     /	    :     <     >     ?    '\'    ?     |
+	0x22, 0x2A, 0x2F, 0x3A, 0x3C, 0x3E, 0x3F, 0x5C, 0x7F, 0x7C
+};
 #ifdef FF_UNICODE_SUPPORT
 static void FF_MakeNameCompliant(FF_T_WCHAR *Name) {
 #else
 static void FF_MakeNameCompliant(FF_T_UINT8 *Name) {
 #endif
-	
+	FF_T_INT index;
 	if((FF_T_UINT8) Name[0] == 0xE5) {	// Support Japanese KANJI symbol.
 		Name[0] = 0x05;
 	}
-	
-	while(*Name) {
-		if(*Name < 0x20 || *Name == 0x7F || *Name == 0x22 || *Name == 0x7C) {	// Leave all extended chars as they are.
-			*Name = '_';
+	for (; *Name; Name++) {
+		for (index = 0; index < sizeof forbiddenChrs; index++) {
+			if (*Name == forbiddenChrs[index]) {
+				*Name = '_';
+				break;
+			}
 		}
-		if(*Name >= 0x2A && *Name <= 0x2F && *Name != 0x2B && *Name != 0x2E && *Name != 0x2D) {
-			*Name = '_';
-		}
-		if(*Name >= 0x3A && *Name <= 0x3F) {
-			*Name = '_';
-		}
-		if(*Name >= 0x5B && *Name <= 0x5C) {
-			*Name = '_';
-		}
-		Name++;
 	}
 }
 
