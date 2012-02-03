@@ -1178,9 +1178,9 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				// and shorter code lines
 				FF_PARTITION *pPart = pIoman->pPartition;
 				FF_T_UINT ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
-				ucRemain = pPart->SectorsPerCluster - ucOffset;
-				if (sSectors > ucRemain) {
-					sSectors = ucRemain;
+				uRemain = pPart->SectorsPerCluster - ucOffset;
+				if (sSectors > uRemain) {
+					sSectors = uRemain;
 				}
 			}
 			
@@ -1554,11 +1554,11 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 				// HT: I'd leave these pPart/ucOffset for readability...
 				FF_PARTITION *pPart				= pIoman->pPartition;
 				FF_T_UINT8 ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
-				ucRemain = pPart->SectorsPerCluster - ucOffset;
-				if (sSectors > ucRemain) {
+				uRemain = pPart->SectorsPerCluster - ucOffset;
+				if (sSectors > uRemain) {
 //					logPrintf ("FF_Write: fp = %lu ofs %u sSectors %u remain %u (correcting)\n",
 //						pFile->FilePointer, offset, sSectors, remain);
-					sSectors = ucRemain;
+					sSectors = uRemain;
 				}
 			}
 			
