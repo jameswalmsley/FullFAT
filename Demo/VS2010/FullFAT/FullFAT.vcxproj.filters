@@ -257,5 +257,14 @@
     <ClInclude Include="..\..\..\src\ff_unicode.h">
       <Filter>Header Files\FullFAT</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\fs-manager\fs_error.h">
+      <Filter>Source Files\fsManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\fs-manager\fs_manager.h">
+      <Filter>Source Files\fsManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\fs-manager\fs_types.h">
+      <Filter>Source Files\fsManager</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

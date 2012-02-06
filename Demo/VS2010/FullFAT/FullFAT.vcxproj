@@ -86,6 +86,8 @@
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_safety_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_time_win32.c" />
+    <ClCompile Include="..\..\..\fs-manager\block_device_manager.c" />
+    <ClCompile Include="..\..\..\fs-manager\fs_manager.c" />
     <ClCompile Include="..\..\..\src\ff_blk.c" />
     <ClCompile Include="..\..\..\src\ff_crc.c" />
     <ClCompile Include="..\..\..\src\ff_dir.c" />
@@ -122,6 +124,9 @@
     <ClInclude Include="..\..\..\..\SuperCache\src\sc_error.h" />
     <ClInclude Include="..\..\..\..\SuperCache\src\sc_supercache.h" />
     <ClInclude Include="..\..\..\..\SuperCache\src\sc_types.h" />
+    <ClInclude Include="..\..\..\fs-manager\fs_error.h" />
+    <ClInclude Include="..\..\..\fs-manager\fs_manager.h" />
+    <ClInclude Include="..\..\..\fs-manager\fs_types.h" />
     <ClInclude Include="..\..\..\src\ff_blk.h" />
     <ClInclude Include="..\..\..\src\ff_config.h" />
     <ClInclude Include="..\..\..\src\ff_crc.h" />
