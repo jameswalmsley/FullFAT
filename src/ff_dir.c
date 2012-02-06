@@ -856,7 +856,7 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 	
 	FF_T_UINT32	ulItemLBA;
 	FF_T_UINT32	ulRelItem;
-	FF_T_UINT32	ulClusterNum;
+	//FF_T_UINT32	ulClusterNum;
 	FF_ERROR	Error;
 
 	Error = FF_Traverse(pIoman, ulEntry, pContext);
@@ -864,7 +864,7 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 		return Error;
 	}
 
-	ulClusterNum  = pContext->ulCurrentClusterNum;
+	//ulClusterNum  = pContext->ulCurrentClusterNum;
 	ulRelItem     = FF_getMinorBlockEntry (pIoman, ulEntry, (FF_T_UINT16)32);
 
 	ulItemLBA = FF_Cluster2LBA (pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
@@ -893,7 +893,7 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer) {
 	FF_T_UINT32	ulItemLBA;
 	FF_T_UINT32	ulRelItem;
-	FF_T_UINT32	ulClusterNum;
+	//FF_T_UINT32	ulClusterNum;
 	FF_ERROR	Error;
 
 	Error = FF_Traverse(pIoman, ulEntry, pContext);
@@ -901,7 +901,7 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
 		return Error;
 	}
 
-	ulClusterNum  = pContext->ulCurrentClusterNum;
+	//ulClusterNum  = pContext->ulCurrentClusterNum;
 	ulRelItem     = FF_getMinorBlockEntry (pIoman, ulEntry, (FF_T_UINT16)32);
 
 	ulItemLBA = FF_Cluster2LBA (pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
