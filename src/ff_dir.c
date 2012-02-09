@@ -773,8 +773,8 @@ FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_
 	}
 	pContext->ulDirCluster			= ulDirCluster;
 	pContext->ulCurrentClusterLCN 	= ulDirCluster;
-	pContext->ulCurrentClusterNum 	= 0;
-	pContext->ulCurrentEntry		= 0;
+//	pContext->ulCurrentClusterNum 	= 0;  // memset has cleared it
+//	pContext->ulCurrentEntry		= 0;
 
 	if(pIoman->pPartition->Type != FF_T_FAT32) {
 		// Handle Root Dirs that don't have cluster chains!
@@ -797,6 +797,61 @@ void FF_CleanupEntryFetch(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext) {
 	}
 }
 
+/**
+ *	@private
+ *	@brief	Find the cluster for a given Entry within a directory
+ *  @brief	Make an exception for the root directory (non FAT32 only):
+ *  @brief	Just calculate the cluster (don't consult the actual FAT)
+ *
+ *	@param	pIoman      FF_IOMAN object that was created by FF_CreateIOMAN().
+ *	@param	ulEntry     The sequence number of the entry of interest
+ *  @param	pContext    Context of current search
+ *
+ *	@return	FF_ERR_NONE on success
+ *	@return	Possible error returned by FF_TraverseFAT() or END_OF_DIR
+ *
+ *  Side effects:
+ *    - pContext->ulCurrentClusterNum : relative cluster number (0 <= Num < ulChainLength)
+ *    - pContext->ulCurrentClusterLCN : fysical cluster on the partition
+ **/
+
+static FF_ERROR FF_Traverse(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext)
+{
+	FF_T_UINT32	ulClusterNum = FF_getClusterChainNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	FF_ERROR	Error;
+
+	// Check if we're past the last cluster (ulChainLength is also valid for root sectors)
+	if((ulClusterNum + 1) > pContext->ulChainLength) {
+		return FF_ERR_DIR_END_OF_DIR | FF_TRAVERSE;	// End of Dir was reached!
+	}
+
+	if(pIoman->pPartition->Type != FF_T_FAT32 &&
+		pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
+		// Double-check if the entry number isn't too high
+		if(ulEntry > ((pIoman->pPartition->RootDirSectors * pIoman->pPartition->BlkSize) / 32)) {
+			return FF_ERR_DIR_END_OF_DIR | FF_FETCHENTRYWITHCONTEXT;
+		}
+		pContext->ulCurrentClusterLCN = pContext->ulDirCluster + ulClusterNum;
+	} else if(ulClusterNum != pContext->ulCurrentClusterNum) {
+		// Traverse the fat gently!
+		if(ulClusterNum > pContext->ulCurrentClusterNum) {
+			// Start traverse from the current entry
+			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulCurrentClusterLCN, (ulClusterNum - pContext->ulCurrentClusterNum), &Error);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
+		} else {
+			// Start traverse from the beginning
+			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulDirCluster, ulClusterNum, &Error);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
+		}
+	}
+	pContext->ulCurrentClusterNum = ulClusterNum;
+	return FF_ERR_NONE;
+}
+
 FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer) {
 	
 	FF_T_UINT32	ulItemLBA;
@@ -804,51 +859,20 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 	FF_T_UINT32	ulClusterNum;
 	FF_ERROR	Error;
 
-	ulClusterNum 					= FF_getClusterChainNumber(pIoman, ulEntry, (FF_T_UINT16)32);
-	ulRelItem						= FF_getMinorBlockEntry		(pIoman, ulEntry, (FF_T_UINT16)32);
-
-	if(ulClusterNum != pContext->ulCurrentClusterNum) {
-
-		// Traverse the fat gently!
-		if(ulClusterNum > pContext->ulCurrentClusterNum) {
-			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulCurrentClusterLCN, (ulClusterNum - pContext->ulCurrentClusterNum), &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-		} else {
-			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulDirCluster, ulClusterNum, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-		}
-		pContext->ulCurrentClusterNum = ulClusterNum;
+	Error = FF_Traverse(pIoman, ulEntry, pContext);
+	if(FF_isERR(Error)) {
+		return Error;
 	}
 
-	if(pIoman->pPartition->Type != FF_T_FAT32) {
-		// Handle Root Dirs that don't have cluster chains!
-		if(pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
-			// This is a RootDIR, special consideration needs to be made, because it doesn't have a Cluster chain!
-			pContext->ulCurrentClusterLCN = pContext->ulDirCluster;
-			ulClusterNum = 0;
-			if(ulEntry > ((pIoman->pPartition->RootDirSectors * pIoman->pPartition->BlkSize) / 32)) {
-				return FF_ERR_DIR_END_OF_DIR | FF_FETCHENTRYWITHCONTEXT;
-			}
-		}
-	}
+	ulClusterNum  = pContext->ulCurrentClusterNum;
+	ulRelItem     = FF_getMinorBlockEntry (pIoman, ulEntry, (FF_T_UINT16)32);
 
-	if((ulClusterNum + 1) > pContext->ulChainLength) {
-		return FF_ERR_DIR_END_OF_DIR | FF_FETCHENTRYWITHCONTEXT;	// End of Dir was reached!
-	}
+	ulItemLBA = FF_Cluster2LBA (pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	ulItemLBA = FF_getRealLBA (pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
 
-	ulItemLBA = FF_Cluster2LBA	(pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
-	ulItemLBA = FF_getRealLBA	(pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
-
-	if(pIoman->pPartition->Type != FF_T_FAT32) {
-		ulClusterNum = FF_getClusterChainNumber(pIoman, ulEntry, (FF_T_UINT16)32);
-		ulItemLBA = ulItemLBA + (pIoman->pPartition->SectorsPerCluster * ulClusterNum);
-	}
-	
-	if(!pContext->pBuffer || (pContext->pBuffer->Sector != ulItemLBA)) {
+	if(!pContext->pBuffer ||
+		(pContext->pBuffer->Sector != ulItemLBA) ||
+		(pContext->pBuffer->Mode & FF_MODE_WRITE)) {
 		if(pContext->pBuffer) {
 			FF_ReleaseBuffer(pIoman, pContext->pBuffer);
 		}
@@ -872,57 +896,34 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
 	FF_T_UINT32	ulClusterNum;
 	FF_ERROR	Error;
 
-	ulClusterNum 					= FF_getClusterChainNumber(pIoman, ulEntry, (FF_T_UINT16)32);
-	ulRelItem						= FF_getMinorBlockEntry		(pIoman, ulEntry, (FF_T_UINT16)32);
-
-	if(ulClusterNum != pContext->ulCurrentClusterNum) {
-		// Traverse the fat gently!
-		if(ulClusterNum > pContext->ulCurrentClusterNum) {
-			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulCurrentClusterLCN, (ulClusterNum - pContext->ulCurrentClusterNum), &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-		} else {
-			pContext->ulCurrentClusterLCN = FF_TraverseFAT(pIoman, pContext->ulDirCluster, ulClusterNum, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-		}
-		pContext->ulCurrentClusterNum = ulClusterNum;
+	Error = FF_Traverse(pIoman, ulEntry, pContext);
+	if(FF_isERR(Error)) {
+		return Error;
 	}
 
-	if(pIoman->pPartition->Type != FF_T_FAT32) {
-		// Handle Root Dirs that don't have cluster chains!
-		if(pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
-			// This is a RootDIR, special consideration needs to be made, because it doesn't have a Cluster chain!
-			pContext->ulCurrentClusterLCN = pContext->ulDirCluster;
-			ulClusterNum = 0;
-			if(ulEntry > ((pIoman->pPartition->RootDirSectors * pIoman->pPartition->BlkSize) / 32)) {
-				return FF_ERR_DIR_END_OF_DIR | FF_PUSHENTRYWITHCONTEXT;
-			}
-		}
-	}
+	ulClusterNum  = pContext->ulCurrentClusterNum;
+	ulRelItem     = FF_getMinorBlockEntry (pIoman, ulEntry, (FF_T_UINT16)32);
 
-	if((ulClusterNum + 1) > pContext->ulChainLength) {
-		return FF_ERR_DIR_END_OF_DIR | FF_PUSHENTRYWITHCONTEXT;	// End of Dir was reached!
-	}
+	ulItemLBA = FF_Cluster2LBA (pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	ulItemLBA = FF_getRealLBA (pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
 
-	ulItemLBA = FF_Cluster2LBA	(pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
-	ulItemLBA = FF_getRealLBA	(pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
-
-	if(!pContext->pBuffer || (pContext->pBuffer->Sector != ulItemLBA)) {
+	if(!pContext->pBuffer ||
+		(pContext->pBuffer->Sector != ulItemLBA) ||
+		!(pContext->pBuffer->Mode & FF_MODE_WRITE)) {
 		if(pContext->pBuffer) {
 			FF_ReleaseBuffer(pIoman, pContext->pBuffer);
 		}
-		pContext->pBuffer = FF_GetBuffer(pIoman, ulItemLBA, FF_MODE_READ);
+		pContext->pBuffer = FF_GetBuffer(pIoman, ulItemLBA, FF_MODE_WRITE);
 		if(!pContext->pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUSHENTRYWITHCONTEXT;
+			return FF_ERR_DEVICE_DRIVER_FAILED | FF_FETCHENTRYWITHCONTEXT;
 		}
 	}
 
+	// Now change the entry:
 	memcpy((pContext->pBuffer->pBuffer + (ulRelItem*32)), pEntryBuffer, 32);
-	pContext->pBuffer->Mode = FF_MODE_WRITE;
-	pContext->pBuffer->Modified = FF_TRUE;
+//	HT: this would be against the rules :-)
+//	pContext->pBuffer->Mode = FF_MODE_WRITE;
+//	pContext->pBuffer->Modified = FF_TRUE;
 	 
     return FF_ERR_NONE;
 }
@@ -1655,10 +1656,11 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
 #ifdef FF_UNICODE_SUPPORT
-					if(wcscmp(pDirent->szWildCard, L"")) {
+					if(wcscmp(pDirent->szWildCard, L""))
 #else
-					if(pDirent->szWildCard[0]) {
+					if(pDirent->szWildCard[0])
 #endif
+					{  // HT put single bracket here because of bracket-matching within editor
 						if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
 							FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 							return FF_ERR_NONE;							
@@ -1728,8 +1730,8 @@ FF_ERROR FF_RewindFind(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 Sequential) {
 
 	FF_T_UINT8			EntryBuffer[32];
-	FF_T_UINT16			i = 0;
-	FF_T_UINT16			nEntry;
+	FF_T_UINT16			freeCount = 0;
+	FF_T_UINT			nEntry;
 	FF_ERROR			Error;
 	FF_T_UINT32			DirLength;
 	FF_FETCH_CONTEXT	FetchContext;
@@ -1760,7 +1762,7 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 		if(FF_isEndOfDir(EntryBuffer)) {	// If its the end of the Dir, then FreeDirents from here.
 			// Check Dir is long enough!
 			DirLength = FetchContext.ulChainLength;//FF_GetChainLength(pIoman, DirCluster, &iEndOfChain);
-			if((nEntry + Sequential) > (FF_T_UINT16)(((pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize) * DirLength) / 32)) {
+			if((nEntry + Sequential) > ((DirLength * ((FF_T_UINT)pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize)) / 32)) {
 				Error = FF_ExtendDirectory(pIoman, DirCluster);
 			}
 
@@ -1773,12 +1775,12 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 			return nEntry;
 		}
 		if(EntryBuffer[0] == 0xE5) {
-			i++;
+			freeCount++;
 		} else {
-			i = 0;
+			freeCount = 0;
 		}
 
-		if(i == Sequential) {
+		if(freeCount == Sequential) {
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 			return (nEntry - (Sequential - 1));// Return the beginning entry in the sequential sequence.
 		}
@@ -1788,50 +1790,38 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 
 	return FF_ERR_DIR_DIRECTORY_FULL | FF_FINDFREEDIRENT;
 }
-
-
-
-
 FF_ERROR FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster, FF_DIRENT *pDirent) {
-	FF_BUFFER *pBuffer;
 	FF_ERROR	Error;
-	FF_T_UINT32 itemLBA;
-	FF_T_UINT32 clusterNum		= FF_getClusterChainNumber	(pIoman, Entry, (FF_T_UINT16)32);
-	FF_T_UINT32 relItem			= FF_getMinorBlockEntry		(pIoman, Entry, (FF_T_UINT16)32);
-	FF_T_UINT32 clusterAddress	= FF_TraverseFAT(pIoman, DirCluster, clusterNum, &Error);
-	FF_T_UINT8 *entryPtr;
-	if(FF_isERR(Error)) {
-		return Error;
+	FF_T_UINT8	EntryBuffer[32];
+	FF_FETCH_CONTEXT FetchContext;
+
+	// HT: use the standard access routine to get the same logic for root dirs
+	Error = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
+	if(!FF_isERR(Error)) {
+		Error = FF_FetchEntryWithContext(pIoman, Entry, &FetchContext, EntryBuffer);
+		if(!FF_isERR(Error)) {
+			// Cleanup probably not necessary here?
+			// FF_PushEntryWithContext checks for R/W flag
+			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			FF_putChar(EntryBuffer,  FF_FAT_DIRENT_ATTRIB,    pDirent->Attrib);
+			FF_putShort(EntryBuffer, FF_FAT_DIRENT_CLUS_HIGH, (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
+			FF_putShort(EntryBuffer, FF_FAT_DIRENT_CLUS_LOW,  (FF_T_UINT16)(pDirent->ObjectCluster));
+			FF_putLong(EntryBuffer,  FF_FAT_DIRENT_FILESIZE,  pDirent->Filesize);
+#ifdef FF_TIME_SUPPORT
+			FF_GetSystemTime(&pDirent->AccessedTime);	///< Date of Last Access.
+			FF_PlaceTime(EntryBuffer, FF_FAT_DIRENT_LASTACC_DATE, &pDirent->AccessedTime);
+			FF_PlaceDate(EntryBuffer, FF_FAT_DIRENT_LASTACC_DATE, &pDirent->AccessedTime);	// Last accessed date.
+			FF_PlaceTime(EntryBuffer, FF_FAT_DIRENT_CREATE_TIME,  &pDirent->CreateTime);
+			FF_PlaceDate(EntryBuffer, FF_FAT_DIRENT_CREATE_DATE,  &pDirent->CreateTime);
+			FF_PlaceTime(EntryBuffer, FF_FAT_DIRENT_LASTMOD_TIME, &pDirent->ModifiedTime);
+			FF_PlaceDate(EntryBuffer, FF_FAT_DIRENT_LASTMOD_DATE, &pDirent->ModifiedTime);
+#endif
+			Error = FF_PushEntryWithContext(pIoman, Entry, &FetchContext, EntryBuffer);
+		}
 	}
 
-	itemLBA = FF_Cluster2LBA(pIoman, clusterAddress)	+ FF_getMajorBlockNumber(pIoman, Entry, (FF_T_UINT16)32);
-	itemLBA = FF_getRealLBA	(pIoman, itemLBA)			+ FF_getMinorBlockNumber(pIoman, relItem, (FF_T_UINT16)32);
-	
-	pBuffer = FF_GetBuffer(pIoman, itemLBA, FF_MODE_WRITE);
-	{
-		if(!pBuffer) {
-			return FF_ERR_DEVICE_DRIVER_FAILED | FF_PUTENTRY;
-		}
-		// Modify the Entry!
-		//memcpy((pBuffer->pBuffer + (32*relItem)), pDirent->FileName, 11);
- 		entryPtr = pBuffer->pBuffer + relItem * 32;
-		FF_putChar(entryPtr,  FF_FAT_DIRENT_ATTRIB,    pDirent->Attrib);
-		FF_putShort(entryPtr, FF_FAT_DIRENT_CLUS_HIGH, (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
-		FF_putShort(entryPtr, FF_FAT_DIRENT_CLUS_LOW,  (FF_T_UINT16)(pDirent->ObjectCluster));
-		FF_putLong(entryPtr,  FF_FAT_DIRENT_FILESIZE,  pDirent->Filesize);
-#ifdef FF_TIME_SUPPORT
-		FF_GetSystemTime(&pDirent->AccessedTime);	///< Date of Last Access.
-		FF_PlaceTime(entryPtr, FF_FAT_DIRENT_LASTACC_DATE, &pDirent->AccessedTime);
-		FF_PlaceDate(entryPtr, FF_FAT_DIRENT_LASTACC_DATE, &pDirent->AccessedTime);	// Last accessed date.
-		FF_PlaceTime(entryPtr, FF_FAT_DIRENT_CREATE_TIME,  &pDirent->CreateTime);
-		FF_PlaceDate(entryPtr, FF_FAT_DIRENT_CREATE_DATE,  &pDirent->CreateTime);
-		FF_PlaceTime(entryPtr, FF_FAT_DIRENT_LASTMOD_TIME, &pDirent->ModifiedTime);
-		FF_PlaceDate(entryPtr, FF_FAT_DIRENT_LASTMOD_DATE, &pDirent->ModifiedTime);
-#endif
-	}
-	FF_ReleaseBuffer(pIoman, pBuffer);
- 
-    return 0;
+	FF_CleanupEntryFetch(pIoman, &FetchContext);
+	return Error;
 }
 
 FF_T_BOOL FF_ValidShortChar (FF_T_INT8 Chr)
@@ -2389,7 +2379,7 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 #else
 		FF_T_SINT32 FitShort = FF_CreateShortName(pIoman, DirCluster, (FF_T_INT8 *) EntryBuffer, pDirent->FileName);
 #endif
-		if (FitShort < 0) {
+		if (FF_isERR(FitShort)) {
 			RetVal = FitShort;
 			FF_unlockDIR(pIoman);
 			return RetVal;
@@ -2398,7 +2388,10 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 			numLFNs = 0;
 			Entries = 1;
 		}
-		if((FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, Entries)) >= 0) {
+		FreeEntry = FF_FindFreeDirent(pIoman, DirCluster, Entries);
+		if (FF_isERR(FreeEntry)) {
+			RetVal = FreeEntry;
+		} else {
 #ifdef FF_LFN_SUPPORT
 #ifdef FF_UNICODE_SUPPORT
 			FF_wcsntocstr((FF_T_INT8 *) EntryBuffer, UTF16EntryBuffer, 11);
@@ -2410,7 +2403,7 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 #else
 			numLFNs = 0;
 #endif // FF_LFN_SUPPORT
-			if (RetVal == 0) {
+			if (!FF_isERR(RetVal)) {
 #ifdef FF_TIME_SUPPORT
 				FF_GetSystemTime(&pDirent->CreateTime);		///< Date and Time Created.
 				pDirent->ModifiedTime = pDirent->CreateTime;	///< Date and Time Modified.
@@ -2430,13 +2423,13 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 				FF_putLong(EntryBuffer,  FF_FAT_DIRENT_FILESIZE, pDirent->Filesize);
 
 				RetVal = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
-				if(RetVal) {
+				if(FF_isERR(RetVal)) {
 					FF_unlockDIR(pIoman);
 					return RetVal;
 				}
 				RetVal = FF_PushEntryWithContext(pIoman, (FF_T_UINT16) (FreeEntry + numLFNs), &FetchContext, EntryBuffer);
 				FF_CleanupEntryFetch(pIoman, &FetchContext);
-				if(RetVal) {
+				if(FF_isERR(RetVal)) {
 					FF_unlockDIR(pIoman);
 					return RetVal;
 				}
@@ -2459,7 +2452,7 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 	}
 	FF_unlockDIR(pIoman);
 
-	if(RetVal) {
+	if(FF_isERR(RetVal)) {
 		return RetVal;
 	}
 

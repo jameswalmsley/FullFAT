@@ -885,7 +885,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 
 		Error = FF_GetEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		
-		if(!Error) {
+		if(!FF_isERR(Error)) {
 			OriginalEntry.ObjectCluster = pFile->AddrCurrentCluster;
 			Error = FF_PutEntry(pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		}
@@ -924,7 +924,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 					return Error;
 				}
 				NextCluster = FF_FindFreeCluster(pIoman, &Error);
-				if(!Error && !NextCluster) {
+				if(!FF_isERR(Error) && !NextCluster) {
 					Error = FF_ERR_FAT_NO_FREE_CLUSTERS | FF_EXTENDFILE;
 				}
 				if(FF_isERR(Error)) {
@@ -1031,7 +1031,6 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster;
 	FF_T_UINT32	nClusterDiff;
-	FF_T_UINT	/*uOffset,*/ uRemain;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1178,9 +1177,9 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				// and shorter code lines
 				FF_PARTITION *pPart = pIoman->pPartition;
 				FF_T_UINT ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
-				uRemain = pPart->SectorsPerCluster - ucOffset;
-				if (sSectors > uRemain) {
-					sSectors = uRemain;
+				FF_T_UINT ucRemain = pPart->SectorsPerCluster - ucOffset;
+				if (sSectors > ucRemain) {
+					sSectors = ucRemain;
 				}
 			}
 			
@@ -1391,7 +1390,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_T_UINT16	sSectors;
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster, nClusterDiff, nClusters;
-	FF_T_UINT	/*uOffset, */uRemain;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1554,11 +1552,11 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 				// HT: I'd leave these pPart/ucOffset for readability...
 				FF_PARTITION *pPart				= pIoman->pPartition;
 				FF_T_UINT8 ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
-				uRemain = pPart->SectorsPerCluster - ucOffset;
-				if (sSectors > uRemain) {
+				FF_T_UINT ucRemain = pPart->SectorsPerCluster - ucOffset;
+				if (sSectors > ucRemain) {
 //					logPrintf ("FF_Write: fp = %lu ofs %u sSectors %u remain %u (correcting)\n",
 //						pFile->FilePointer, offset, sSectors, remain);
-					sSectors = uRemain;
+					sSectors = ucRemain;
 				}
 			}
 			
@@ -1880,13 +1878,13 @@ FF_ERROR FF_SetFileTime(FF_FILE *pFile, FF_SYSTEMTIME *pTime, FF_T_UINT aWhat) {
 	}
 	// Update the Dirent!
 	Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
-	if (!Error) {
+	if (!FF_isERR(Error)) {
 		if (aWhat & ETimeCreate) OriginalEntry.CreateTime = *pTime;		///< Date and Time Created.
 		if (aWhat & ETimeMod)    OriginalEntry.ModifiedTime = *pTime;	///< Date and Time Modified.
 		if (aWhat & ETimeAccess) OriginalEntry.AccessedTime = *pTime;	///< Date of Last Access.
 		Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 	}
-	if (!Error)
+	if (!FF_isERR(Error))
 		Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
 	return Error;
 }
@@ -1964,7 +1962,7 @@ FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTim
 	if (aWhat & ETimeAccess) OriginalEntry.AccessedTime = *pTime;	///< Date of Last Access.
 	Error = FF_PutEntry(pIoman, OriginalEntry.CurrentItem-1, DirCluster, &OriginalEntry);
 
-	if (!Error)
+	if (!FF_isERR(Error))
 		Error = FF_FlushCache(pIoman);		// Ensure all modfied blocks are flushed to disk!
 	return Error;
 }
@@ -2035,7 +2033,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 		Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		// Error might be non-zero, but don't forget to remove handle from list
 		// and to free the pFile pointer
-		if (!Error && pFile->Filesize != OriginalEntry.Filesize) {
+		if (!FF_isERR(Error) && pFile->Filesize != OriginalEntry.Filesize) {
 			OriginalEntry.Filesize = pFile->Filesize;
 			Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		}

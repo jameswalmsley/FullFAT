@@ -182,7 +182,7 @@ const struct _FFERRTAB
     {"Cannot unregister device, a partition is still mounted",						FF_ERR_IOMAN_PARTITION_MOUNTED},
     {"Cannot unmount the partition while there are active FILE handles",			FF_ERR_IOMAN_ACTIVE_HANDLES},
 	{"The GPT partition header appears to be corrupt, refusing to mount",			FF_ERR_IOMAN_GPT_HEADER_CORRUPT},
-	{"Not enough free disk space to complete the disk transaction",					FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE},
+	{"Disk full",                                                                   FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE},
 	{"Attempted to Read a sector out of bounds",									FF_ERR_IOMAN_OUT_OF_BOUNDS_READ},
 	{"Attempted to Write a sector out of bounds",									FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE},
 	{"I/O driver is busy",                                                          FF_ERR_IOMAN_DRIVER_BUSY},

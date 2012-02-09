@@ -61,7 +61,7 @@ typedef struct {
 	FF_T_UINT32	ulDirCluster;
 	FF_T_UINT32	ulCurrentClusterLCN;
 	FF_T_UINT32	ulCurrentClusterNum;
-	FF_T_UINT32	ulCurrentEntry;
+//	FF_T_UINT32	ulCurrentEntry;    // HT: has member this ever been used?
 	FF_BUFFER	*pBuffer;
 } FF_FETCH_CONTEXT;
 

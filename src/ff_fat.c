@@ -536,6 +536,7 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_T_UINT32	EntriesPerSector;
 	FF_T_UINT32 FatEntry = 1;
 	const FF_T_INT EntrySize = (pIoman->pPartition->Type == FF_T_FAT32) ? 4 : 2;
+	const FF_T_UINT32 uNumClusters = pIoman->pPartition->NumClusters;
 
 	*pError = FF_ERR_NONE;
 
@@ -557,13 +558,13 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman, FF_ERROR *pError) {
 				*pError = FF_ERR_DEVICE_DRIVER_FAILED | FF_FINDFREECLUSTER;
 				return 0;
 			}
-			// HT double-check: don't use non-existing clusters
-			if (nCluster >= pIoman->pPartition->NumClusters) {
-				FF_ReleaseBuffer(pIoman, pBuffer);
-				*pError = FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE | FF_FINDFREECLUSTER;
-				return 0;
-			}
 			for(x = nCluster % EntriesPerSector; x < EntriesPerSector; x++) {
+				// HT double-check: don't use non-existing clusters
+				if (nCluster >= uNumClusters) {
+					FF_ReleaseBuffer(pIoman, pBuffer);
+					*pError = FF_ERR_IOMAN_NOT_ENOUGH_FREE_SPACE | FF_FINDFREECLUSTER;
+					return 0;
+				}
 				FatSectorEntry	= FatOffset % pIoman->pPartition->BlkSize;
 				if(pIoman->pPartition->Type == FF_T_FAT32) {
 					FatEntry = FF_getLong(pBuffer->pBuffer, FatSectorEntry);
@@ -589,6 +590,8 @@ FF_T_UINT32 FF_FindFreeCluster(FF_IOMAN *pIoman, FF_ERROR *pError) {
 /**
  * @private
  * @brief	Create's a Cluster Chain
+ *	@return > 0 New created cluster
+ *	@return = 0 See pError
  **/
 FF_T_UINT32 FF_CreateClusterChain(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_T_UINT32	iStartCluster;
