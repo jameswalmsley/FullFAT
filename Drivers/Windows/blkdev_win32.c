@@ -40,6 +40,9 @@
 	This driver can interface with very Large Disks.
 */
 
+extern void read_inc(void);
+extern void write_inc(void);
+
 /*
 	FullFAT assumes that every read and write call is completed in a multiple transaction safe manor.
 
@@ -181,6 +184,8 @@ signed int fnRead(unsigned char *buffer, unsigned long sector, unsigned short se
 	}
 	FF_ReleaseSemaphore(ptDevInfo->AccessSem);
 
+	read_inc();
+
 	return Read / ptDevInfo->BlockSize;
 }
 
@@ -201,6 +206,8 @@ signed int fnWrite(unsigned char *buffer, unsigned long sector, unsigned short s
 		WriteFile(ptDevInfo->hDev, buffer, ptDevInfo->BlockSize * sectors, &Written, NULL);
 	}
 	FF_ReleaseSemaphore(ptDevInfo->AccessSem);
+
+	write_inc();
 
 	return Written / ptDevInfo->BlockSize;
 }

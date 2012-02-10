@@ -51,6 +51,40 @@
 int version(int argc, char **argv);
 extern const FFT_ERR_TABLE versionInfo[];
 
+int totalReads	= 0;
+int totalWrites = 0;
+
+void read_inc(void) {
+	totalReads += 1;
+}
+
+void write_inc(void) {
+	totalWrites += 1;
+}
+
+int test(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+
+	FF_FILE* ftestHandle;
+	FF_ERROR fError;
+	long bw = 0;
+	int secNumber = 0;
+	FF_T_UINT8 SdCardBuf[1000];
+	
+	totalReads = 0;
+	totalWrites = 0;
+	
+	ftestHandle = FF_Open(pEnv->pIoman,"\\test.dat", FF_GetModeBits("a+"), NULL);
+	for (secNumber = 0; secNumber < 1048; secNumber++)
+	{
+		bw += FF_Write(ftestHandle, 1, 1000, (FF_T_UINT8*) SdCardBuf);
+	}
+	FF_Close(ftestHandle); 
+
+	printf("reads: %d, writes %d\n", totalReads, totalWrites);
+
+	return 0;
+}
+
 int main(void) {
 	
 	FFT_CONSOLE		*pConsole;							// FFTerm Console Pointer.
@@ -131,6 +165,8 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
 				FFTerm_AddCmd(pConsole, "version",	(FFT_FN_COMMAND) version, versionInfo);
+
+				FFTerm_AddExCmd(pConsole, "test", (FFT_FN_COMMAND_EX) test, NULL, &Env);
 
 //				fseek_test(&pIoman);
 

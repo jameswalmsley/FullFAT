@@ -144,6 +144,9 @@
     <ClCompile Include="..\..\..\..\ffterm\Platforms\Win32\FFTerm-Platform-win32.c">
       <Filter>Source Files\FFTerm</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\ff_unaligned.c">
+      <Filter>Source Files\FullFAT</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Commands.h">
@@ -256,15 +259,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\ff_unicode.h">
       <Filter>Header Files\FullFAT</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\fs-manager\fs_error.h">
-      <Filter>Source Files\fsManager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\fs-manager\fs_manager.h">
-      <Filter>Source Files\fsManager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\fs-manager\fs_types.h">
-      <Filter>Source Files\fsManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
