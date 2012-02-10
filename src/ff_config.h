@@ -36,16 +36,18 @@
 
 #ifndef _FF_CONFIG_H_
 #define _FF_CONFIG_H_
+
+#define snprintf _snprintf
+
 /*
 	Here you can change the configuration of FullFAT as appropriate to your
 	platform.
 */
 //---------- ENDIANESS
-#ifdef	__WIN32__
-#define FF_LITTLE_ENDIAN		// Choosing the Byte-order of your system is important.
-#else
-#define FF_BIG_ENDIAN			// You may be able to provide better Byte-order swapping routines to FullFAT.
-#endif							// See ff_memory.c for more information.
+#define FF_LITTLE_ENDIAN				// Choosing the Byte-order of your system is important.	
+//#define FF_BIG_ENDIAN					// You may be able to provide better Byte-order swapping routines to FullFAT.
+										// See ff_memory.c for more information.
+
 
 //---------- LFN (Long File-name) SUPPORT
 #define FF_LFN_SUPPORT					// Comment this out if you don't want to worry about Patent Issues.
@@ -64,13 +66,6 @@
 										// pedantically GCC refuses to accept C99 library functions, unless the -std=c99 flag is used.
 										// To use UNICODE (UTF-16, or UTF-32 depending on the size of wchar_t) you must have a C99 compliant
 										// compiler and library.
-
-//#define FF_UNICODE_UTF8_SUPPORT		// If this is defined, then all of FullFAT's API's will expect to receive UTF-8 formatted strings.
-										// FF_FindFirst() and FF_FindNext() will also return Filenames in UTF-8 format.
-
-										// Note the 2 UNICODE options are mutually exclusive. Only one can be enabled.
-
-										// Ensure that dirents are big enough to hold the maximum UTF-8 sequence.
 
 
 //---------- FAT12 SUPPORT
@@ -148,7 +143,8 @@
 
 //---------- IN-LINE FUNCTIONS
 //---------- INLINE KeyWord				// Define FF_INLINE as your compiler's inline keyword. This is placed before the type qualifier.
-#define FF_INLINE static inline		// Standard for GCC. Note some C compilers user the __inline keyword
+//#define FF_INLINE static inline		// Standard for GCC
+#define FF_INLINE static __inline
 
 //---------- Inline Memory Independence Routines for better performance, but bigger codesize.
 #define FF_INLINE_MEMORY_ACCESS

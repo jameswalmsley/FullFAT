@@ -54,9 +54,6 @@
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Error.c">
       <Filter>Source Files\FFTerm</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Platform.c">
-      <Filter>Source Files\FFTerm</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c">
       <Filter>Source Files\FFTerm</Filter>
     </ClCompile>
@@ -137,6 +134,15 @@
     </ClCompile>
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\geterror_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\mv_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\ffterm\Platforms\Win32\FFTerm-Platform-win32.c">
+      <Filter>Source Files\FFTerm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

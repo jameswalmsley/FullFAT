@@ -44,6 +44,7 @@
 
 #include <locale.h>
 #include <wchar.h>
+#include <Windows.h>
 
 #define PARTITION_NUMBER	0
 
@@ -60,6 +61,7 @@ int main(void) {
 	FF_ENVIRONMENT	Env;								// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
 
 	HANDLE			hDisk;								// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
+	char buf[2600];
 	
 	//----------- Initialise the environment
 	Env.pIoman = NULL;									// Initialise the FullFAT I/O Manager to NULL.
@@ -69,11 +71,14 @@ int main(void) {
 	strcpy(Env.WorkingDir, "\\");						// Reset the Working Directory to the root folder.
 #endif
 
+	GetCurrentDirectoryA(2600, buf);
+	printf("%s\n", buf);
+
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	//hDisk = fnOpen("c:\\1gbImage.img", 512);
+	hDisk = fnOpen("ffimage.img", 512);
 	
-	hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
+	//hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
 	// When opening a physical drive handle, the blocksize is ignored, and detected automatically.
 	//hDisk = fnOpen("\\\\.\\PHYSICALDRIVE2", 0);

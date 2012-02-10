@@ -79,9 +79,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\ffterm\Platforms\Win32\FFTerm-Platform-win32.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Commands.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Error.c" />
-    <ClCompile Include="..\..\..\..\ffterm\src\FFTerm-Platform.c" />
     <ClCompile Include="..\..\..\..\ffterm\src\FFTerm.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\blkdev_win32.c" />
     <ClCompile Include="..\..\..\Drivers\Windows\ff_safety_win32.c" />
@@ -103,9 +103,11 @@
     <ClCompile Include="..\..\cmd\cmd_prompt.c" />
     <ClCompile Include="..\..\cmd\cp_cmd.c" />
     <ClCompile Include="..\..\cmd\dir.c" />
+    <ClCompile Include="..\..\cmd\geterror_cmd.c" />
     <ClCompile Include="..\..\cmd\ls_cmd.c" />
     <ClCompile Include="..\..\cmd\md5sum_cmd.c" />
     <ClCompile Include="..\..\cmd\mkdir_cmd.c" />
+    <ClCompile Include="..\..\cmd\mv_cmd.c" />
     <ClCompile Include="..\..\cmd\pwd_cmd.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\md5.c" />
