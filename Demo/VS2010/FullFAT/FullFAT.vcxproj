@@ -102,6 +102,7 @@
     <ClCompile Include="..\..\cmd\cd_cmd.c" />
     <ClCompile Include="..\..\cmd\cmd_helpers.c" />
     <ClCompile Include="..\..\cmd\cmd_prompt.c" />
+    <ClCompile Include="..\..\cmd\cmd_testsuite.c" />
     <ClCompile Include="..\..\cmd\cp_cmd.c" />
     <ClCompile Include="..\..\cmd\dir.c" />
     <ClCompile Include="..\..\cmd\geterror_cmd.c" />
@@ -144,6 +145,7 @@
     <ClInclude Include="..\..\cmd\cd_cmd.h" />
     <ClInclude Include="..\..\cmd\cmd_helpers.h" />
     <ClInclude Include="..\..\cmd\cmd_prompt.h" />
+    <ClInclude Include="..\..\cmd\cmd_testsuite.h" />
     <ClInclude Include="..\..\cmd\commands.h" />
     <ClInclude Include="..\..\cmd\cp_cmd.h" />
     <ClInclude Include="..\..\cmd\dir.h" />

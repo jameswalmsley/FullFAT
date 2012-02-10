@@ -342,6 +342,10 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 			}
 			FF_ReleaseSemaphore(pIoman->pSemaphore);
 
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			pFile->pBuf = (FF_T_UINT8 *) FF_MALLOC(pIoman->BlkSize);
+#endif
+
 			return pFile;
 		}else {
 			FF_FREE(pFile);
@@ -525,7 +529,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 	FF_T_UINT8 EntryBuffer[32];
 	FF_FETCH_CONTEXT FetchContext;
 
-	pFile = FF_Open(pIoman, path, FF_MODE_READ, &Error);
+	pFile = FF_Open(pIoman, path, FF_MODE_WRITE, &Error);
 
 	if(!pFile) {
 		return Error;	// File in use or File not found!
@@ -555,7 +559,7 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			FF_Close(pFile);
 			return Error;
 		}
-		Error = FF_RmLFNs(pIoman, pFile->DirEntry, &FetchContext);
+		Error = FF_RmLFNs(pIoman, (FF_T_UINT16)pFile->DirEntry, &FetchContext);
 		if(FF_isERR(Error)) {
 			FF_CleanupEntryFetch(pIoman, &FetchContext);
 			FF_unlockDIR(pIoman);
@@ -1383,7 +1387,9 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_T_UINT32	nBytesWritten = 0;
 	FF_T_UINT32 nBytesToWrite;
 	FF_IOMAN	*pIoman;
+#ifndef FF_OPTIMISE_UNALIGNED_ACCESS
 	FF_BUFFER	*pBuffer;
+#endif
 	FF_T_UINT32 nRelBlockPos;
 	FF_T_UINT32	nItemLBA;
 	FF_T_SINT32	slRetVal = 0;
@@ -1420,7 +1426,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	// HT: + 1 byte because the code assumes there is always a next cluster
 	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes + 1);
-
 	if(FF_isERR(Error)) {
 		return Error;	
 	}
@@ -1442,6 +1447,9 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+		memcpy(pFile->pBuf, buffer, nBytes);
+#else
 		if (!nRelBlockPos && pFile->FilePointer >= pFile->Filesize) {
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WR_ONLY);
 		} else {
@@ -1454,7 +1462,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			memcpy((pBuffer->pBuffer + nRelBlockPos), buffer, nBytes);
 		}
 		FF_ReleaseBuffer(pIoman, pBuffer);
-
+#endif
 		pFile->FilePointer += nBytes;
 		nBytesWritten = nBytes;
 		//return nBytes;		// Return the number of bytes written.
@@ -1464,6 +1472,11 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		//---------- Write (memcpy) to a Sector Boundary
 		if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
 			nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			memcpy(pFile->pBuf+nRelBlockPos, buffer, nBytesToWrite);
+			FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			pFile->bWriteBuf = FF_FALSE;
+#else
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
 			{
 				if(!pBuffer) {
@@ -1473,7 +1486,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 				memcpy((pBuffer->pBuffer + nRelBlockPos), buffer, nBytesToWrite);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-
+#endif
 			nBytes				-= nBytesToWrite;
 			nBytesWritten		+= nBytesToWrite;
 			pFile->FilePointer	+= nBytesToWrite;
@@ -1602,6 +1615,11 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
+			
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			memcpy(pFile->pBuf, buffer, nBytes);
+			pFile->bWriteBuf = FF_TRUE;
+#else
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
 			{
 				if(!pBuffer) {
@@ -1610,6 +1628,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 				memcpy(pBuffer->pBuffer, buffer, nBytes);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
+#endif
 
 			nBytesToWrite = nBytes;
 			pFile->FilePointer	+= nBytesToWrite;
@@ -1685,6 +1704,14 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster) + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
 	iItemLBA = FF_getRealLBA (pFile->pIoman, iItemLBA)					+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
 	
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	if(!pFile->bWriteBuf && pFile->FilePointer < pFile->Filesize) {
+		FF_BlockRead(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
+	}
+
+	pFile->pBuf[iRelPos] = pa_cValue;
+	pFile->bWriteBuf = FF_TRUE;
+#else
 	pBuffer = FF_GetBuffer(pFile->pIoman, iItemLBA, FF_MODE_WRITE);
 	{
 		if(!pBuffer) {
@@ -1693,11 +1720,22 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 		FF_putChar(pBuffer->pBuffer, (FF_T_UINT16) iRelPos, pa_cValue);
 	}
 	FF_ReleaseBuffer(pFile->pIoman, pBuffer);
+#endif
 
 	pFile->FilePointer += 1;
 	if(pFile->Filesize < (pFile->FilePointer)) {
 		pFile->Filesize += 1;
 	}
+
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	if(pFile->bWriteBuf) {
+		iRelPos = FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
+		if(!iRelPos) {
+			FF_BlockWrite(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
+			pFile->bWriteBuf = FF_FALSE;
+		}	
+	}
+#endif
 	return pa_cValue;
 }
 
@@ -1720,6 +1758,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	
 	FF_ERROR	Error;
+	FF_T_UINT32	nItemLBA;
 
 	if(!pFile) {
 		return (FF_ERR_NULL_POINTER | FF_SEEK);
@@ -1729,6 +1768,20 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	if(FF_isERR(Error)) {
 		return Error;
 	}
+
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	/*
+		Here we must ensure that if the user tries to seek, and we had data in the file's
+		write buffer that this is written to disk.
+	*/
+	
+	if(pFile->bWriteBuf) {
+		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
+		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
+		FF_BlockWrite(pFile->pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+		pFile->bWriteBuf = FF_FALSE;
+	}
+#endif
 
 	switch(Origin) {
 		case FF_SEEK_SET:
@@ -1985,6 +2038,11 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	FF_DIRENT	OriginalEntry;
 	FF_ERROR	Error;
 
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	FF_T_UINT32	nItemLBA;
+	FF_T_UINT32 nRelBlockPos;
+#endif
+
 	if(!pFile) {
 		return (FF_ERR_NULL_POINTER | FF_CLOSE);
 	}
@@ -2014,6 +2072,9 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 			}
 		}	// Semaphore released, linked list was shortened!
 		FF_ReleaseSemaphore(pFile->pIoman->pSemaphore);
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+		FF_FREE(pFile->pBuf);
+#endif
 		FF_FREE(pFile);  // So at least we have freed the pointer.
 		return FF_ERR_NONE;
 	}
@@ -2060,8 +2121,17 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	}	// Semaphore released, linked list was shortened!
 	FF_ReleaseSemaphore(pFile->pIoman->pSemaphore);
 
-	// If file written, flush to disk
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	// Ensure any unaligned points are pushed to the disk!
+	if(pFile->bWriteBuf) {
+		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
+		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
+		FF_BlockWrite(pFile->pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+	}
+
+	FF_FREE(pFile->pBuf);
+#endif
 	FF_FREE(pFile);
-	// Simply free the pointer!
+	
 	return Error;
 }

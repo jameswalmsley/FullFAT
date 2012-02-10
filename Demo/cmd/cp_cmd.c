@@ -40,6 +40,7 @@
 	
 	It behaves similar to the GNU cp command.
 */
+static FF_T_BOOL bExternal = FF_FALSE;
 
 static int copy_dir	(const char *srcPath, const char *destPath, FF_T_BOOL bRecursive, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
 static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv);
@@ -59,7 +60,7 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));			// Initialise the option context to zero.
 
-	option = FFTerm_getopt(argc, (const char **) argv, "rRv", &optionContext);		// Get the command line option charachters.
+	option = FFTerm_getopt(argc, (const char **) argv, "rRvx", &optionContext);		// Get the command line option charachters.
 
 	while(option != EOF) {											// Process Commandline options
 		switch(option) {
@@ -72,11 +73,15 @@ int cp_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 				bVerbose = FF_TRUE;									// Set verbose flag if -v appears on the commandline.
 				break;
 
+			case 'x':
+				bExternal = FF_TRUE;
+				break;
+
 			default:
 				break;
 		}
 
-		option = FFTerm_getopt(argc, (const char **) argv, "rRv", &optionContext);	// Get the next option.
+		option = FFTerm_getopt(argc, (const char **) argv, "rRvx", &optionContext);	// Get the next option.
 	}
 
 	szpSource 		= FFTerm_getarg(argc, (const char **) argv, 0, &optionContext);	// The remaining options or non optional arguments.
@@ -200,7 +205,8 @@ static int copy_dir(const char *srcPath, const char *destPath, FF_T_BOOL bRecurs
 static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bVerbose, FF_ENVIRONMENT *pEnv) {
 
 	FF_FILE *pfSource;
-	FF_FILE	*pfDestination;
+	FF_FILE	*pfDestination = NULL;
+	FILE *pex;
 	FF_ERROR ffError;
 	FF_T_SINT32	slBytesRead, slBytesWritten;
 	unsigned char	buffer[CP_BUFFER_SIZE];
@@ -217,9 +223,12 @@ static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bV
 		return 0;
 	}
 
-	pfDestination = FF_Open(pEnv->pIoman, szdestPath, (FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE), &ffError);
-
-	if(!pfDestination) {
+	if(!bExternal) {
+		pfDestination = FF_Open(pEnv->pIoman, szdestPath, (FF_MODE_WRITE | FF_MODE_CREATE | FF_MODE_TRUNCATE), &ffError);
+	} else {
+		pex = fopen(szdestPath+1, "w");
+	}
+	if(!pfDestination && !pex) {
 		printf("cp: %s: open failed: %s\n", szdestPath, FF_GetErrMessage(ffError));
 		FF_Close(pfSource);													// Don't forget to close the Source file.
 		return 0;
@@ -228,7 +237,11 @@ static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bV
 	// Source and Destination files are open, copy the data from Source to Dest!
 	do {
 		slBytesRead 	= FF_Read(pfSource, 1, CP_BUFFER_SIZE, buffer);
-		slBytesWritten 	= FF_Write(pfDestination, 1, slBytesRead, buffer);
+		if(!bExternal) {
+			slBytesWritten 	= FF_Write(pfDestination, 1, slBytesRead, buffer);
+		} else {
+			slBytesWritten = fwrite(buffer, 1, slBytesRead, pex);
+		}
 		
 		if(slBytesWritten != slBytesRead) {
 			printf("cp: write error: %s\n", FF_GetErrMessage(slBytesWritten));
@@ -238,7 +251,11 @@ static int copy_file(const char *szsrcPath, const char *szdestPath, FF_T_BOOL bV
 	} while(slBytesRead);
 
 	FF_Close(pfSource);
-	FF_Close(pfDestination);
+	if(!bExternal) {
+		FF_Close(pfDestination);
+	} else {
+		fclose(pex);
+	}
 
 	if(bVerbose) {
 		printf("'%s' -> '%s'\n", szsrcPath, szdestPath);

@@ -12,6 +12,7 @@
 #include "pwd_cmd.h"
 #include "mv_cmd.h"
 //#include "cmd_mount.h"
+#include "cmd_testsuite.h"
 
 #ifdef WIN32
 #include "cmd_Windows/md5sum_win_cmd.h"

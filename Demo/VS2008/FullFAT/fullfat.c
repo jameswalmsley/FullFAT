@@ -67,20 +67,48 @@ int test(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_FILE* ftestHandle;
 	FF_ERROR fError;
 	long bw = 0;
+	int i, di;
 	int secNumber = 0;
+	md5_state_t 		state;
+	md5_byte_t			digest[16];
+	char szpHash[255];
+	char				temp[3];
+
 	FF_T_UINT8 SdCardBuf[1000];
+	FF_T_UINT8	buf2[1000];
+
+	for(i = 0; i < 1000; i++) {
+		SdCardBuf[i] = (unsigned char) i;
+	}
+
+	md5_init(&state);
 	
+	ftestHandle = FF_Open(pEnv->pIoman,"\\test.dat", FF_GetModeBits("a+"), &fError);
 	totalReads = 0;
 	totalWrites = 0;
-	
-	ftestHandle = FF_Open(pEnv->pIoman,"\\test.dat", FF_GetModeBits("a+"), NULL);
 	for (secNumber = 0; secNumber < 1048; secNumber++)
 	{
 		bw += FF_Write(ftestHandle, 1, 1000, (FF_T_UINT8*) SdCardBuf);
+
+		md5_append(&state, (const md5_byte_t *)SdCardBuf, 1000);
 	}
-	FF_Close(ftestHandle); 
 
 	printf("reads: %d, writes %d\n", totalReads, totalWrites);
+
+	FF_Close(ftestHandle);
+
+	md5_finish(&state, digest);
+
+	strcpy(szpHash, "");
+
+	for (di = 0; di < 16; ++di) {
+		sprintf(temp, "%02x", digest[di]);
+		strcat(szpHash, temp);
+	}
+
+	printf("HASH: %s\n", szpHash);
+
+	
 
 	return 0;
 }
@@ -128,6 +156,8 @@ int main(void) {
 				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %ld.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 			}
 
+			FF_FormatPartition(pIoman, 0, 1024*64);
+
 			//---------- Try to Mount the Partition with FullFAT.
 			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);
 			if(FF_isERR(Error)) {
@@ -166,6 +196,8 @@ int main(void) {
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
 				FFTerm_AddCmd(pConsole, "version",	(FFT_FN_COMMAND) version, versionInfo);
 
+				FFTerm_AddExCmd(pConsole, "testsuite", (FFT_FN_COMMAND_EX) cmd_testsuite, NULL, &Env);
+
 				FFTerm_AddExCmd(pConsole, "test", (FFT_FN_COMMAND_EX) test, NULL, &Env);
 
 //				fseek_test(&pIoman);
@@ -196,7 +228,7 @@ int main(void) {
 		printf("Could not open the I/O Block device\nError calling blockdeviceopen() function. (Device (file) not found?)\n");
 	}
 
-	getchar();
+	//getchar();
 	return -1;
 }
 

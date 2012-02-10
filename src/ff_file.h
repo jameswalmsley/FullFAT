@@ -70,14 +70,15 @@ typedef struct _FF_FILE {
 	//FF_T_UINT32	 AppendPointer;		///< Points to the Append from position. (The original filesize at open).
 	FF_T_UINT32		 DirCluster;		///< Cluster Number that the Dirent is in.
 	FF_T_UINT32		 ValidFlags;		///< Handle validation flags.
-/*#ifdef	FF_REMOVABLE_MEDIA
-		Invalidated : 1,
-#endif
-		FileDeleted : 1,
-		SpareFlags : 30;*/
+
 	FF_T_UINT16		 DirEntry;			///< Dirent Entry Number describing this file.
 	FF_T_UINT8		 Mode;				///< Mode that File Was opened in.
-	//FF_T_UINT8		 NumLFNs;			///< Number of LFNs associated with this file.
+
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	FF_T_UINT8		*pBuf;				///< A buffer for providing fast unaligned access.
+	FF_T_UINT8		 bWriteBuf;			///< Should close write the contents of the last write.?
+#endif
+
 	struct _FF_FILE *Next;				///< Pointer to the next file object in the linked list.
 } FF_FILE,
 *PFF_FILE;

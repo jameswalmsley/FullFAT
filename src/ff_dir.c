@@ -2674,6 +2674,10 @@ FF_ERROR FF_RmLFNs(FF_IOMAN *pIoman, FF_T_UINT16 usDirEntry, FF_FETCH_CONTEXT *p
 	FF_ERROR	Error;
 	FF_T_UINT8	EntryBuffer[32];
 
+	if(usDirEntry == 0) {
+		return FF_ERR_NONE;
+	}
+
 	usDirEntry--;
 
 	do {

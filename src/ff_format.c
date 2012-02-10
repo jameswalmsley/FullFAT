@@ -275,9 +275,9 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 			memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+3), "FULLFAT2", 8); // Place the FullFAT OEM code.
 
 			FF_putShort(pBuffer->pBuffer, 11, pIoman->BlkSize);
-			FF_putChar(pBuffer->pBuffer, 13, sectorsPerCluster);
+			FF_putChar(pBuffer->pBuffer, 13, (FF_T_UINT8) sectorsPerCluster);
 			
-			FF_putShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS, partitionGeom.ulStartLBA); 	// Number of reserved sectors. (1 for fat12/16, 32 for f32).
+			FF_putShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS, (FF_T_UINT16)partitionGeom.ulStartLBA); 	// Number of reserved sectors. (1 for fat12/16, 32 for f32).
 			FF_putShort(pBuffer->pBuffer, FF_FAT_NUMBER_OF_FATS, 2); 	// Always 2 copies.
 
 			
@@ -290,7 +290,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 			FF_putLong(pBuffer->pBuffer, 32, partitionGeom.ulLength+partitionGeom.ulStartLBA); // Total sectors of this partition.
 
 			if(fatSize == 32) {
-				FF_putShort(pBuffer->pBuffer, 36, finalFatSize);		// Number of sectors per fat. 
+				FF_putShort(pBuffer->pBuffer, 36, (FF_T_UINT16)finalFatSize);		// Number of sectors per fat. 
 				FF_putShort(pBuffer->pBuffer, 44, 2);					// Root dir cluster (2).
 				FF_putShort(pBuffer->pBuffer, 48, 1);					// FSINFO sector at LBA1.
 				FF_putShort(pBuffer->pBuffer, 50, 6);					// 0 for no backup boot sector.
@@ -304,7 +304,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 				FF_putChar(pBuffer->pBuffer, 38, 0x28);					// Signal this contains an extended signature.
 				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+43), "FullFAT2-V", 10); // Volume name.
 				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+54), "FAT16   ", 8);
-				FF_putShort(pBuffer->pBuffer, FF_FAT_16_SECTORS_PER_FAT, finalFatSize);
+				FF_putShort(pBuffer->pBuffer, FF_FAT_16_SECTORS_PER_FAT, (FF_T_UINT16) finalFatSize);
 				FF_putShort(pBuffer->pBuffer, 17, 512);				 		// Number of Dir entries. (FAT32 0).
 				//FF_putShort(pBuffer->pBuffer, FF_FAT_ROOT_ENTRY_COUNT, 
 			}

@@ -147,6 +147,9 @@
     <ClCompile Include="..\..\..\src\ff_unaligned.c">
       <Filter>Source Files\FullFAT</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cmd\cmd_testsuite.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Commands.h">
@@ -259,6 +262,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\ff_unicode.h">
       <Filter>Header Files\FullFAT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cmd\cmd_testsuite.h">
+      <Filter>Source Files\commands</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
