@@ -1027,7 +1027,9 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT32	nBytesRead = 0;
 	FF_T_UINT32 nBytesToRead;
 	FF_IOMAN	*pIoman;
+#ifndef FF_OPTIMISE_UNALIGNED_ACCESS
 	FF_BUFFER	*pBuffer;
+#endif
 	FF_T_UINT32 nRelBlockPos;
 	FF_T_UINT32	nItemLBA;
 	FF_T_SINT32	RetVal = 0;
@@ -1075,6 +1077,13 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to read are within a block and less than a block size.
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+		if(!pFile->ucState & FF_BUFSTATE_VALID) {
+			FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			pFile->ucState = FF_BUFSTATE_VALID;
+		}
+		memcpy(buffer, (pFile->pBuf + nRelBlockPos), nBytes);
+#else
 		pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
 		{
 			if(!pBuffer) {
@@ -1085,7 +1094,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
 		pFile->FilePointer += nBytes;
-		
+#endif	
 		return nBytes;		// Return the number of bytes read.
 
 	} else {
@@ -1093,6 +1102,20 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		//---------- Read (memcpy) to a Sector Boundary
 		if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
 			nBytesToRead = pIoman->BlkSize - nRelBlockPos;
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			if(!pFile->ucState & FF_BUFSTATE_VALID) {
+				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+				pFile->ucState = FF_BUFSTATE_VALID;
+			}
+			memcpy(buffer, pFile->pBuf + nRelBlockPos, nBytesToRead);
+			// Now we read to the sector boundary we need to invalidate the buffer!
+
+			if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
+				FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			}
+			pFile->ucState = FF_BUFSTATE_INVALID;
+
+#else
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
@@ -1102,7 +1125,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				memcpy(buffer, (pBuffer->pBuffer + nRelBlockPos), nBytesToRead);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-
+#endif
 			nBytes				-= nBytesToRead;
 			nBytesRead			+= nBytesToRead;
 			pFile->FilePointer	+= nBytesToRead;
@@ -1229,6 +1252,14 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			
 			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			if(!pFile->ucState & FF_BUFSTATE_VALID) {
+				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+				pFile->ucState = FF_BUFSTATE_VALID;
+			}
+			memcpy(buffer, pFile->pBuf, nBytes);
+
+#else
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
 			{
 				if(!pBuffer) {
@@ -1237,7 +1268,7 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 				memcpy(buffer, pBuffer->pBuffer, nBytes);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
-
+#endif
 			nBytesToRead = nBytes;
 			pFile->FilePointer	+= nBytesToRead;
 			nBytes				-= nBytesToRead;
@@ -1266,7 +1297,9 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
  **/
 FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	FF_T_UINT32		fileLBA;
+#ifndef FF_OPTIMISE_UNALIGNED_ACCESS
 	FF_BUFFER		*pBuffer;
+#endif
 	FF_T_UINT8		retChar;
 	FF_T_UINT32		relMinorBlockPos;
 	FF_T_UINT32		nClusterDiff;
@@ -1301,7 +1334,13 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 
 	fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster)	+ FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
 	fileLBA = FF_getRealLBA (pFile->pIoman, fileLBA)		+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-	
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	if(!pFile->ucState & FF_BUFSTATE_VALID) {
+		FF_BlockRead(pFile->pIoman, fileLBA, 1, pFile->pBuf, FF_FALSE);
+		pFile->ucState |= FF_BUFSTATE_VALID;
+	}
+	retChar = pFile->pBuf[relMinorBlockPos]; 
+#else
 	pBuffer = FF_GetBuffer(pFile->pIoman, fileLBA, FF_MODE_READ);
 	{
 		if(!pBuffer) {
@@ -1310,8 +1349,18 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 		retChar = pBuffer->pBuffer[relMinorBlockPos];
 	}
 	FF_ReleaseBuffer(pFile->pIoman, pBuffer);
-
+#endif
 	pFile->FilePointer += 1;
+
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	relMinorBlockPos	= FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
+	if(!relMinorBlockPos) {
+		if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
+			FF_BlockWrite(pFile->pIoman, fileLBA, 1, pFile->pBuf, FF_FALSE);
+		}
+		pFile->ucState = FF_BUFSTATE_INVALID;
+	}
+#endif
 
 	return (FF_T_SINT32) retChar;
 }
@@ -1448,8 +1497,12 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+		if(!pFile->ucState & FF_BUFSTATE_VALID) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
+			FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			pFile->ucState = FF_BUFSTATE_VALID;
+		}
 		memcpy(pFile->pBuf + nRelBlockPos, buffer, nBytes);
-		pFile->bWriteBuf = FF_TRUE;
+		pFile->ucState |= FF_BUFSTATE_WRITTEN;
 #else
 		if (!nRelBlockPos && pFile->FilePointer >= pFile->Filesize) {
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WR_ONLY);
@@ -1474,9 +1527,13 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
 			nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			if(!pFile->ucState & FF_BUFSTATE_VALID) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
+				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+				pFile->ucState = FF_BUFSTATE_VALID;
+			}
 			memcpy(pFile->pBuf+nRelBlockPos, buffer, nBytesToWrite);
 			FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-			pFile->bWriteBuf = FF_FALSE;
+			pFile->ucState = FF_BUFSTATE_INVALID;
 #else
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
 			{
@@ -1618,8 +1675,12 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
 			
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+			if(!pFile->ucState & FF_BUFSTATE_VALID && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
+				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+				pFile->ucState = FF_BUFSTATE_VALID;
+			}
 			memcpy(pFile->pBuf, buffer, nBytes);
-			pFile->bWriteBuf = FF_TRUE;
+			pFile->ucState = FF_BUFSTATE_WRITTEN | FF_BUFSTATE_VALID;
 #else
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
 			{
@@ -1659,7 +1720,9 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
  *
  **/
 FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
+#ifndef FF_OPTIMISE_UNALIGNED_ACCESS
 	FF_BUFFER	*pBuffer;
+#endif
 	FF_T_UINT32 iItemLBA;
 	FF_T_UINT32 iRelPos;
 	FF_T_UINT32 nClusterDiff;
@@ -1706,12 +1769,12 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	iItemLBA = FF_getRealLBA (pFile->pIoman, iItemLBA)					+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
 	
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-	if(!pFile->bWriteBuf && pFile->FilePointer < pFile->Filesize) {
+	if(!(pFile->ucState & FF_BUFSTATE_WRITTEN) && pFile->FilePointer < pFile->Filesize) {
 		FF_BlockRead(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
 	}
 
 	pFile->pBuf[iRelPos] = pa_cValue;
-	pFile->bWriteBuf = FF_TRUE;
+	pFile->ucState |= FF_BUFSTATE_WRITTEN | FF_BUFSTATE_VALID;
 #else
 	pBuffer = FF_GetBuffer(pFile->pIoman, iItemLBA, FF_MODE_WRITE);
 	{
@@ -1729,11 +1792,11 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	}
 
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-	if(pFile->bWriteBuf) {
+	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
 		iRelPos = FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
 		if(!iRelPos) {
 			FF_BlockWrite(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
-			pFile->bWriteBuf = FF_FALSE;
+			pFile->ucState = FF_BUFSTATE_INVALID;
 		}	
 	}
 #endif
@@ -1776,11 +1839,11 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		write buffer that this is written to disk.
 	*/
 	
-	if(pFile->bWriteBuf) {
+	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
 		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 		FF_BlockWrite(pFile->pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-		pFile->bWriteBuf = FF_FALSE;
+		pFile->ucState = FF_BUFSTATE_INVALID;
 	}
 #endif
 
@@ -2041,7 +2104,6 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 	FF_T_UINT32	nItemLBA;
-	FF_T_UINT32 nRelBlockPos;
 #endif
 
 	if(!pFile) {
@@ -2124,7 +2186,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 	// Ensure any unaligned points are pushed to the disk!
-	if(pFile->bWriteBuf) {
+	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
 		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
 		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
 		FF_BlockWrite(pFile->pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);

@@ -134,8 +134,11 @@ int test_2(FF_IOMAN *pIoman) {
 	Error = FF_Seek(pFile, 5, FF_SEEK_SET);
 	CHECK_ERR(Error);
 
+	Error = FF_Read(pFile, 1, 1, buffer2);
+	CHECK_ERR(Error);
+
 	buffer[pFile->FilePointer] = '_';
-	Error = FF_PutC(pFile, '.');
+	Error = FF_PutC(pFile, '_');
 	CHECK_ERR(Error);
 
 	Error = FF_Close(pFile);
@@ -164,10 +167,6 @@ const TEST_ITEM tests[] = {
 
 int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	
-	FF_ERROR Error;
-	FF_FILE *pFile;
-	char	 buffer[8192];
-
 	int i;
 
 	printf("Thankyou for helping to verify FullFAT!\n\nStarting tests:\n\n");
@@ -190,3 +189,4 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 
 
+																										

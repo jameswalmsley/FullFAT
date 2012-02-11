@@ -58,6 +58,12 @@
 #define FF_SEEK_END	3
 #endif
 
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+#define FF_BUFSTATE_INVALID				0x00	///< Data in file handle buffer is invalid.
+#define FF_BUFSTATE_VALID				0x01	///< Valid data in pBuf (Something has been read into it).
+#define FF_BUFSTATE_WRITTEN				0x02	///< Data was written into pBuf, this must be saved when leaving sector.
+#endif
+
 typedef struct _FF_FILE {
 	FF_IOMAN		*pIoman;			///< Ioman Pointer!
 	FF_T_UINT32		 Filesize;			///< File's Size.
@@ -76,7 +82,7 @@ typedef struct _FF_FILE {
 
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 	FF_T_UINT8		*pBuf;				///< A buffer for providing fast unaligned access.
-	FF_T_UINT8		 bWriteBuf;			///< Should close write the contents of the last write.?
+	FF_T_UINT8		 ucState;			///< State information about the buffer.
 #endif
 
 	struct _FF_FILE *Next;				///< Pointer to the next file object in the linked list.
