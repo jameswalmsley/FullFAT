@@ -1448,7 +1448,8 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		memcpy(pFile->pBuf, buffer, nBytes);
+		memcpy(pFile->pBuf + nRelBlockPos, buffer, nBytes);
+		pFile->bWriteBuf = FF_TRUE;
 #else
 		if (!nRelBlockPos && pFile->FilePointer >= pFile->Filesize) {
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WR_ONLY);
