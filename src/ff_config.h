@@ -37,8 +37,9 @@
 #ifndef _FF_CONFIG_H_
 #define _FF_CONFIG_H_
 
+#ifdef __WIN32
 #define snprintf _snprintf
-
+#endif
 /*
 	Here you can change the configuration of FullFAT as appropriate to your
 	platform.

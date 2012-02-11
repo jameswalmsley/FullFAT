@@ -6,6 +6,7 @@ OBJS += ../../../ffterm/Platforms/linux/FFTerm-Platform-linux.o
 OBJS += ../cmd/cd_cmd.o
 OBJS += ../cmd/cmd_helpers.o
 OBJS += ../cmd/cmd_prompt.o
+OBJS += ../cmd/cmd_testsuite.o
 OBJS += ../cmd/cp_cmd.o
 OBJS += ../cmd/dir.o
 OBJS += ../cmd/geterror_cmd.o

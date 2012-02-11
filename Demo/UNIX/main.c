@@ -151,7 +151,7 @@ int main(void) {
 				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
 				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
 				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
-
+				FFTerm_AddExCmd(pConsole, "testsuite", (FFT_FN_COMMAND_EX) cmd_testsuite, NULL, &Env);
 				FFTerm_AddCmd(pConsole, "lslin", 	(FFT_FN_COMMAND) lin_ls, NULL);
 				
 				//---------- Start the console.
