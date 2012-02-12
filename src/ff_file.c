@@ -193,6 +193,16 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	memset (pFile, 0, sizeof *pFile);
 	// Get the Mode Bits.
 	pFile->Mode = Mode;
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	pFile->pBuf = (FF_T_UINT8 *) FF_MALLOC(pIoman->BlkSize);
+	if (pFile->pBuf == NULL) {
+		if(pError) {
+			*pError = FF_ERR_NOT_ENOUGH_MEMORY | FF_OPEN;
+		}
+		FF_FREE(pFile);
+		return (FF_FILE *)NULL;
+	}
+#endif
 
 #ifdef FF_UNICODE_SUPPORT
 	i = (FF_T_UINT16) wcslen(path);
@@ -222,143 +232,139 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		if(pError) {
 			*pError = Error;
 		}
-		FF_FREE(pFile);
-		return (FF_FILE *) NULL;
+		goto out;
 	}
 
-	if(DirCluster) {
-
-		FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object, &Error);
-		if(FF_isERR(Error)) {
-			if(pError) {
-				*pError = Error;	
-			}
-			FF_FREE(pFile);
-			return (FF_FILE *) NULL;
+	if(!DirCluster) {
+		if(pError) {
+			*pError = (FF_ERR_FILE_INVALID_PATH | FF_OPEN);
 		}
+		goto out;
+	}
 
-		if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
+	FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0x00, &Object, &Error);
+	if(FF_isERR(Error)) {
+		if(pError) {
+			*pError = Error;	
+		}
+		goto out;
+	}
+
+	if(!FileCluster) {	// If 0 was returned, it might be because the file has no allocated cluster
 #ifdef FF_UNICODE_SUPPORT
-			if(wcslen(filename) == wcslen(Object.FileName)) {
-				if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) wcslen(filename)) == FF_TRUE) {
+		if(wcslen(filename) == wcslen(Object.FileName)) {
+			if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) wcslen(filename)) == FF_TRUE) {
 #else
-			if(strlen(filename) == strlen(Object.FileName)) {
-				if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) strlen(filename)) == FF_TRUE) {
+		if(strlen(filename) == strlen(Object.FileName)) {
+			if(Object.Filesize == 0 && FF_strmatch(filename, Object.FileName, (FF_T_UINT16) strlen(filename)) == FF_TRUE) {
 #endif
-					// The file really was found!
-					FileCluster = 1;
-				} 
-			}
+				// The file really was found!
+				FileCluster = 1;
+			} 
 		}
+	}
 
-		if(!FileCluster) {
-			if((pFile->Mode & FF_MODE_CREATE)) {
-				FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object, &Error);
-				if(FF_isERR(Error)) {
-					if(pError) {
-						*pError = Error;
-					}
-					FF_FREE(pFile);
-					return (FF_FILE *) NULL;
+	if(!FileCluster) {
+		if((pFile->Mode & FF_MODE_CREATE)) {
+			FileCluster = FF_CreateFile(pIoman, DirCluster, filename, &Object, &Error);
+			if(FF_isERR(Error)) {
+				if(pError) {
+					*pError = Error;
 				}
-				Object.CurrentItem += 1;
+				goto out;
 			}
+			Object.CurrentItem += 1;
 		}
-		
-		if(FileCluster) {
-			if(Object.Attrib == FF_FAT_ATTR_DIR) {
-				if(!(pFile->Mode & FF_MODE_DIR)) {
-					// Not the object, File Not Found!
-					FF_FREE(pFile);
-					if(pError) {
-						*pError = (FF_ERR_FILE_OBJECT_IS_A_DIR | FF_OPEN);
-					}
-					return (FF_FILE *) NULL;
-				}
-			}
-			
-			//---------- Ensure Read-Only files don't get opened for Writing.
-			if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND)) {
-				if((Object.Attrib & FF_FAT_ATTR_READONLY)) {
-					FF_FREE(pFile);
-					if(pError) {
-						*pError = (FF_ERR_FILE_IS_READ_ONLY | FF_OPEN);
-					}
-					return (FF_FILE *) NULL;
-				}
-			}
-			pFile->pIoman				= pIoman;
-			pFile->FilePointer			= 0;
-			pFile->ObjectCluster		= Object.ObjectCluster;
-			pFile->Filesize				= Object.Filesize;
-			pFile->CurrentCluster		= 0;
-			pFile->AddrCurrentCluster	= pFile->ObjectCluster;
-			//pFile->Mode					= Mode;
-			pFile->Next					= NULL;
-			pFile->DirCluster			= DirCluster;
-			pFile->DirEntry				= Object.CurrentItem - 1;
-			pFile->iChainLength			= 0;
-			pFile->iEndOfChain			= 0;
-			pFile->ValidFlags			&= ~(FF_VALID_FLAG_DELETED); //FF_FALSE;
+	}
+	
+	if(!FileCluster) {
+		if(pError) {
+			*pError = (FF_ERR_FILE_NOT_FOUND | FF_OPEN);
+		}
+		goto out;
+	}
 
-			// File Permission Processing
-			// Only "w" and "w+" mode strings can erase a file's contents.
-			// Any other combinations will not cause an erase.
-			if((pFile->Mode & FF_MODE_TRUNCATE)) {
-				pFile->Filesize = 0;
-				pFile->FilePointer = 0;
-			}
+	// So now we have a FileCluster
 
-			/*
-				Add pFile onto the end of our linked list of FF_FILE objects.
-			*/
-			FF_PendSemaphore(pIoman->pSemaphore);
-			{
-				if(!pIoman->FirstFile) {
-					pIoman->FirstFile = pFile;
-				} else {
-					pFileChain = (FF_FILE *) pIoman->FirstFile;
-					do {
-						if(pFileChain->ObjectCluster == pFile->ObjectCluster) {
-							// HT: Only fail if any of them has write access...
-							// Why not have 2 open read handles to a single file?
-							if ((pFileChain->Mode | pFile->Mode) & (FF_MODE_WRITE | FF_MODE_APPEND)) {
-								// File is already open! DON'T ALLOW IT!
-								FF_ReleaseSemaphore(pIoman->pSemaphore);
-								FF_FREE(pFile);
-								if(pError) {
-									*pError = (FF_ERR_FILE_ALREADY_OPEN | FF_OPEN);
-								}
-								return (FF_FILE *) NULL;
-							}
-						}
-						if(!pFileChain->Next) {
-							pFileChain->Next = pFile;
-							break;
-						}
-						pFileChain = (FF_FILE *) pFileChain->Next;
-					}while(pFileChain != NULL);
-				}
-			}
-			FF_ReleaseSemaphore(pIoman->pSemaphore);
-
-#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-			pFile->pBuf = (FF_T_UINT8 *) FF_MALLOC(pIoman->BlkSize);
-#endif
-
-			return pFile;
-		}else {
-			FF_FREE(pFile);
+	// Check the Mode flags
+	if(Object.Attrib == FF_FAT_ATTR_DIR) {
+		if(!(pFile->Mode & FF_MODE_DIR)) {
+			// Not the object, File Not Found!
 			if(pError) {
-				*pError = (FF_ERR_FILE_NOT_FOUND | FF_OPEN);
+				*pError = (FF_ERR_FILE_OBJECT_IS_A_DIR | FF_OPEN);
 			}
-			return (FF_FILE *) NULL;
-		} 
+			goto out;
+		}
 	}
-	if(pError) {
-		*pError = (FF_ERR_FILE_INVALID_PATH | FF_OPEN);
+	
+	//---------- Ensure Read-Only files don't get opened for Writing.
+	if((pFile->Mode & FF_MODE_WRITE) || (pFile->Mode & FF_MODE_APPEND)) {
+		if((Object.Attrib & FF_FAT_ATTR_READONLY)) {
+			if(pError) {
+				*pError = (FF_ERR_FILE_IS_READ_ONLY | FF_OPEN);
+			}
+			goto out;
+		}
+	}
+	pFile->pIoman				= pIoman;
+	pFile->FilePointer			= 0;
+	pFile->ObjectCluster		= Object.ObjectCluster;
+	pFile->Filesize				= Object.Filesize;
+	pFile->CurrentCluster		= 0;
+	pFile->AddrCurrentCluster	= pFile->ObjectCluster;
+	//pFile->Mode					= Mode;
+	pFile->Next					= NULL;
+	pFile->DirCluster			= DirCluster;
+	pFile->DirEntry				= Object.CurrentItem - 1;
+	pFile->iChainLength			= 0;
+	pFile->iEndOfChain			= 0;
+	pFile->ValidFlags			&= ~(FF_VALID_FLAG_DELETED); //FF_FALSE;
+
+	// File Permission Processing
+	// Only "w" and "w+" mode strings can erase a file's contents.
+	// Any other combinations will not cause an erase.
+	if((pFile->Mode & FF_MODE_TRUNCATE)) {
+		pFile->Filesize = 0;
+		pFile->FilePointer = 0;
 	}
 
+	/*
+		Add pFile onto the end of our linked list of FF_FILE objects.
+	*/
+	FF_PendSemaphore(pIoman->pSemaphore);
+	{
+		if(!pIoman->FirstFile) {
+			pIoman->FirstFile = pFile;
+		} else {
+			pFileChain = (FF_FILE *) pIoman->FirstFile;
+			do {
+				if(pFileChain->ObjectCluster == pFile->ObjectCluster) {
+					// HT: Only fail if any of them has write access...
+					// Why not have 2 open read handles to a single file?
+					if ((pFileChain->Mode | pFile->Mode) & (FF_MODE_WRITE | FF_MODE_APPEND)) {
+						// File is already open! DON'T ALLOW IT!
+						FF_ReleaseSemaphore(pIoman->pSemaphore);
+						if(pError) {
+							*pError = (FF_ERR_FILE_ALREADY_OPEN | FF_OPEN);
+						}
+						goto out;
+					}
+				}
+				if(!pFileChain->Next) {
+					pFileChain->Next = pFile;
+					break;
+				}
+				pFileChain = (FF_FILE *) pFileChain->Next;
+			}while(pFileChain != NULL);
+		}
+	}
+	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return pFile;
+out:
+#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+	FF_FREE(pFile->pBuf);
+#endif
 	FF_FREE(pFile);
 
 	return (FF_FILE *)NULL;
@@ -1011,6 +1017,60 @@ static FF_ERROR FF_WriteClusters(FF_FILE *pFile, FF_T_UINT32 Count, FF_T_UINT8 *
 }
 
 /**
+ *	@private
+ *	@brief	Calculate the Logical Block Address (LBA)
+ *
+ *	@param	pFile       The file handle
+ *
+ *	@return	LBA
+ *
+ *  Must be set:
+ *    - pFile->FilePointer        : byte offset in file
+ *    - pFile->AddrCurrentCluster : fysical cluster on the partition
+ **/
+static FF_T_UINT32 FF_FileLBA (FF_FILE *pFile) {
+	FF_T_UINT32 nItemLBA;
+	nItemLBA  = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
+	nItemLBA += FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
+	nItemLBA  = FF_getRealLBA(pFile->pIoman, nItemLBA);
+	nItemLBA += FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
+	return nItemLBA;
+}
+
+/**
+ *	@private
+ *	@brief	Depending on FilePointer, calculate CurrentCluster
+ *  @brief	and traverse the FAT to find the right AddrCurrentCluster
+ *
+ *	@param	pFile       The file handle
+ *
+ *	@return	FF_ERR_NONE on success
+ *	@return	Possible error returned by FF_TraverseFAT() or END_OF_DIR
+ *
+ *  Side effects:
+ *    - pFile->CurrentCluster     : relative cluster number (0 <= Num < ulChainLength)
+ *    - pFile->AddrCurrentCluster : fysical cluster on the partition
+ **/
+
+static FF_T_UINT32 FF_SetCluster (FF_FILE *pFile, FF_ERROR  *pError) {
+	FF_IOMAN	*pIoman = pFile->pIoman;
+	FF_T_UINT32 nNewCluster = FF_getClusterChainNumber(pIoman, pFile->FilePointer, 1);
+
+	*pError = FF_ERR_NONE;
+	if(nNewCluster > pFile->CurrentCluster) {
+		pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nNewCluster - pFile->CurrentCluster, pError);
+	} else if(nNewCluster < pFile->CurrentCluster) {
+		pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->ObjectCluster, nNewCluster, pError);
+	} else {
+		// Well positioned
+	}
+	if(FF_isERR(*pError))
+		return 0;
+	pFile->CurrentCluster = nNewCluster;
+	return FF_FileLBA(pFile);
+}
+
+/**
  *	@public
  *	@brief	Equivalent to fread()
  *
@@ -1036,7 +1096,6 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	FF_T_UINT16	sSectors;
 	FF_T_UINT32 nRelClusterPos;
 	FF_T_UINT32 nBytesPerCluster;
-	FF_T_UINT32	nClusterDiff;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1059,27 +1118,18 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 	if((pFile->FilePointer + nBytes) > pFile->Filesize) {
 		nBytes = pFile->Filesize - pFile->FilePointer;
 	}
-	
-	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-	if(nClusterDiff) {
-		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-			pFile->CurrentCluster += nClusterDiff;
-		}
+	nItemLBA = FF_SetCluster (pFile, &Error);
+	if(FF_isERR(Error)) {
+		return Error;
 	}
 
 	nRelBlockPos = FF_getMinorBlockEntry(pIoman, pFile->FilePointer, 1); // Get the position within a block.
 	
-	nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-	nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to read are within a block and less than a block size.
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		if(!pFile->ucState & FF_BUFSTATE_VALID) {
-			FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
 			pFile->ucState = FF_BUFSTATE_VALID;
 		}
 		memcpy(buffer, (pFile->pBuf + nRelBlockPos), nBytes);
@@ -1093,189 +1143,160 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 		}
 		FF_ReleaseBuffer(pIoman, pBuffer);
 
-		pFile->FilePointer += nBytes;
 #endif	
+		pFile->FilePointer += nBytes;
 		return nBytes;		// Return the number of bytes read.
+	}
 
-	} else {
-
-		//---------- Read (memcpy) to a Sector Boundary
-		if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
-			nBytesToRead = pIoman->BlkSize - nRelBlockPos;
+	//---------- Read (memcpy) to a Sector Boundary
+	if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
+		nBytesToRead = pIoman->BlkSize - nRelBlockPos;
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-			if(!pFile->ucState & FF_BUFSTATE_VALID) {
-				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-				pFile->ucState = FF_BUFSTATE_VALID;
-			}
-			memcpy(buffer, pFile->pBuf + nRelBlockPos, nBytesToRead);
-			// Now we read to the sector boundary we need to invalidate the buffer!
+		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
+			pFile->ucState = FF_BUFSTATE_VALID;
+		}
+		memcpy(buffer, pFile->pBuf + nRelBlockPos, nBytesToRead);
+		// Now we read to the sector boundary we need to invalidate the buffer!
 
-			if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
-				FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-			}
-			pFile->ucState = FF_BUFSTATE_INVALID;
+		// HT: Sure about this check for FF_BUFSTATE_WRITTEN?
+		// I thought file access is either Rd or Wr-only?
+		if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
+			Error = FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
+		}
+		pFile->ucState = FF_BUFSTATE_INVALID;
 
 #else
-			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
-			{
-				if(!pBuffer) {
-					return (FF_ERR_DEVICE_DRIVER_FAILED | FF_READ);
-				}
-				// Here we copy to the sector boudary.
-				memcpy(buffer, (pBuffer->pBuffer + nRelBlockPos), nBytesToRead);
+		pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
+		{
+			if(!pBuffer) {
+				return (FF_ERR_DEVICE_DRIVER_FAILED | FF_READ);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			// Here we copy to the sector boudary.
+			memcpy(buffer, (pBuffer->pBuffer + nRelBlockPos), nBytesToRead);
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
 #endif
-			nBytes				-= nBytesToRead;
-			nBytesRead			+= nBytesToRead;
-			pFile->FilePointer	+= nBytesToRead;
-			buffer				+= nBytesToRead;
-			
-		}
-
-		//---------- Read to a Cluster Boundary
+		nBytes				-= nBytesToRead;
+		nBytesRead			+= nBytesToRead;
+		pFile->FilePointer	+= nBytesToRead;
+		buffer				+= nBytesToRead;
 		
-		nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
-		nBytesPerCluster = (pIoman->pPartition->SectorsPerCluster * pIoman->BlkSize);
-		if(nRelClusterPos != 0 && nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
-			
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;	// Returning an error, ensuring we are signed (error flag).
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}
+	}
+
+	//---------- Read to a Cluster Boundary
+	
+	nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
+	nBytesPerCluster = (pIoman->pPartition->SectorsPerCluster * pIoman->BlkSize);
+	if(nRelClusterPos != 0 && nRelClusterPos + nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
+		nItemLBA = FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
+	
+		sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
 		
-			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-
-			sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
-			
-			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
-			if(RetVal < 0) {
-				return RetVal;
-			}
-			
-			nBytesToRead		 = sSectors * pIoman->BlkSize;
-			nBytes				-= nBytesToRead;
-			buffer				+= nBytesToRead;
-			nBytesRead			+= nBytesToRead;
-			pFile->FilePointer	+= nBytesToRead;
-
+		RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
+		if(RetVal < 0) {
+			return RetVal;
 		}
+		
+		nBytesToRead		 = sSectors * pIoman->BlkSize;
+		nBytes				-= nBytesToRead;
+		buffer				+= nBytesToRead;
+		nBytesRead			+= nBytesToRead;
+		pFile->FilePointer	+= nBytesToRead;
 
-		//---------- Read Clusters
-		if(nBytes >= nBytesPerCluster) {
-			//----- Thanks to Christopher Clark of DigiPen Institute of Technology in Redmond, US adding this traversal check.
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}
-			//----- End of Contributor fix.
+	}
 
-			RetVal = FF_ReadClusters(pFile, (nBytes / nBytesPerCluster), buffer);
-			if(RetVal < 0) {
-				return RetVal;
-			}
-			nBytesToRead = (nBytesPerCluster *  (nBytes / nBytesPerCluster));
-
-			pFile->FilePointer	+= nBytesToRead;
-
-			nBytes			-= nBytesToRead;
-			buffer			+= nBytesToRead;
-			nBytesRead		+= nBytesToRead;
+	//---------- Read Clusters
+	if(nBytes >= nBytesPerCluster) {
+		//----- Thanks to Christopher Clark of DigiPen Institute of Technology in Redmond, US adding this traversal check.
+		FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
 		}
+		//----- End of Contributor fix.
 
-		//---------- Read Remaining Blocks
-		while (nBytes >= pIoman->BlkSize) {
-			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
-			{
-				// HT: I'd leave these pPart/ucOffset for readability
-				// and shorter code lines
-				FF_PARTITION *pPart = pIoman->pPartition;
-				FF_T_UINT ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
-				FF_T_UINT ucRemain = pPart->SectorsPerCluster - ucOffset;
-				if (sSectors > ucRemain) {
-					sSectors = ucRemain;
-				}
-			}
-			
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}
-			
-			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-			RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
-
-			if(RetVal < 0) {
-				return RetVal;
-			}
-			
-			nBytesToRead = sSectors * pIoman->BlkSize;
-			pFile->FilePointer	+= nBytesToRead;
-			nBytes				-= nBytesToRead;
-			buffer				+= nBytesToRead;
-			nBytesRead			+= nBytesToRead;
+		RetVal = FF_ReadClusters(pFile, (nBytes / nBytesPerCluster), buffer);
+		if(RetVal < 0) {
+			return RetVal;
 		}
+		nBytesToRead = (nBytesPerCluster *  (nBytes / nBytesPerCluster));
 
-		//---------- Read (memcpy) Remaining Bytes
-		if(nBytes > 0) {
-			
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
+		pFile->FilePointer	+= nBytesToRead;
+
+		nBytes			-= nBytesToRead;
+		buffer			+= nBytesToRead;
+		nBytesRead		+= nBytesToRead;
+	}
+
+	//---------- Read Remaining Blocks
+	while (nBytes >= pIoman->BlkSize) {
+		sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
+		{
+			// HT: I'd leave these pPart/ucOffset for readability
+			// and shorter code lines
+			FF_PARTITION *pPart = pIoman->pPartition;
+			FF_T_UINT ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
+			FF_T_UINT ucRemain = pPart->SectorsPerCluster - ucOffset;
+			if (sSectors > ucRemain) {
+				sSectors = ucRemain;
 			}
-			
-			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
+		}
+		
+		nItemLBA = FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
+		
+		RetVal = FF_BlockRead(pIoman, nItemLBA, (FF_T_UINT32) sSectors, buffer, FF_FALSE);
+
+		if(FF_isERR(Error)) {
+			return RetVal;
+		}
+		
+		nBytesToRead = sSectors * pIoman->BlkSize;
+		pFile->FilePointer	+= nBytesToRead;
+		nBytes				-= nBytesToRead;
+		buffer				+= nBytesToRead;
+		nBytesRead			+= nBytesToRead;
+	}
+
+	//---------- Read (memcpy) Remaining Bytes
+	if(nBytes > 0) {
+		
+		nItemLBA = FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
+		
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-			if(!pFile->ucState & FF_BUFSTATE_VALID) {
-				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-				pFile->ucState = FF_BUFSTATE_VALID;
-			}
-			memcpy(buffer, pFile->pBuf, nBytes);
+		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
+			pFile->ucState = FF_BUFSTATE_VALID;
+		}
+		memcpy(buffer, pFile->pBuf, nBytes);
 
 #else
-			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
-			{
-				if(!pBuffer) {
-					return (FF_ERR_DEVICE_DRIVER_FAILED | FF_READ);
-				}
-				memcpy(buffer, pBuffer->pBuffer, nBytes);
+		pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_READ);
+		{
+			if(!pBuffer) {
+				return (FF_ERR_DEVICE_DRIVER_FAILED | FF_READ);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
-#endif
-			nBytesToRead = nBytes;
-			pFile->FilePointer	+= nBytesToRead;
-			nBytes				-= nBytesToRead;
-			buffer				+= nBytesToRead;
-			nBytesRead			+= nBytesToRead;
-
+			memcpy(buffer, pBuffer->pBuffer, nBytes);
 		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
+#endif
+		nBytesToRead = nBytes;
+		pFile->FilePointer	+= nBytesToRead;
+		nBytes				-= nBytesToRead;
+		buffer				+= nBytesToRead;
+		nBytesRead			+= nBytesToRead;
+
 	}
 
 	return nBytesRead;
@@ -1302,7 +1323,6 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 #endif
 	FF_T_UINT8		retChar;
 	FF_T_UINT32		relMinorBlockPos;
-	FF_T_UINT32		nClusterDiff;
 	FF_ERROR			Error;
 	
 	
@@ -1320,23 +1340,15 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 
 	relMinorBlockPos	= FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
 
-	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-	if(nClusterDiff) {
-		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-			pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-			pFile->CurrentCluster += nClusterDiff;
-		}
+	fileLBA = FF_SetCluster (pFile, &Error);
+	if(FF_isERR(Error)) {
+		return Error;
 	}
 	
-
-	fileLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster)	+ FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-	fileLBA = FF_getRealLBA (pFile->pIoman, fileLBA)		+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-	if(!pFile->ucState & FF_BUFSTATE_VALID) {
-		FF_BlockRead(pFile->pIoman, fileLBA, 1, pFile->pBuf, FF_FALSE);
+	if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+		Error = FF_BlockRead(pFile->pIoman, fileLBA, 1, pFile->pBuf, FF_FALSE);
+		if(FF_isERR(Error)) return Error;
 		pFile->ucState |= FF_BUFSTATE_VALID;
 	}
 	retChar = pFile->pBuf[relMinorBlockPos]; 
@@ -1356,7 +1368,8 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 	relMinorBlockPos	= FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
 	if(!relMinorBlockPos) {
 		if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
-			FF_BlockWrite(pFile->pIoman, fileLBA, 1, pFile->pBuf, FF_FALSE);
+			Error = FF_BlockWrite(pFile->pIoman, fileLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
 		}
 		pFile->ucState = FF_BUFSTATE_INVALID;
 	}
@@ -1444,7 +1457,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	FF_T_SINT32	slRetVal = 0;
 	FF_T_UINT16	sSectors;
 	FF_T_UINT32 nRelClusterPos;
-	FF_T_UINT32 nBytesPerCluster, nClusterDiff, nClusters;
+	FF_T_UINT32 nBytesPerCluster, nClusters;
 	FF_ERROR	Error;
 
 	if(!pFile) {
@@ -1481,28 +1494,20 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 
 	nRelBlockPos = FF_getMinorBlockEntry(pIoman, pFile->FilePointer, 1); // Get the position within a block.
 	
-	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-	if(nClusterDiff) {
-		if(pFile->CurrentCluster != FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-			pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-			pFile->CurrentCluster += nClusterDiff;
-		}
+	nItemLBA = FF_SetCluster (pFile, &Error);
+	if(FF_isERR(Error)) {
+		return Error;
 	}
 	
-	nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-	nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		if(!pFile->ucState & FF_BUFSTATE_VALID) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
-			FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-			pFile->ucState = FF_BUFSTATE_VALID;
+		// HT: Only read if we access existing data
+		if(pFile->FilePointer < pFile->Filesize && !(pFile->ucState & FF_BUFSTATE_VALID)) {
+			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
 		}
 		memcpy(pFile->pBuf + nRelBlockPos, buffer, nBytes);
-		pFile->ucState |= FF_BUFSTATE_WRITTEN;
+		pFile->ucState |= FF_BUFSTATE_WRITTEN | FF_BUFSTATE_VALID;
 #else
 		if (!nRelBlockPos && pFile->FilePointer >= pFile->Filesize) {
 			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WR_ONLY);
@@ -1519,186 +1524,157 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 #endif
 		pFile->FilePointer += nBytes;
 		nBytesWritten = nBytes;
-		//return nBytes;		// Return the number of bytes written.
+		// HT: restored return here to de-indent the remaining part of this function
+		if(pFile->FilePointer > pFile->Filesize) {
+			pFile->Filesize = pFile->FilePointer;
+		}
+		return nBytes;		// Return the number of bytes written.
+	}
 
-	} else {
-
-		//---------- Write (memcpy) to a Sector Boundary
-		if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
-			nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
+	//---------- Write (memcpy) to a Sector Boundary
+	if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
+		nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-			if(!pFile->ucState & FF_BUFSTATE_VALID) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
-				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-				pFile->ucState = FF_BUFSTATE_VALID;
-			}
-			memcpy(pFile->pBuf+nRelBlockPos, buffer, nBytesToWrite);
-			FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-			pFile->ucState = FF_BUFSTATE_INVALID;
+		// HT: Only read if we access existing data
+		if(pFile->FilePointer < pFile->Filesize && !(pFile->ucState & FF_BUFSTATE_VALID)) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
+			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
+		}
+		memcpy(pFile->pBuf+nRelBlockPos, buffer, nBytesToWrite);
+		Error = FF_BlockWrite(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+		pFile->ucState = FF_BUFSTATE_INVALID;
+		if(FF_isERR(Error)) return Error;
 #else
-			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
-			{
-				if(!pBuffer) {
-					return (FF_ERR_DEVICE_DRIVER_FAILED | FF_WRITE);
-				}
-				// Here we copy to the sector boudary.
-				memcpy((pBuffer->pBuffer + nRelBlockPos), buffer, nBytesToWrite);
+		pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
+		{
+			if(!pBuffer) {
+				return (FF_ERR_DEVICE_DRIVER_FAILED | FF_WRITE);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			// Here we copy to the sector boudary.
+			memcpy((pBuffer->pBuffer + nRelBlockPos), buffer, nBytesToWrite);
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
 #endif
-			nBytes				-= nBytesToWrite;
-			nBytesWritten		+= nBytesToWrite;
-			pFile->FilePointer	+= nBytesToWrite;
-			buffer				+= nBytesToWrite;
-		}
+		nBytes				-= nBytesToWrite;
+		nBytesWritten		+= nBytesToWrite;
+		pFile->FilePointer	+= nBytesToWrite;
+		buffer				+= nBytesToWrite;
+	}
 
-		//---------- Write to a Cluster Boundary
+	//---------- Write to a Cluster Boundary
+	
+	nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
+	if(nRelClusterPos != 0 && nRelClusterPos + nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
 		
-		nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
-		if(nRelClusterPos != 0 && nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
-			
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}
+		nItemLBA = FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
+	
+		sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
+
+		slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
+		if(slRetVal < 0) {
+			return slRetVal;
+		}
 		
-			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
+		nBytesToWrite		 = sSectors * pIoman->BlkSize;
+		nBytes				-= nBytesToWrite;
+		buffer				+= nBytesToWrite;
+		nBytesWritten		+= nBytesToWrite;
+		pFile->FilePointer	+= nBytesToWrite;
 
-			sSectors = (FF_T_UINT16) (pIoman->pPartition->SectorsPerCluster - (nRelClusterPos / pIoman->BlkSize));
+	}
 
-			slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
-			if(slRetVal < 0) {
-				return slRetVal;
-			}
-			
-			nBytesToWrite		 = sSectors * pIoman->BlkSize;
-			nBytes				-= nBytesToWrite;
-			buffer				+= nBytesToWrite;
-			nBytesWritten		+= nBytesToWrite;
-			pFile->FilePointer	+= nBytesToWrite;
-
+	//---------- Write Clusters
+	if(nBytes >= nBytesPerCluster) {
+		//----- Thanks to Christopher Clark of DigiPen Institute of Technology in Redmond, US adding this traversal check.
+		FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
 		}
+		//----- End of Contributor fix.
 
-		//---------- Write Clusters
-		if(nBytes >= nBytesPerCluster) {
-			//----- Thanks to Christopher Clark of DigiPen Institute of Technology in Redmond, US adding this traversal check.
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}
-			//----- End of Contributor fix.
-
-			nClusters = (nBytes / nBytesPerCluster);
-			
-			slRetVal = FF_WriteClusters(pFile, nClusters, buffer);
-			if(slRetVal < 0) {
-				return slRetVal;
-			}
-			
-			nBytesToWrite = (nBytesPerCluster *  nClusters);
-			
-			pFile->FilePointer	+= nBytesToWrite;
-
-			nBytes				-= nBytesToWrite;
-			buffer				+= nBytesToWrite;
-			nBytesWritten		+= nBytesToWrite;
+		nClusters = (nBytes / nBytesPerCluster);
+		
+		slRetVal = FF_WriteClusters(pFile, nClusters, buffer);
+		if(slRetVal < 0) {
+			return slRetVal;
 		}
+		
+		nBytesToWrite = (nBytesPerCluster *  nClusters);
+		
+		pFile->FilePointer	+= nBytesToWrite;
 
-		//---------- Write Remaining Blocks
-		while (nBytes >= pIoman->BlkSize) {
-			sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
-			{
-				// HT: I'd leave these pPart/ucOffset for readability...
-				FF_PARTITION *pPart				= pIoman->pPartition;
-				FF_T_UINT8 ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
-				FF_T_UINT ucRemain = pPart->SectorsPerCluster - ucOffset;
-				if (sSectors > ucRemain) {
+		nBytes				-= nBytesToWrite;
+		buffer				+= nBytesToWrite;
+		nBytesWritten		+= nBytesToWrite;
+	}
+
+	//---------- Write Remaining Blocks
+	while (nBytes >= pIoman->BlkSize) {
+		sSectors = (FF_T_UINT16) (nBytes / pIoman->BlkSize);
+		{
+			// HT: I'd leave these pPart/ucOffset for readability...
+			FF_PARTITION *pPart				= pIoman->pPartition;
+			FF_T_UINT8 ucOffset = (pFile->FilePointer / pIoman->BlkSize) % pPart->SectorsPerCluster;
+			FF_T_UINT ucRemain = pPart->SectorsPerCluster - ucOffset;
+			if (sSectors > ucRemain) {
 //					logPrintf ("FF_Write: fp = %lu ofs %u sSectors %u remain %u (correcting)\n",
 //						pFile->FilePointer, offset, sSectors, remain);
-					sSectors = ucRemain;
-				}
+				sSectors = ucRemain;
 			}
-			
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}			
-			
-			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-			
-			slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
-			if(slRetVal < 0) {
-				return slRetVal;
-			}
-			
-			nBytesToWrite = sSectors * pIoman->BlkSize;
-			pFile->FilePointer	+= nBytesToWrite;
-			nBytes				-= nBytesToWrite;
-			buffer				+= nBytesToWrite;
-			nBytesWritten		+= nBytesToWrite;
 		}
+		
+		nItemLBA = FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
+		
+		slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
+		if(slRetVal < 0) {
+			return slRetVal;
+		}
+		
+		nBytesToWrite = sSectors * pIoman->BlkSize;
+		pFile->FilePointer	+= nBytesToWrite;
+		nBytes				-= nBytesToWrite;
+		buffer				+= nBytesToWrite;
+		nBytesWritten		+= nBytesToWrite;
+	}
 
-		//---------- Write (memcpy) Remaining Bytes
-		if(nBytes > 0) {
-			
-			nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-			if(nClusterDiff) {
-				if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-					pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-					if(FF_isERR(Error)) {
-						return Error;
-					}
-					pFile->CurrentCluster += nClusterDiff;
-				}
-			}
-			
-			nItemLBA = FF_Cluster2LBA(pIoman, pFile->AddrCurrentCluster);
-			nItemLBA = FF_getRealLBA(pIoman, nItemLBA + FF_getMajorBlockNumber(pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pIoman, pFile->FilePointer, 1);
-			
+	//---------- Write (memcpy) Remaining Bytes
+	if(nBytes > 0) {
+		
+		nItemLBA = FF_SetCluster (pFile, &Error);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
+		
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-			if(!pFile->ucState & FF_BUFSTATE_VALID && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
-				FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-				pFile->ucState = FF_BUFSTATE_VALID;
-			}
-			memcpy(pFile->pBuf, buffer, nBytes);
-			pFile->ucState = FF_BUFSTATE_WRITTEN | FF_BUFSTATE_VALID;
+		if(pFile->FilePointer < pFile->Filesize && !(pFile->ucState & FF_BUFSTATE_VALID)) {
+			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
+		}
+		memcpy(pFile->pBuf, buffer, nBytes);
+		pFile->ucState = FF_BUFSTATE_WRITTEN | FF_BUFSTATE_VALID;
 #else
-			pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
-			{
-				if(!pBuffer) {
-					return (FF_ERR_DEVICE_DRIVER_FAILED | FF_WRITE);
-				}
-				memcpy(pBuffer->pBuffer, buffer, nBytes);
+		pBuffer = FF_GetBuffer(pIoman, nItemLBA, FF_MODE_WRITE);
+		{
+			if(!pBuffer) {
+				return (FF_ERR_DEVICE_DRIVER_FAILED | FF_WRITE);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			memcpy(pBuffer->pBuffer, buffer, nBytes);
+		}
+		FF_ReleaseBuffer(pIoman, pBuffer);
 #endif
 
-			nBytesToWrite = nBytes;
-			pFile->FilePointer	+= nBytesToWrite;
-			nBytes				-= nBytesToWrite;
-			buffer				+= nBytesToWrite;
-			nBytesWritten		+= nBytesToWrite;
+		nBytesToWrite = nBytes;
+		pFile->FilePointer	+= nBytesToWrite;
+		nBytes				-= nBytesToWrite;
+		buffer				+= nBytesToWrite;
+		nBytesWritten		+= nBytesToWrite;
 
-		}
 	}
 
 	if(pFile->FilePointer > pFile->Filesize) {
@@ -1725,7 +1701,6 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 #endif
 	FF_T_UINT32 iItemLBA;
 	FF_T_UINT32 iRelPos;
-	FF_T_UINT32 nClusterDiff;
 	FF_ERROR	Error;
 	
 	if(!pFile) {	// Ensure we don't have a Null file pointer on a Public interface.
@@ -1754,23 +1729,15 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 		return Error;
 	}
 	
-	nClusterDiff = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1) - pFile->CurrentCluster;
-	if(nClusterDiff) {
-		if(pFile->CurrentCluster < FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1)) {
-			pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->AddrCurrentCluster, nClusterDiff, &Error);
-			if(FF_isERR(Error)) {
-				return Error;
-			}
-			pFile->CurrentCluster += nClusterDiff;
-		}
+	iItemLBA = FF_SetCluster (pFile, &Error);
+	if(FF_isERR(Error)) {
+		return Error;
 	}
 
-	iItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster) + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-	iItemLBA = FF_getRealLBA (pFile->pIoman, iItemLBA)					+ FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, (FF_T_UINT16) 1);
-	
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 	if(!(pFile->ucState & FF_BUFSTATE_WRITTEN) && pFile->FilePointer < pFile->Filesize) {
-		FF_BlockRead(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
+		Error = FF_BlockRead(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
+		if(FF_isERR(Error)) return Error;
 	}
 
 	pFile->pBuf[iRelPos] = pa_cValue;
@@ -1795,7 +1762,8 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
 		iRelPos = FF_getMinorBlockEntry(pFile->pIoman, pFile->FilePointer, 1);
 		if(!iRelPos) {
-			FF_BlockWrite(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
+			Error = FF_BlockWrite(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
+			if(FF_isERR(Error)) return Error;
 			pFile->ucState = FF_BUFSTATE_INVALID;
 		}	
 	}
@@ -1822,7 +1790,6 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	
 	FF_ERROR	Error;
-	FF_T_UINT32	nItemLBA;
 
 	if(!pFile) {
 		return (FF_ERR_NULL_POINTER | FF_SEEK);
@@ -1840,19 +1807,17 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 	*/
 	
 	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
-		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
-		FF_BlockWrite(pFile->pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
-		pFile->ucState = FF_BUFSTATE_INVALID;
+		Error = FF_BlockWrite(pFile->pIoman, FF_FileLBA(pFile), 1, pFile->pBuf, FF_FALSE);
+		if(FF_isERR(Error)) return Error;
 	}
+	pFile->ucState = FF_BUFSTATE_INVALID;
 #endif
 
 	switch(Origin) {
 		case FF_SEEK_SET:
 			if((FF_T_UINT32) Offset <= pFile->Filesize && Offset >= 0) {
 				pFile->FilePointer = Offset;
-				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster, &Error);
+				FF_SetCluster (pFile, &Error);
 				if(FF_isERR(Error)) {
 					return Error;
 				}
@@ -1864,8 +1829,7 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		case FF_SEEK_CUR:
 			if((Offset + pFile->FilePointer) <= pFile->Filesize && (Offset + (FF_T_SINT32) pFile->FilePointer) >= 0) {
 				pFile->FilePointer = Offset + pFile->FilePointer;
-				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster, &Error);
+				FF_SetCluster (pFile, &Error);
 				if(FF_isERR(Error)) {
 					return Error;
 				}
@@ -1877,8 +1841,7 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		case FF_SEEK_END:
 			if((Offset + (FF_T_SINT32) pFile->Filesize) >= 0 && (Offset + pFile->Filesize) <= pFile->Filesize) {
 				pFile->FilePointer = Offset + pFile->Filesize;
-				pFile->CurrentCluster = FF_getClusterChainNumber(pFile->pIoman, pFile->FilePointer, 1);
-				pFile->AddrCurrentCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, pFile->CurrentCluster, &Error);
+				FF_SetCluster (pFile, &Error);
 				if(FF_isERR(Error)) {
 					return Error;
 				}
@@ -1891,7 +1854,6 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 			return -3;
 		
 	}
-
 	return 0;
 }
 
@@ -2102,10 +2064,6 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	FF_DIRENT	OriginalEntry;
 	FF_ERROR	Error;
 
-#ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-	FF_T_UINT32	nItemLBA;
-#endif
-
 	if(!pFile) {
 		return (FF_ERR_NULL_POINTER | FF_CLOSE);
 	}
@@ -2187,9 +2145,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 	// Ensure any unaligned points are pushed to the disk!
 	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
-		nItemLBA = FF_Cluster2LBA(pFile->pIoman, pFile->AddrCurrentCluster);
-		nItemLBA = FF_getRealLBA(pFile->pIoman, nItemLBA + FF_getMajorBlockNumber(pFile->pIoman, pFile->FilePointer, 1)) + FF_getMinorBlockNumber(pFile->pIoman, pFile->FilePointer, 1);
-		FF_BlockWrite(pFile->pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
+		FF_BlockWrite(pFile->pIoman, FF_FileLBA(pFile), 1, pFile->pBuf, FF_FALSE);
 	}
 
 	FF_FREE(pFile->pBuf);
