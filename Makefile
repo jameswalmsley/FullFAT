@@ -24,6 +24,9 @@ fullfat.build:                                    # Build the entire FullFAT lib
 fullfat.lib:                                      # Build a static FullFAT library for linking with a commercial project.
 	make -C src/ libfullfat.a
 
+image:                                            # Create a FAT32 formatted image file.
+	make -C Demo/UNIX/ image
+
 clean:
 	make -C src/ clean
 
