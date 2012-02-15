@@ -1,0 +1,8 @@
+# Default GitIgnore file.
+
+*~
+*#
+*.d
+*.a
+*.o
+
