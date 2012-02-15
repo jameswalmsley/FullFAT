@@ -37,7 +37,7 @@
 #ifndef _FF_CONFIG_H_
 #define _FF_CONFIG_H_
 
-#ifdef __WIN32
+#ifdef WIN32
 #define snprintf _snprintf
 #endif
 /*

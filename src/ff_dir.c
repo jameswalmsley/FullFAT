@@ -1,17 +1,18 @@
 /*****************************************************************************
- *  FullFAT - High Performance, Thread-Safe Embedded FAT File-System         *
+ *     FullFAT - High Performance, Thread-Safe Embedded FAT File-System      *
  *                                                                           *
- *  Copyright(C) 2009  James Walmsley  (james@fullfat-fs.co.uk)              *
- *  Many Thanks to     Hein Tibosch    (hein_tibosch@yahoo.es)               *
+ *        Copyright(C) 2009  James Walmsley  <james@fullfat-fs.co.uk>        *
+ *        Copyright(C) 2011  Hein Tibosch    <hein_tibosch@yahoo.es>         *
  *                                                                           *
- *  See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.       *
+ *    See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.     *
  *                                                                           *
- *                FULLFAT IS NOT FREE FOR COMMERCIAL USE                     *
+ *    WARNING : COMMERCIAL PROJECTS MUST COMPLY WITH THE GNU GPL LICENSE.    *
  *                                                                           *
- *  Removing this notice is illegal and will invalidate this license.        *
+ *  Projects that cannot comply with the GNU GPL terms are legally obliged   *
+ *    to seek alternative licensing. Contact James Walmsley for details.     *
+ *                                                                           *
  *****************************************************************************
- *  See http://www.fullfat-fs.co.uk/ for more information.                   *
- *  Or  http://fullfat.googlecode.com/ for latest releases and the wiki.     *
+ *           See http://www.fullfat-fs.co.uk/ for more information.          *
  *****************************************************************************
  *  This program is free software: you can redistribute it and/or modify     *
  *  it under the terms of the GNU General Public License as published by     *
@@ -26,12 +27,14 @@
  *  You should have received a copy of the GNU General Public License        *
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
  *                                                                           *
- *  IMPORTANT NOTICE:                                                        *
- *  =================                                                        *
- *  Alternative Licensing is available directly from the Copyright holder,   *
- *  (James Walmsley). For more information consult LICENSING.TXT to obtain   *
- *  a Commercial license.                                                    *
+ *  The Copyright of Hein Tibosch on this project recognises his efforts in  *
+ *  contributing to this project. The right to license the project under     *
+ *  any other terms (other than the GNU GPL license) remains with the        *
+ *  original copyright holder (James Walmsley) only.                         *
  *                                                                           *
+ *****************************************************************************
+ *  Modification/Extensions/Bugfixes/Improvements to FullFAT must be sent to *
+ *  James Walmsley for integration into the main development branch.         *
  *****************************************************************************/
 
 /**
@@ -2236,6 +2239,7 @@ FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 	FF_T_UINT32 CurrentCluster;
 	FF_T_UINT32 NextCluster;
 	FF_ERROR Error;
+	FF_FatBuffers FatBuf;
 
 	if(pIoman->pPartition->Type != FF_T_FAT32) {
 		if(DirCluster == pIoman->pPartition->RootDirCluster) {
@@ -2267,13 +2271,12 @@ FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 			return Error;
 		}
 
-		Error = FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
-		if(FF_isERR(Error)) {
-			FF_unlockFAT(pIoman);
-			return Error;
+		FF_InitFatBuffer (&FatBuf, FF_MODE_WRITE);
+		Error = FF_putFatEntry(pIoman, CurrentCluster, NextCluster, &FatBuf);
+		if(!FF_isERR(Error)) {
+			Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF, &FatBuf);
 		}
-
-		Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
+		FF_ReleaseFatBuffer(pIoman, &FatBuf);
 		if(FF_isERR(Error)) {
 			FF_unlockFAT(pIoman);
 			return Error;

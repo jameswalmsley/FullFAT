@@ -1,41 +1,41 @@
 /*****************************************************************************
- *     FullFAT - High Performance, Thread-Safe Embedded FAT File-System      *
- *                                                                           *
- *        Copyright(C) 2009  James Walmsley  <james@fullfat-fs.co.uk>        *
- *        Copyright(C) 2011  Hein Tibosch    <hein_tibosch@yahoo.es>         *
- *                                                                           *
- *    See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.     *
- *                                                                           *
- *    WARNING : COMMERCIAL PROJECTS MUST COMPLY WITH THE GNU GPL LICENSE.    *
- *                                                                           *
- *  Projects that cannot comply with the GNU GPL terms are legally obliged   *
- *    to seek alternative licensing. Contact James Walmsley for details.     *
- *                                                                           *
- *****************************************************************************
- *           See http://www.fullfat-fs.co.uk/ for more information.          *
- *****************************************************************************
- *  This program is free software: you can redistribute it and/or modify     *
- *  it under the terms of the GNU General Public License as published by     *
- *  the Free Software Foundation, either version 3 of the License, or        *
- *  (at your option) any later version.                                      *
- *                                                                           *
- *  This program is distributed in the hope that it will be useful,          *
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
- *  GNU General Public License for more details.                             *
- *                                                                           *
- *  You should have received a copy of the GNU General Public License        *
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
- *                                                                           *
- *  The Copyright of Hein Tibosch on this project recognises his efforts in  *
- *  contributing to this project. The right to license the project under     *
- *  any other terms (other than the GNU GPL license) remains with the        *
- *  original copyright holder (James Walmsley) only.                         *
- *                                                                           *
- *****************************************************************************
- *  Modification/Extensions/Bugfixes/Improvements to FullFAT must be sent to *
- *  James Walmsley for integration into the main development branch.         *
- *****************************************************************************/
+*     FullFAT - High Performance, Thread-Safe Embedded FAT File-System      *
+*                                                                           *
+*        Copyright(C) 2009  James Walmsley  <james@fullfat-fs.co.uk>        *
+*        Copyright(C) 2011  Hein Tibosch    <hein_tibosch@yahoo.es>         *
+*                                                                           *
+*    See RESTRICTIONS.TXT for extra restrictions on the use of FullFAT.     *
+*                                                                           *
+*    WARNING : COMMERCIAL PROJECTS MUST COMPLY WITH THE GNU GPL LICENSE.    *
+*                                                                           *
+*  Projects that cannot comply with the GNU GPL terms are legally obliged   *
+*    to seek alternative licensing. Contact James Walmsley for details.     *
+*                                                                           *
+*****************************************************************************
+*           See http://www.fullfat-fs.co.uk/ for more information.          *
+*****************************************************************************
+*  This program is free software: you can redistribute it and/or modify     *
+*  it under the terms of the GNU General Public License as published by     *
+*  the Free Software Foundation, either version 3 of the License, or        *
+*  (at your option) any later version.                                      *
+*                                                                           *
+*  This program is distributed in the hope that it will be useful,          *
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+*  GNU General Public License for more details.                             *
+*                                                                           *
+*  You should have received a copy of the GNU General Public License        *
+*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+*                                                                           *
+*  The Copyright of Hein Tibosch on this project recognises his efforts in  *
+*  contributing to this project. The right to license the project under     *
+*  any other terms (other than the GNU GPL license) remains with the        *
+*  original copyright holder (James Walmsley) only.                         *
+*                                                                           *
+*****************************************************************************
+*  Modification/Extensions/Bugfixes/Improvements to FullFAT must be sent to *
+*  James Walmsley for integration into the main development branch.         *
+*****************************************************************************/
 
 /**
  *	@file		ff_file.c
@@ -812,14 +812,17 @@ static FF_T_UINT32 FF_GetSequentialClusters(FF_IOMAN *pIoman, FF_T_UINT32 StartC
 	FF_T_UINT32 CurrentCluster;
 	FF_T_UINT32 NextCluster = StartCluster;
 	FF_T_UINT32 i = 0;
+	FF_FatBuffers FatBuf;
+	FF_InitFatBuffer (&FatBuf, FF_MODE_READ);
 
 	*pError = FF_ERR_NONE;
 
 	do {
 		CurrentCluster = NextCluster;
-		NextCluster = FF_getFatEntry(pIoman, CurrentCluster, pError);
+		NextCluster = FF_getFatEntry(pIoman, CurrentCluster, pError, &FatBuf);
 		if(*pError) {
-			return 0;
+			i = 0;
+			break;
 		}
 		if(NextCluster == (CurrentCluster + 1)) {
 			i++;
@@ -833,6 +836,7 @@ static FF_T_UINT32 FF_GetSequentialClusters(FF_IOMAN *pIoman, FF_T_UINT32 StartC
 			}
 		}
 	}while(NextCluster == (CurrentCluster + 1));
+	FF_ReleaseFatBuffer(pIoman, &FatBuf);
 
 	return i;
 }
@@ -882,7 +886,8 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 	FF_T_UINT32 CurrentCluster, NextCluster;
 	FF_T_UINT32	i;
 	FF_DIRENT	OriginalEntry;
-	FF_ERROR	Error;
+	FF_ERROR	Error = FF_ERR_NONE;
+	FF_FatBuffers FatBuf;
 
 	if((pFile->Mode & FF_MODE_WRITE) != FF_MODE_WRITE) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE | FF_EXTENDFILE);
@@ -932,32 +937,29 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 			for(i = 0; i < nClusterToExtend; i++) {
 				CurrentCluster = FF_FindEndOfChain(pIoman, NextCluster, &Error);
 				if(FF_isERR(Error)) {
-					FF_unlockFAT(pIoman);
-					FF_DecreaseFreeClusters(pIoman, i);
-					return Error;
+					break;
 				}
 				NextCluster = FF_FindFreeCluster(pIoman, &Error);
 				if(!FF_isERR(Error) && !NextCluster) {
 					Error = FF_ERR_FAT_NO_FREE_CLUSTERS | FF_EXTENDFILE;
 				}
 				if(FF_isERR(Error)) {
-					FF_unlockFAT(pIoman);
-					FF_DecreaseFreeClusters(pIoman, i);
-					return Error;
+					break;
 				}
-				
-				Error = FF_putFatEntry(pIoman, CurrentCluster, NextCluster);
-				if(FF_isERR(Error)) {
-					FF_unlockFAT(pIoman);
-					FF_DecreaseFreeClusters(pIoman, i);
-					return Error;
+				// Can not use this buffer earlier because of FF_FindEndOfChain/FF_FindFreeCluster
+				FF_InitFatBuffer (&FatBuf, FF_MODE_WRITE);
+				Error = FF_putFatEntry(pIoman, CurrentCluster, NextCluster, &FatBuf);
+				if(!FF_isERR(Error)) {
+					Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF, &FatBuf);
 				}
-				Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF);
-				if(FF_isERR(Error)) {
-					FF_unlockFAT(pIoman);
-					FF_DecreaseFreeClusters(pIoman, i);
-					return Error;
-				}
+				FF_ReleaseFatBuffer(pIoman, &FatBuf);
+				if(FF_isERR(Error))
+					break;
+			}
+			if(FF_isERR(Error)) {
+				FF_unlockFAT(pIoman);
+				FF_DecreaseFreeClusters(pIoman, i);
+				return Error;
 			}
 			
 			pFile->iEndOfChain = FF_FindEndOfChain(pIoman, NextCluster, &Error);
