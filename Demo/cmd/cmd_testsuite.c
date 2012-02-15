@@ -160,9 +160,15 @@ int test_2(FF_IOMAN *pIoman) {
 	DO_FAIL;
 }
 
+int test_3(FF_IOMAN *pIoman) {
+	
+	DO_FAIL;
+}
+
 const TEST_ITEM tests[] = {
 	{test_1,		"Small repeated unaligned byte write access. (FF_PutC()/FF_Write())."},
 	{test_2,		"Re-arrange Text file."},
+	{test_3,		"Multi-order file transactions."},
 };
 
 int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
