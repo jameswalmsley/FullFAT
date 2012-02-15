@@ -97,7 +97,6 @@
     <ClCompile Include="..\..\..\src\ff_ioman.c" />
     <ClCompile Include="..\..\..\src\ff_memory.c" />
     <ClCompile Include="..\..\..\src\ff_string.c" />
-    <ClCompile Include="..\..\..\src\ff_unaligned.c" />
     <ClCompile Include="..\..\..\src\ff_unicode.c" />
     <ClCompile Include="..\..\cmd\cd_cmd.c" />
     <ClCompile Include="..\..\cmd\cmd_helpers.c" />

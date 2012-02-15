@@ -144,9 +144,6 @@
     <ClCompile Include="..\..\..\..\ffterm\Platforms\Win32\FFTerm-Platform-win32.c">
       <Filter>Source Files\FFTerm</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\ff_unaligned.c">
-      <Filter>Source Files\FullFAT</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cmd\cmd_testsuite.c">
       <Filter>Source Files\commands</Filter>
     </ClCompile>
