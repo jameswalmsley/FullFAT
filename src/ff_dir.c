@@ -913,6 +913,11 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
 	ulRelItem     = FF_getMinorBlockEntry (pIoman, ulEntry, (FF_T_UINT16)32);
 
 	ulItemLBA = FF_Cluster2LBA (pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	if(pIoman->pPartition->Type != FF_T_FAT32 &&
+		pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
+			ulItemLBA += (ulEntry / ((pIoman->pPartition->BlkSize *pIoman->pPartition->SectorsPerCluster)/32) * pIoman->pPartition->SectorsPerCluster);
+	}
+
 	ulItemLBA = FF_getRealLBA (pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
 
 	if(!pContext->pBuffer ||

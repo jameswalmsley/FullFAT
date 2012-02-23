@@ -161,14 +161,27 @@ int test_2(FF_IOMAN *pIoman) {
 }
 
 int test_3(FF_IOMAN *pIoman) {
-	
-	DO_FAIL;
+	int i;
+	char namebuffer[128];
+	FF_FILE *pFile;
+	FF_ERROR Error;
+
+	for(i = 0; i < 0xFFFF; i++) {
+		sprintf(namebuffer, "tst%d.tst", i);
+		pFile = FF_Open(pIoman, namebuffer, FF_MODE_WRITE|FF_MODE_CREATE, &Error);
+		if(!pFile) {
+			CHECK_ERR(Error);
+		}
+		FF_Close(pFile);
+	}
+
+	return PASS;
 }
 
 const TEST_ITEM tests[] = {
 	{test_1,		"Small repeated unaligned byte write access. (FF_PutC()/FF_Write())."},
 	{test_2,		"Re-arrange Text file."},
-	{test_3,		"Multi-order file transactions."},
+	{test_3,		"Fill-up root dir!."},
 };
 
 int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
