@@ -138,7 +138,7 @@ int main(void) {
 
 	// Opens a HANDLE to a Windows Disk, or Drive Image, the second parameter is the blocksize,
 	// and is only used in conjunction with DriveImage files.
-	hDisk = fnOpen("ffimage.img", 512);
+	hDisk = fnOpen("disk.img", 512);
 
 	//hDisk = fnOpen("\\\\.\\E:", 0);	// Driver now expects a Volume, to allow Vista and Seven write access.
 
@@ -156,7 +156,7 @@ int main(void) {
 				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %ld.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 			}
 
-			FF_FormatPartition(pIoman, 0, 1024*64);
+			//FF_FormatPartition(pIoman, 0, 1024*64);
 
 			//---------- Try to Mount the Partition with FullFAT.
 			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);

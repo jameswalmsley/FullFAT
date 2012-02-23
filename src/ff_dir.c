@@ -834,7 +834,7 @@ static FF_ERROR FF_Traverse(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONT
 		if(ulEntry > ((pIoman->pPartition->RootDirSectors * pIoman->pPartition->BlkSize) / 32)) {
 			return FF_ERR_DIR_END_OF_DIR | FF_FETCHENTRYWITHCONTEXT;
 		}
-		pContext->ulCurrentClusterLCN = pContext->ulDirCluster + ulClusterNum;
+		pContext->ulCurrentClusterLCN = pContext->ulDirCluster;// + ulClusterNum;
 	} else if(ulClusterNum != pContext->ulCurrentClusterNum) {
 		// Traverse the fat gently!
 		if(ulClusterNum > pContext->ulCurrentClusterNum) {
@@ -871,6 +871,11 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 	ulRelItem     = FF_getMinorBlockEntry (pIoman, ulEntry, (FF_T_UINT16)32);
 
 	ulItemLBA = FF_Cluster2LBA (pIoman, pContext->ulCurrentClusterLCN) + FF_getMajorBlockNumber(pIoman, ulEntry, (FF_T_UINT16)32);
+	if(pIoman->pPartition->Type != FF_T_FAT32 &&
+		pContext->ulDirCluster == pIoman->pPartition->RootDirCluster) {
+			ulItemLBA += (ulEntry / ((pIoman->pPartition->BlkSize *pIoman->pPartition->SectorsPerCluster)/32) * pIoman->pPartition->SectorsPerCluster);
+	}
+
 	ulItemLBA = FF_getRealLBA (pIoman, ulItemLBA)	+ FF_getMinorBlockNumber(pIoman, ulRelItem, (FF_T_UINT16)32);
 
 	if(!pContext->pBuffer ||
