@@ -1556,6 +1556,8 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 		return FF_ERR_NULL_POINTER | FF_FINDFIRST;
 	}
 
+	memset(pDirent, 0, sizeof(FF_DIRENT));
+
 	// Detect a Wild-Card on the End, or Filename, as apposed to a complete path.
 #ifndef FF_FINDAPI_ALLOW_WILDCARDS
 	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen, &Error);	// Get the directory cluster, if it exists.
@@ -1578,7 +1580,7 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 			}
 		}
 	}
-			
+
 	pDirent->DirCluster = FF_FindDir(pIoman, path, PathLen - i, &Error);
 	if(FF_isERR(Error)) {
 		return Error;
@@ -1590,6 +1592,10 @@ FF_ERROR FF_FindFirst(FF_IOMAN *pIoman, FF_DIRENT *pDirent, const FF_T_INT8 *pat
 #else
 		strncpy(pDirent->szWildCard, ++szWildCard, FF_MAX_FILENAME);
 #endif
+		if(pDirent->szWildCard[i-1] == ':') {
+			pDirent->bInvertWildCard = 1;
+			pDirent->szWildCard[i-1] = '\0';
+		}
 	}
 #endif
 
@@ -1627,6 +1633,7 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	FF_ERROR	Error;
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
+	FF_T_BOOL	b;
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER | FF_FINDNEXT;
@@ -1673,11 +1680,16 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 #else
 					if(pDirent->szWildCard[0])
 #endif
-					{  // HT put single bracket here because of bracket-matching within editor
-						if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
-							FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
-							return FF_ERR_NONE;							
+					{  // HT put single bracket here because of bracket-matching within editor	
+						b = FF_wildcompare(pDirent->szWildCard, pDirent->FileName);
+						if(pDirent->bInvertWildCard) {							
+							b = !b;
 						}
+						if(b) {
+							FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+							return FF_ERR_NONE;	
+						}
+						
 						pDirent->CurrentItem -= 1;
 					} else {
 						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
@@ -1702,10 +1714,14 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 #endif
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
 				if(pDirent->szWildCard[0]) {
-					if(FF_wildcompare(pDirent->szWildCard, pDirent->FileName)) {
+					b = FF_wildcompare(pDirent->szWildCard, pDirent->FileName);
+					if(pDirent->bInvertWildCard) {
+						b = !b;
+					}
+					if(b) {
 						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 						pDirent->CurrentItem += 1;
-						return FF_ERR_NONE;
+						return FF_ERR_NONE;	
 					}
 				} else {
 					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);

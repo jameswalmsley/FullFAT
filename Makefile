@@ -27,6 +27,14 @@ fullfat.lib:                                      # Build a static FullFAT libra
 image:                                            # Create a FAT32 formatted image file.
 	make -C Demo/UNIX/ image
 
+check:
+	fsck.vfat Demo/UNIX/ffimage.img
+
+testsuite:
+	make image; make fullfat; echo "testsuite; exit;" | make demo
+	make demo
+
+
 clean:
 	make -C src/ clean
 

@@ -32,6 +32,8 @@ char				temp[3];
 
 char errBuf[1024];
 
+static char *message = NULL;
+
 #define DO_FF_FAIL(x)	printf("FAILED Line:%d : %s\n", __LINE__, __FILE__);  FF_GetErrDescription(x, errBuf, 1024); \
 						printf("%s\n", errBuf); return FAIL
 
@@ -166,6 +168,11 @@ int test_3(FF_IOMAN *pIoman) {
 	FF_FILE *pFile;
 	FF_ERROR Error;
 
+	if(pIoman->pPartition->Type == FF_T_FAT32) {
+		message = "Test not applicable for FAT32 formatted media!";
+		return PASS;
+	}
+
 	for(i = 0; i < 0xFFFF; i++) {
 		sprintf(namebuffer, "tst%d.tst", i);
 		pFile = FF_Open(pIoman, namebuffer, FF_MODE_WRITE|FF_MODE_CREATE, &Error);
@@ -178,10 +185,71 @@ int test_3(FF_IOMAN *pIoman) {
 	return PASS;
 }
 
+
+int test_4(FF_IOMAN *pIoman) {
+	FF_FILE *pFile;
+	FF_ERROR Error;
+
+	Error = FF_MkDir(pIoman, "/wildcard");
+	CHECK_ERR(Error);
+
+	pFile = FF_Open(pIoman, "/wildcard/test1.dat", FF_MODE_CREATE, &Error);
+	if(!pFile) {
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	pFile = FF_Open(pIoman, "/wildcard/test2.dat", FF_MODE_CREATE, &Error);
+	if(!pFile) {
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	pFile = FF_Open(pIoman, "/wildcard/test1.bat", FF_MODE_CREATE, &Error);
+	if(!pFile) {
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	pFile = FF_Open(pIoman, "/wildcard/test2.bat", FF_MODE_CREATE, &Error);
+	if(!pFile) {
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	pFile = FF_Open(pIoman, "/wildcard/test1", FF_MODE_CREATE, &Error);
+	if(!pFile) {
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	pFile = FF_Open(pIoman, "/wildcard/test2", FF_MODE_CREATE, &Error);
+	if(!pFile) {
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+	
+
+	return PASS;
+}
+
 const TEST_ITEM tests[] = {
 	{test_1,		"Small repeated unaligned byte write access. (FF_PutC()/FF_Write())."},
 	{test_2,		"Re-arrange Text file."},
-	{test_3,		"Fill-up root dir!."},
+	{test_3,		"Fill-up root dir!. (Test FAT16)."},
+	{test_4, 		"Testing wildcard searching."},
 };
 
 int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
@@ -190,14 +258,19 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	printf("Thankyou for helping to verify FullFAT!\n\nStarting tests:\n\n");
 
-	for(i = 0; i < sizeof(tests)/sizeof(TEST_ITEM); i++) {
-		if(tests[i].pfnTest(pEnv->pIoman)) {
-			printf("PASS : %s\n", tests[i].description);
-		} else {
-			printf("FAIL : %s\n", tests[i].description);
-			printf("\nABORTING TESTS - Please contact james@fullfat-fs.co.uk -- THIS MUST BE FIXED!\n");
-			return -1;
+	if(argc == 1) {
+
+		for(i = 0; i < sizeof(tests)/sizeof(TEST_ITEM); i++) {
+			message = NULL;
+			if(tests[i].pfnTest(pEnv->pIoman)) {
+				printf("PASS : %s : %s\n", tests[i].description, message);
+			} else {
+				printf("FAIL : %s : %s\n", tests[i].description, message);
+				printf("\nABORTING TESTS - Please contact james@fullfat-fs.co.uk -- THIS MUST BE FIXED!\n");
+				return -1;
+			}
 		}
+
 	}
 
 	return 0;

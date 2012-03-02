@@ -113,7 +113,7 @@ int main(void) {
 
 			printf("Attempt to format the first partition!\n");
 
-			FF_FormatPartition(pIoman, 0, 512);
+			//FF_FormatPartition(pIoman, 0, 512);
 
 			//---------- Try to Mount the Partition with FullFAT.
 			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);

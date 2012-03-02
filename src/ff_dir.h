@@ -90,6 +90,7 @@ typedef struct {
 #else
 	FF_T_INT8	szWildCard[FF_MAX_FILENAME];
 #endif
+	FF_T_BOOL	bInvertWildCard;
 #endif
 
 #ifdef FF_UNICODE_SUPPORT
