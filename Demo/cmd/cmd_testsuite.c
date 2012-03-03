@@ -3,10 +3,10 @@
 	If does a whole manor of file/IO operations and checks the on-disk affected files
 	and comapres MD5 sums.
 
-	This proves that no data corruption has occurred because of various combinations of the 
+	This proves that no data corruption has occurred because of various combinations of the
 	FullFAT api.
 
-	
+
 */
 
 #include "cmd_testsuite.h"
@@ -31,6 +31,8 @@ char				szpHash[255];
 char				temp[3];
 
 char errBuf[1024];
+
+static bPrintDebug = 0;
 
 static char *message = NULL;
 
@@ -158,7 +160,7 @@ int test_2(FF_IOMAN *pIoman) {
 	if(!memcmp(buffer, buffer2, 8192)) {
 		return PASS;
 	}
-	
+
 	DO_FAIL;
 }
 
@@ -240,7 +242,7 @@ int test_4(FF_IOMAN *pIoman) {
 
 	Error = FF_Close(pFile);
 	CHECK_ERR(Error);
-	
+
 
 	return PASS;
 }
@@ -256,7 +258,7 @@ int test_5(FF_IOMAN *pIoman) {
 		{"boot.txt",	"*",		1},
 		{"bootdir",		"*",		1},
 		{"myfiles.lst",	"*",		1},
-		
+
 		{"boot.txt",	"*.*",		1},
 		{"bootdir",		"*.*",		0},
 		{"myfiles.lst",	"*.*",		1},
@@ -304,11 +306,17 @@ int test_5(FF_IOMAN *pIoman) {
 	int i;
 
 	for(i = 0; i < sizeof(tests)/sizeof(WC_TABLE); i++) {
-		printf("Matching %-16s with %-16s:  ", tests[i].string, tests[i].wc);
+		if(bPrintDebug) {
+			printf("Matching %-16s with %-16s:  ", tests[i].string, tests[i].wc);
+		}
 		if(FF_wildcompare(tests[i].wc, tests[i].string) == tests[i].expectMatch) {
-			printf("PASS (Match=%d)\n", tests[i].expectMatch);
+			if(bPrintDebug) {
+				printf("PASS (Match=%d)\n", tests[i].expectMatch);
+			}
 		} else {
-			printf("FAIL (Match=%d)\n", tests[i].expectMatch);
+			if(bPrintDebug) {
+				printf("FAIL (Match=%d)\n", tests[i].expectMatch);
+			}
 			bFail = 1;
 		}
 	}
@@ -320,41 +328,74 @@ int test_5(FF_IOMAN *pIoman) {
 	return PASS;
 }
 
-const TEST_ITEM tests[] = {
-	{test_5,		"Testing wildcard algorithm."},
-	{test_1,		"Small repeated unaligned byte write access. (FF_PutC()/FF_Write())."},
+static const TEST_ITEM tests[] = {
+	{test_5, 		"Testing wildcard algorithm."},
+	{test_1,		"Small repeated unaligned byte write access."},
 	{test_2,		"Re-arrange Text file."},
 	{test_3,		"Fill-up root dir!. (Test FAT16)."},
 	{test_4, 		"Testing wildcard searching."},
 };
 
+static int exec_test(FF_IOMAN *pIoman, int testID) {
+	int bFail;
+	message = " ";
+	printf("%4d : ", i);
+	if(tests[testID].pfnTest(pIoman)) {
+		printf("PASS : %-50s : %s\n", tests[testID].description, message);
+		bFail = 0;
+	} else {
+		printf("FAIL : %-50s : %s\n", tests[testID].description, message);
+		bFail = 1;
+	}
+
+	return bFail;
+}
+
 int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	
+
 	int i;
+	int bFail = 0;
 
 	printf("Thankyou for helping to verify FullFAT!\n\nStarting tests:\n\n");
 
-	if(argc == 1) {
+	if(argc == 1 || argc == 2) {
+		printf("  ID : Description                                               : Execution Message\n");
+		printf("------------------------------------------------------------------------------------\n");
+	}
 
+	if(argc == 1) {	   
 		for(i = 0; i < sizeof(tests)/sizeof(TEST_ITEM); i++) {
-			message = NULL;
-			if(tests[i].pfnTest(pEnv->pIoman)) {
-				printf("PASS : %s : %s\n", tests[i].description, message);
-			} else {
-				printf("FAIL : %s : %s\n", tests[i].description, message);
-				printf("\nABORTING TESTS - Please contact james@fullfat-fs.co.uk -- THIS MUST BE FIXED!\n");
-				return -1;
+			if(exec_test(pEnv->pIoman, i)) {
+				bFail = 1;
 			}
 		}
+		printf("\n\n");	 		
+	}
 
+	if(argc == 2) {
+		i = atoi(argv[1]);
+		if(i < 0  || i >= sizeof(tests)/sizeof(TEST_ITEM)) {
+			printf("Invalid test ID!\n");
+			return -1;
+		}
+
+		if(exec_test(pEnv->pIoman, i)) {
+			bFail = 1;
+		}
+		
+		return 0;
+	}
+
+	if(bFail) {
+		printf("\nABORTING TESTS - Please contact james@fullfat-fs.co.uk -- THIS MUST BE FIXED!\n");
+		printf("\n\n");
+		return -1;
+	}
+
+	if(argc > 2) {
+		printf("Usage:\n");
+		printf("%s [test ID]\n");
 	}
 
 	return 0;
 }
-
-
-
-
-
-
-																										
