@@ -411,13 +411,17 @@ FF_T_BOOL FF_wildcompare(const FF_T_WCHAR *pszWildCard, const FF_T_WCHAR *pszStr
             pszWildCard = pszWc;
             pszString = pszStr++;
         }
+
+		if(!*pszWildCard || !*pszString) {
+			break;
+		}
     } while ( *pszWildCard++ && *pszString++ );
 
 	while(*pszWildCard == '*') {
 		pszWildCard++;
 	}
 
-	if(!*(pszWildCard - 1)) {	// WildCard is at the end. (Terminated)
+	if(!*pszWildCard) {	// WildCard is at the end. (Terminated)
 		return FF_TRUE;	// Therefore this must be a match.
 	}
 
@@ -447,13 +451,17 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
             pszWildCard = pszWc;
             pszString = pszStr++;
         }
-    } while ( *pszWildCard++ && *pszString++ );
 
+		if(!*pszWildCard || !*pszString) {
+			break;
+		}
+	} while ( *pszWildCard++ && *pszString++ );
+		
 	while(*pszWildCard == '*') {
 		pszWildCard++;
 	}
 
-	if(!*(pszWildCard - 1)) {	// WildCard is at the end. (Terminated)
+	if(!*pszWildCard) {	// WildCard is at the end. (Terminated)
 		return FF_TRUE;	// Therefore this must be a match.
 	}
 
