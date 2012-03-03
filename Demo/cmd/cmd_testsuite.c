@@ -245,7 +245,82 @@ int test_4(FF_IOMAN *pIoman) {
 	return PASS;
 }
 
+typedef struct {
+	const char *string;
+	const char *wc;
+	int	expectMatch;
+} WC_TABLE;
+
+int test_5(FF_IOMAN *pIoman) {
+	WC_TABLE tests[] = {
+		{"boot.txt",	"*",		1},
+		{"bootdir",		"*",		1},
+		{"myfiles.lst",	"*",		1},
+		
+		{"boot.txt",	"*.*",		1},
+		{"bootdir",		"*.*",		0},
+		{"myfiles.lst",	"*.*",		1},
+
+		{"boot.txt",	"*.???",	1},
+		{"bootdir",		"*.???",	0},
+		{"myfiles.lst",	"*.???",	1},
+
+		{"boot.txt",	"*?",		1},
+		{"bootdir",		"*?",		1},
+		{"myfiles.lst",	"*?",		1},
+
+		{"boot.txt",	"*oot*",	1},
+		{"bootdir",		"*oot*",	1},
+		{"myfiles.lst",	"*oot*",	0},
+
+		{"boot.txt",	"boot*",	1},
+		{"bootdir",		"boot*",	1},
+		{"myfiles.lst",	"boot*",	0},
+
+		{"boot.txt",	"boot*.*",	1},
+		{"bootdir",		"boot*.*",	0},
+		{"myfiles.lst",	"boot*.*",	0},
+
+		{"boot.txt",	"b*.*",		1},
+		{"bootdir",		"b*.*",		0},
+		{"myfiles.lst",	"b*.*",		0},
+
+		{"boot.txt",	"*txt",		1},
+		{"bootdir",		"*txt",		0},
+		{"myfiles.lst",	"*txt",		0},
+
+		{"boot.txt",	"*.lst",	0},
+		{"bootdir",		"*.lst",	0},
+		{"myfiles.lst",	"*.lst",	1},
+
+		{"DSC0051.jpg",		"DSC005?.jp*",	1},
+		{"DSC0052.jpg",		"DSC005?.jp*",	1},
+		{"DSC0062.jpg",		"DSC005?.jp*",	0},
+		{"DSC0051.jpeg",	"DSC005?.jp*",	1},
+		{"DSC0052.jpeg",	"DSC005?.jp*",	1},
+	};
+
+	int bFail = 0;
+	int i;
+
+	for(i = 0; i < sizeof(tests)/sizeof(WC_TABLE); i++) {
+		printf("Matching %-16s with %-16s:  ", tests[i].string, tests[i].wc);
+		if(FF_wildcompare(tests[i].wc, tests[i].string) == tests[i].expectMatch) {
+			printf("PASS (Match=%d)\n", tests[i].expectMatch);
+		} else {
+			printf("FAIL (Match=%d)\n", tests[i].expectMatch);
+			bFail = 1;
+		}
+	}
+
+	if(bFail) {
+		DO_FAIL;
+	}
+	return PASS;
+}
+
 const TEST_ITEM tests[] = {
+	{test_5,		"Testing wildcard algorithm."},
 	{test_1,		"Small repeated unaligned byte write access. (FF_PutC()/FF_Write())."},
 	{test_2,		"Re-arrange Text file."},
 	{test_3,		"Fill-up root dir!. (Test FAT16)."},
