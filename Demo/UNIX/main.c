@@ -138,9 +138,8 @@ int main(void) {
 		
 			if(pConsole) {
 
-				 //FFTerm_RegisterPlatformSpecification(pConsole, linux_getSpec());
+				FFTerm_RegisterPlatformSpecification(pConsole, linux_getSpec());
 
-				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
 				hook_commands(&Env);		// See Demo/cmd/hook.c
 				
