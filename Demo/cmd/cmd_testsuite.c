@@ -339,7 +339,7 @@ static const TEST_ITEM tests[] = {
 static int exec_test(FF_IOMAN *pIoman, int testID) {
 	int bFail;
 	message = " ";
-	printf("%4d : ", i);
+	printf("%4d : ", testID);
 	if(tests[testID].pfnTest(pIoman)) {
 		printf("PASS : %-50s : %s\n", tests[testID].description, message);
 		bFail = 0;
@@ -374,6 +374,7 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	if(argc == 2) {
 		i = atoi(argv[1]);
+		bPrintDebug = 1;
 		if(i < 0  || i >= sizeof(tests)/sizeof(TEST_ITEM)) {
 			printf("Invalid test ID!\n");
 			return -1;
@@ -382,7 +383,9 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		if(exec_test(pEnv->pIoman, i)) {
 			bFail = 1;
 		}
-		
+
+		bPrintDebug = 0;
+
 		return 0;
 	}
 

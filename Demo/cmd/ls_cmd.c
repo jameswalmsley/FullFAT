@@ -270,8 +270,6 @@ static int ls_dir(const char *szPath, LS_OPTIONS *poOptions, FF_ENVIRONMENT *pEn
 		if(findData.Attrib & FF_FAT_ATTR_ARCHIVE)
 			Dirent.ulAttributes |= SD_ATTRIBUTE_ARCHIVE;
 
-		printf("FS: %d : %s\n", findData.Filesize, findData.FileName);
-
 		SD_AddDirent(Dir, &Dirent);
 
 		Result = FF_FindNext(pEnv->pIoman, &findData);
