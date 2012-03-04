@@ -17,6 +17,8 @@ int hook_commands(FF_ENVIRONMENT *pEnv) {
 	FFTerm_AddExCmd(pConsole, "fsinfo",		(FFT_FN_COMMAND_EX) fsinfo_cmd,		fsinfoInfo,		pEnv);
 	FFTerm_AddExCmd(pConsole, "testsuite",	(FFT_FN_COMMAND_EX) cmd_testsuite,	NULL,			pEnv);
 	FFTerm_AddExCmd(pConsole, "more",		(FFT_FN_COMMAND_EX) more_cmd,		moreInfo,		pEnv);
+	FFTerm_AddExCmd(pConsole, "hex",		(FFT_FN_COMMAND_EX) hexview_cmd,	hexviewInfo,	pEnv);
+	FFTerm_AddExCmd(pConsole, "mkfile",		(FFT_FN_COMMAND_EX) mkfile_cmd,		mkfileInfo,		pEnv);
 
 	return 0;
 }

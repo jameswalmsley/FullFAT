@@ -523,6 +523,7 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 					FF_ReleaseBuffer(pIoman, buf);
 					pFatBuf->pBuffers[i] = NULL;
 					fatStat.missCount[1]++;
+					pBuffer = NULL;
 				}
 			} else {
 				fatStat.getCount[1]++;
@@ -559,8 +560,8 @@ FF_ERROR FF_putFatEntry(FF_IOMAN *pIoman, FF_T_UINT32 nCluster, FF_T_UINT32 Valu
 			pFatBuf->Mode = FF_MODE_WRITE;
 		} else {
 			FF_ReleaseBuffer(pIoman, pBuffer);
-			pBuffer = NULL;
 		}
+		pBuffer = NULL;
 	}
 
 	return FF_ERR_NONE;

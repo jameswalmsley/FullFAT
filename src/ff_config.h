@@ -77,17 +77,17 @@
 										// If you don't need FAT12 support, why have it. FAT12 is more complex to process,
 										// therefore savings can be made by not having it.
 
-#define FF_OPTIMISE_UNALIGNED_ACCESS	// Optimise unaligned accesses. This requires that each FILE handle has an associated buffer
+//#define FF_OPTIMISE_UNALIGNED_ACCESS	// Optimise unaligned accesses. This requires that each FILE handle has an associated buffer
 										// of atleast BLOCKSIZE bytes.
 										// If your system is not memory constrained, you should enable this to reduce accesses
 										// to the underlying block device.
 
 //---------- WRITE BOTH FATS
-#define FF_WRITE_BOTH_FATS				// Writes the 2nd FAT (backup) at runtime. Disabling this can improve performance. 
+//#define FF_WRITE_BOTH_FATS				// Writes the 2nd FAT (backup) at runtime. Disabling this can improve performance. 
 										// However, leaving it enabled guarantees that both FATs will match, and fs checkers
 										// will not complain. (More compliant).
 
-#define FF_MIRROR_FATS_UMOUNT			// This will cause all FAT tables to be duplicated on unmount. 
+//#define FF_MIRROR_FATS_UMOUNT			// This will cause all FAT tables to be duplicated on unmount. 
 										// This is usually expensive in terms of time but will ensure that all FAT copies
 										// are consistent. (If you can guarantee an unmount operation, use this while disabling FF_WRITE_BOTH_FATS).
 

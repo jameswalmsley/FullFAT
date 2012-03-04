@@ -621,6 +621,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
 			FF_ReleaseBuffer(pIoman, pBuffer);
+			
 			if(testLong == 0xFFF8)
 				return FF_ERR_NONE;
 #endif

@@ -19,6 +19,8 @@ OBJS += ../cmd/pwd_cmd.o
 OBJS += ../cmd/cmd_Linux/md5sum_lin_cmd.o
 OBJS += ../cmd/fsinfo_cmd.o
 OBJS += ../cmd/more_cmd.o
+OBJS += ../cmd/hexview_cmd.o
+OBJS += ../cmd/mkfile_cmd.o
 OBJS += ../cmd/hook.o
 
 LIBS := libfullfat.a
@@ -68,5 +70,5 @@ libffterm.a:
 	@cp ../../../ffterm/src/libffterm.a .
 
 image:
-	@dd if=/dev/zero of=ffimage.img bs=512 count=100000
-	@mkfs.vfat -s 1 -F 32 ffimage.img
+	@dd if=/dev/zero of=ffimage.img bs=512 count=200000
+	@mkfs.vfat -s 2 -F 32 ffimage.img

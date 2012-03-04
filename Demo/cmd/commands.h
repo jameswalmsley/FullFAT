@@ -15,6 +15,8 @@
 //#include "cmd_mount.h"
 #include "cmd_testsuite.h"
 #include "fsinfo_cmd.h"
+#include "hexview_cmd.h"
+#include "mkfile_cmd.h"
 
 #ifdef WIN32
 #include "cmd_Windows/md5sum_win_cmd.h"

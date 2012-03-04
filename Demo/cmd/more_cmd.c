@@ -40,7 +40,7 @@ int more_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	return 0;
 }
 const FFT_ERR_TABLE moreInfo[] =
-{											// This demonstrates how FFTerm can provide useful information about specific command failure codes.
+{											
 	{"Unknown or Generic Error",				-1},	// Generic Error must always be the first in the table.
 	{"Types out the specified file.",			FFT_COMMAND_DESCRIPTION},
 	{"File open failed. (File not found?)",		-2},
