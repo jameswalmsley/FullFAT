@@ -76,7 +76,7 @@ int main(void) {
 	FFT_CONSOLE		*pConsole;					// FFTerm Console Pointer.										
 	FF_ERROR		Error = FF_ERR_NONE;		// ERROR code value.
 	FF_IOMAN		*pIoman;					// FullFAT I/O Manager Pointer, to be created.
-	FF_ENVIRONMENT	Env;						// Special Micro-Environment for the Demo (working Directory etc). See cmd.h.
+	FF_ENVIRONMENT	Env;						// Special Micro-Environment for the Demo (working Directory etc).
 	BLK_DEV_LINUX	hDisk;						// FILE Stream pointer for Windows FullFAT driver. (Device HANDLE).
 
 	//----------- Initialise the environment
@@ -142,21 +142,15 @@ int main(void) {
 
 				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
-				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
-				FFTerm_AddExCmd(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd, 	cpInfo,			&Env);
-				FFTerm_AddExCmd(pConsole, "ls", 	(FFT_FN_COMMAND_EX) ls_cmd, 	lsInfo, 		&Env);
-				FFTerm_AddExCmd(pConsole, "md5sum", (FFT_FN_COMMAND_EX) md5sum_cmd, md5sumInfo, 	&Env);
-				FFTerm_AddCmd(pConsole, "md5lin",	(FFT_FN_COMMAND)	md5sum_lin_cmd, md5sum_lin_Info);
-				FFTerm_AddExCmd(pConsole, "mkdir", 	(FFT_FN_COMMAND_EX) mkdir_cmd, 	mkdirInfo,		&Env);
-				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
-				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
-				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
-				FFTerm_AddExCmd(pConsole, "testsuite", (FFT_FN_COMMAND_EX) cmd_testsuite, NULL, &Env);
+				hook_commands(&Env);		// See Demo/cmd/hook.c
+				
+				//---------- Add Platform Specific commands.
 				FFTerm_AddCmd(pConsole, "lslin", 	(FFT_FN_COMMAND) lin_ls, NULL);
+				FFTerm_AddCmd(pConsole, "md5lin",	(FFT_FN_COMMAND)	md5sum_lin_cmd, md5sum_lin_Info);
 				
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
-				FF_UnmountPartition(pIoman);						// Dis-mount the mounted partition from FullFAT.
+				FF_UnmountPartition(pIoman);						// Unmount the mounted partition from FullFAT.
 				FF_DestroyIOMAN(pIoman);							// Clean-up the FF_IOMAN Object.
 
 				//---------- Final User Interaction

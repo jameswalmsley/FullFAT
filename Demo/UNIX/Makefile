@@ -17,6 +17,9 @@ OBJS += ../cmd/mkdir_cmd.o
 OBJS += ../cmd/mv_cmd.o
 OBJS += ../cmd/pwd_cmd.o
 OBJS += ../cmd/cmd_Linux/md5sum_lin_cmd.o
+OBJS += ../cmd/fsinfo_cmd.o
+OBJS += ../cmd/more_cmd.o
+OBJS += ../cmd/hook.o
 
 LIBS := libfullfat.a
 LIBS += libffterm.a
