@@ -897,7 +897,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		memcpy (pPart->VolLabel, pBuffer->pBuffer + FF_FAT_16_VOL_LABEL, sizeof pPart->VolLabel);
 	}
 #ifdef FF_WRITE_FREE_COUNT
-	pPart->FSInfoLBA = FF_getShort(pBuffer->pBuffer, 48);
+	pPart->FSInfoLBA = pPart->BeginLBA + FF_getShort(pBuffer->pBuffer, 48);
 #endif
 
 	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
