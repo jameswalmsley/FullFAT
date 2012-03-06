@@ -776,15 +776,16 @@ FF_T_UINT32 FF_ExtendClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF
  *	@param	StartCluster	Cluster Number that starts the chain.
  *	@param	Count			Number of Clusters from the end of the chain to unlink.
  *	@param	Count			0 Means Free the entire chain (delete file).
+ *	@param	Count			1 Means mark the start cluster with EOF.
  *
  *	@return 0 On Success.
  *	@return	-1 If the device driver failed to provide access.
  *
  **/
-FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_UINT16 Count) {
+FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_BOOL bTruncate) {
 	
 	FF_T_UINT32 fatEntry;
-	FF_T_UINT32 currentCluster, chainLength = 0;
+	FF_T_UINT32 currentCluster;
 	FF_T_UINT32	iLen = 0;
 	FF_T_UINT32 lastFree = StartCluster;	/* HT addition : reset LastFreeCluster */
 	FF_ERROR	Error = FF_ERR_NONE;
@@ -793,42 +794,36 @@ FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_
 
 	fatEntry = StartCluster;
 
-	if(Count == 0) {
-		// Free all clusters in the chain!
-		currentCluster = StartCluster;
-		fatEntry = currentCluster;
-        do {
-			// Sector will now be fetched in write-mode
-			fatEntry = FF_getFatEntry(pIoman, fatEntry, &Error, &FatBuf);
-			if(FF_isERR(Error)) {
-				goto out;
-			}
-			Error = FF_putFatEntry(pIoman, currentCluster, 0x00000000, &FatBuf);
-			if(FF_isERR(Error)) {
-				goto out;
-			}
-
-			if (lastFree > currentCluster) {
-				lastFree = currentCluster;
-			}
-			currentCluster = fatEntry;
-			iLen ++;
-		}while(!FF_isEndOfChain(pIoman, fatEntry));
-		if (pIoman->pPartition->LastFreeCluster > lastFree) {
-			pIoman->pPartition->LastFreeCluster = lastFree;
+	// Free all clusters in the chain!
+	currentCluster = StartCluster;
+	fatEntry = currentCluster;
+	do {
+		// Sector will now be fetched in write-mode
+		fatEntry = FF_getFatEntry(pIoman, fatEntry, &Error, &FatBuf);
+		if(FF_isERR(Error)) {
+			goto out;
 		}
-		Error = FF_IncreaseFreeClusters(pIoman, iLen);
-	} else {
-		// Truncation - This is quite hard, because we can only do it backwards.
-		// HT: isn't this function *always* called with Count=0 ?
-		do {
-			fatEntry = FF_getFatEntry(pIoman, fatEntry, &Error, NULL);
-			if(FF_isERR(Error)) {
-				goto out;
-			}
-			chainLength++;
-		}while(!FF_isEndOfChain(pIoman, fatEntry));
+
+		if(bTruncate && currentCluster == StartCluster) {
+			Error = FF_putFatEntry(pIoman, currentCluster, 0xFFFFFFFF, &FatBuf);
+		}else {
+			Error = FF_putFatEntry(pIoman, currentCluster, 0x00000000, &FatBuf);
+		}
+		if(FF_isERR(Error)) {
+			goto out;
+		}
+
+		if (lastFree > currentCluster) {
+			lastFree = currentCluster;
+		}
+		currentCluster = fatEntry;
+		iLen ++;
+	}while(!FF_isEndOfChain(pIoman, fatEntry));
+
+	if (pIoman->pPartition->LastFreeCluster > lastFree) {
+		pIoman->pPartition->LastFreeCluster = lastFree;
 	}
+	Error = FF_IncreaseFreeClusters(pIoman, iLen);
 out:
 	FF_ReleaseFatBuffer(pIoman, &FatBuf);
 	return Error;
@@ -864,6 +859,7 @@ FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman, FF_ERROR *pError) {
 	FF_T_UINT32	FatEntry;
 	FF_T_UINT32	EntriesPerSector;
 	FF_T_UINT32	FreeClusters = 0;
+	FF_T_UINT32	ClusterNum = 0;
 	*pError = FF_ERR_NONE;
 
 #ifdef FF_FAT12_SUPPORT
@@ -900,12 +896,19 @@ FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman, FF_ERROR *pError) {
 				if (!FatEntry) {
 					FreeClusters++;
 				}
+				if(ClusterNum > pIoman->pPartition->NumClusters) {	// FAT table might not be cluster aligned
+					break;											// Stop counting if thats the case.
+				}
+				ClusterNum++;
 			}	
 		}
 		FF_ReleaseBuffer(pIoman, pBuffer);
+		if(ClusterNum > pIoman->pPartition->NumClusters) {
+			break;													// Break out of 2nd loop too ^^
+		}
 	}
-
-	return FreeClusters <= pIoman->pPartition->NumClusters ? FreeClusters : pIoman->pPartition->NumClusters;
+	// FreeClusters is -2 because the first 2 fat entries in the table are reserved.
+	return FreeClusters <= pIoman->pPartition->NumClusters ? FreeClusters-2 : pIoman->pPartition->NumClusters;
 }
 
 #ifdef FF_64_NUM_SUPPORT

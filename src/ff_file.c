@@ -2113,6 +2113,29 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
      * So here we have a normal valid file handle
 	 */
 
+	/*
+	 *	Sometimes FullFAT will leave a trailing cluster on the end of a cluster chain.
+	 * 	To ensure we're compliant we shall now check for this condition and truncate it.
+	 */
+
+	if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
+		/*
+		 *	The file meets the conditions, because it is of either 0 size, or is a perfect multiple
+		 *	of the size of 1 cluster.
+		 */
+		// Calculate how many cluster we should require:
+
+		unsigned long nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);
+
+		// Unlink the chain!		
+		FF_lockFAT(pFile->pIoman);
+		{
+			FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster + nClusters-1, 1);		
+			FF_IncreaseFreeClusters(pFile->pIoman, 1);
+		}
+		FF_unlockFAT(pFile->pIoman);
+		//:D
+	}
 	
 	// UpDate Dirent if File-size has changed?
 	if(!(pFile->ValidFlags & FF_VALID_FLAG_DELETED) && (pFile->Mode & (FF_MODE_WRITE |FF_MODE_APPEND))) {
