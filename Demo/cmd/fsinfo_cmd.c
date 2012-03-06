@@ -30,6 +30,7 @@ int fsinfo_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	printf("Media Format            : %s\n", fatType);
 	printf("FullFAT Driver Blocksize: %d\n", pIoman->BlkSize);
 	printf("Partition Blocksize     : %d\n", pPart->BlkSize);
+	printf("Total Clusters			: %lu\n", pPart->NumClusters);
 	printf("Cluster Size            : %fKb\n", (float)(pPart->BlkSize * pPart->SectorsPerCluster) / 1024.0);
 #ifdef FF_64_NUM_SUPPORT
 	printf("Volume Size             : %llu (%d MB)\n", FF_GetVolumeSize(pIoman), (unsigned int) (FF_GetVolumeSize(pIoman) / 1048576));

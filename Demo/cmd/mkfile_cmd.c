@@ -20,22 +20,22 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	if(argc == 5) {
 		sscanf(argv[1], "%lu", &ElementSize);
-		if(!ElementSize) {
+		/*if(!ElementSize) {
 			printf("Invalid Element Size!\n");
 			return 0;
-		}
+			}*/
 
 		sscanf(argv[2], "%lu", &Elements);
-		if(!Elements) {
+		/*if(!Elements) {
 			printf("Invalid Number of Elements\n");
 			return 0;
-		}
+			}*/
 
 		sscanf(argv[3], "%lu", &Multiplier);
-		if(!Multiplier) {
+		/*if(!Multiplier) {
 			printf("Invalid Multiplier\n");
 			return 0;
-		}
+			}*/
 
 		Bytes = ElementSize * Elements * Multiplier;
 
