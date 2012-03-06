@@ -204,12 +204,13 @@ void SD_PrintDirent(SD_DIRENT *pDirent, SD_SIZEUNIT eUnit, char cForcedBytes, FF
 			printf("KB");
 			break;
 
-		case SD_BYTES:
+	case SD_BYTES:
+		printf("bytes\n");
 		default:
 			if(cForcedBytes) {
-				printf("%12lu ", pDirent->ulFileSize);
+				printf("%12lu ", (unsigned long) pDirent->ulFileSize);
 			} else {
-				printf("%7lu ", pDirent->ulFileSize);
+				printf("%7lu ", (unsigned long) pDirent->ulFileSize);
 				printf("B ");
 			}
 			break;

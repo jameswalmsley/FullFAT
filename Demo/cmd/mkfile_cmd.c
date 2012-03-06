@@ -7,7 +7,7 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	FF_T_UINT32	Bytes;
 	FF_T_UINT32	BytesWritten = 0;
 	FF_T_UINT32 ElementSize = 0, Elements = 0, Multiplier = 0;
-	FF_T_UINT32 IntBuffer[4096];	// 16Kb of Integers!
+	FF_T_UINT8 IntBuffer[4096*4];	// 16Kb of Integers!
 	FF_T_UINT32	i = 0, x;
 	FF_T_INT8	path[FF_MAX_PATH];
 	FF_ERROR	Error;
@@ -48,8 +48,8 @@ int mkfile_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		if(f) {
 			while(Bytes) {
 				
-				for(x = 0; x < 4096; x++) {
-					IntBuffer[x] = i++;
+				for(x = 0; x < 4096*4; x++) {
+					IntBuffer[x] = (FF_T_UINT8)i++;
 				}
 				
 				TicksStart = FFTerm_GetTicks(pEnv->pConsole);
