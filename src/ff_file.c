@@ -178,7 +178,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 	if(pError) {
 		*pError = FF_ERR_NONE;
 	}
-	
+
 	if(!pIoman) {
 		if(pError) {
 			*pError = (FF_ERR_NULL_POINTER | FF_OPEN);
@@ -2118,32 +2118,46 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	 * 	To ensure we're compliant we shall now check for this condition and truncate it.
 	 */
 
-	if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
-		/*
-		 *	The file meets the conditions, because it is of either 0 size, or is a perfect multiple
-		 *	of the size of 1 cluster.
-		 */
-		// Calculate how many cluster we should require:
-
-		unsigned long nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);
-
-		// Unlink the chain!		
-		FF_lockFAT(pFile->pIoman);
-		{
-			FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster + nClusters-1, 1);		
-			FF_IncreaseFreeClusters(pFile->pIoman, 1);
-		}
-		FF_unlockFAT(pFile->pIoman);
-		//:D
-	}
+	
 	
 	// UpDate Dirent if File-size has changed?
-	if(!(pFile->ValidFlags & FF_VALID_FLAG_DELETED) && (pFile->Mode & (FF_MODE_WRITE |FF_MODE_APPEND))) {
+	if(!(pFile->ValidFlags & FF_VALID_FLAG_DELETED) && (pFile->Mode & (FF_MODE_WRITE | FF_MODE_APPEND | FF_MODE_CREATE))) {
 		// Update the Dirent!
+
+		if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
+			/*
+			 *	The file meets the conditions, because it is of either 0 size, or is a perfect multiple
+			 *	of the size of 1 cluster.
+			 */
+			// Calculate how many cluster we should require:
+
+			unsigned long nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);
+
+			//unsigned long chainLen = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster, NULL, &Error);
+			// Unlink the chain!		
+			FF_lockFAT(pFile->pIoman);
+			{
+				if(!pFile->Filesize) {					
+					FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster, 0);		
+				} else {
+					FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster + nClusters-1, 1);
+					FF_IncreaseFreeClusters(pFile->pIoman, 1);					
+				}
+			
+			}
+			FF_unlockFAT(pFile->pIoman);
+			//:D
+		}
+
 		Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+
 		// Error might be non-zero, but don't forget to remove handle from list
 		// and to free the pFile pointer
-		if (!FF_isERR(Error) && pFile->Filesize != OriginalEntry.Filesize) {
+
+		if (!FF_isERR(Error) && ((pFile->Filesize != OriginalEntry.Filesize) || (!pFile->Filesize))) {
+			if(!pFile->Filesize) {
+				OriginalEntry.ObjectCluster = 0;
+			}
 			OriginalEntry.Filesize = pFile->Filesize;
 			Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		}
