@@ -397,7 +397,7 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	if(argc > 2) {
 		printf("Usage:\n");
-		printf("%s [test ID]\n");
+		printf("%s [test ID]\n", argv[0]);
 	}
 
 	return 0;
