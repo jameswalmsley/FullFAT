@@ -2131,21 +2131,22 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 			 */
 			// Calculate how many cluster we should require:
 
-			unsigned long nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);
-
-			//unsigned long chainLen = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster, NULL, &Error);
+			FF_T_UINT32 nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);			
+			FF_T_UINT32 chainLen = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster, NULL, &Error);
 			// Unlink the chain!		
-			FF_lockFAT(pFile->pIoman);
-			{
-				if(!pFile->Filesize) {					
-					FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster, 0);		
-				} else {
-					FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster + nClusters-1, 1);
-					FF_IncreaseFreeClusters(pFile->pIoman, 1);					
+			if(chainLen > nClusters) {
+
+				FF_lockFAT(pFile->pIoman);
+				{
+					if(!pFile->Filesize) {					
+						FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster, 0);		
+					} else {
+						FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster + nClusters-1, 1);
+						FF_DecreaseFreeClusters(pFile->pIoman, 1);
+					}		   
 				}
-			
+				FF_unlockFAT(pFile->pIoman);
 			}
-			FF_unlockFAT(pFile->pIoman);
 			//:D
 		}
 
@@ -2154,7 +2155,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 		// Error might be non-zero, but don't forget to remove handle from list
 		// and to free the pFile pointer
 
-		if (!FF_isERR(Error) && ((pFile->Filesize != OriginalEntry.Filesize) || (!pFile->Filesize))) {
+		if(!FF_isERR(Error) && ((pFile->Filesize != OriginalEntry.Filesize) || (!pFile->Filesize))) {
 			if(!pFile->Filesize) {
 				OriginalEntry.ObjectCluster = 0;
 			}

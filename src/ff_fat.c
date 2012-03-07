@@ -818,6 +818,7 @@ FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_
 		}
 		currentCluster = fatEntry;
 		iLen ++;
+
 	}while(!FF_isEndOfChain(pIoman, fatEntry));
 
 	if (pIoman->pPartition->LastFreeCluster > lastFree) {
@@ -908,7 +909,7 @@ FF_T_UINT32 FF_CountFreeClusters(FF_IOMAN *pIoman, FF_ERROR *pError) {
 		}
 	}
 	// FreeClusters is -2 because the first 2 fat entries in the table are reserved.
-	return FreeClusters <= pIoman->pPartition->NumClusters ? FreeClusters-2 : pIoman->pPartition->NumClusters;
+	return FreeClusters <= pIoman->pPartition->NumClusters ? FreeClusters : pIoman->pPartition->NumClusters;
 }
 
 #ifdef FF_64_NUM_SUPPORT
