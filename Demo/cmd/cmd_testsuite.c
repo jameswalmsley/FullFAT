@@ -362,10 +362,10 @@ int test_6(FF_IOMAN *pIoman) {
 	char buffer[2048];
 
 	Error = FF_RmFile(pIoman, "\\test1.txt");
-	CHECK_ERR(Error);
+	//CHECK_ERR(Error);
 
 	Error = FF_RmFile(pIoman, "\\test2.txt");
-	CHECK_ERR(Error);
+	//CHECK_ERR(Error);
 
 	for(i = 0; i < 20; i++) {
 		pFile = FF_Open(pIoman, "\\test1.txt", FF_GetModeBits("a+"), &Error);
