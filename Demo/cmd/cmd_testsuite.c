@@ -19,6 +19,8 @@ typedef struct {
 	const char *description;
 } TEST_ITEM;
 
+static FF_ENVIRONMENT *g_pEnv = NULL;
+
 
 #define FAIL 0
 #define PASS 1
@@ -42,6 +44,27 @@ static char *message = NULL;
 #define DO_FAIL			printf("FAILED Line:%d : %s\n", __LINE__, __FILE__);  return FAIL
 
 #define CHECK_ERR(x)	{if(FF_isERR(x)) {DO_FF_FAIL(x);}}
+
+char *get_md5(unsigned char *data, size_t len, char *hashbuf, size_t hashlen) {
+	int i;
+	char temp[3];
+	
+	md5_init(&state);
+	for(i = 0; i < len; i++) {
+		md5_append(&state, (const md5_byte_t *) data +i, 1);
+	}
+
+	md5_finish(&state, digest);
+
+	sprintf(hashbuf,"");
+
+	for(i = 0; i < 16; i++) {
+		sprintf(temp, "%02x", digest[i]);
+		strcat(hashbuf, temp);
+	}
+	
+	return hashbuf;
+}
 
 int test_1(FF_IOMAN *pIoman) {
 	FF_FILE *pFile;
@@ -328,12 +351,72 @@ int test_5(FF_IOMAN *pIoman) {
 	return PASS;
 }
 
+int test_6(FF_IOMAN *pIoman) {
+	int i;
+	FF_FILE *pFile;
+	FF_ERROR Error;
+	char *buf1 = "This is a test sentence for FullFAT.";
+	char *buf2 = "Another simple test sentence for FF.";
+
+	char md5[2][64];
+	char buffer[2048];
+
+	for(i = 0; i < 20; i++) {
+		pFile = FF_Open(pIoman, "\\test1.txt", FF_GetModeBits("a+"), &Error);
+		if(!pFile) { CHECK_ERR(Error); }
+
+		Error = FF_Seek(pFile, 0, FF_SEEK_END); 						CHECK_ERR(Error);		
+		Error = FF_Write(pFile, 1, strlen(buf1), (FF_T_UINT8 *) buf1); 	CHECK_ERR(Error);
+		Error = FF_Close(pFile); 										CHECK_ERR(Error);
+
+		pFile = FF_Open(pIoman, "\\test2.txt", FF_GetModeBits("a+"), &Error);
+		if(!pFile) { CHECK_ERR(Error); }
+
+		Error = FF_Seek(pFile, 0, FF_SEEK_END);							CHECK_ERR(Error);
+		Error = FF_Write(pFile, 1, strlen(buf2), (FF_T_UINT8 *) buf2);	CHECK_ERR(Error);
+		Error = FF_Close(pFile);										CHECK_ERR(Error);
+	}
+
+	// Calculate the MD5 sum of each buffer (what we expect from the file?
+	
+	memset(buffer, 0, sizeof(buffer));
+	for(i = 0; i < 20; i++) {
+		sprintf(buffer, "%s%s", buffer, buf1);	// The contents of file 1 should be this.
+	}
+	printf("BUF1:\n%s\n", buffer);
+
+	get_md5(buffer, 20 * strlen(buf1), md5[0], 33);
+
+	memset(buffer, 0, sizeof(buffer));
+	for(i = 0; i < 20; i++) {
+		sprintf(buffer, "%s%s", buffer, buf2);
+	}
+
+	get_md5(buffer, 20 * strlen(buf2), md5[1], 33);
+
+
+	// Verify with md5sum commandlet.
+	sprintf(buffer, "md5sum -v %s %s", md5[0], "test1.txt");
+	printf("%s\n", buffer);
+	if(FFTerm_Exec(g_pEnv->pConsole, buffer)) {
+		DO_FAIL;
+	}
+
+	sprintf(buffer, "md5sum -v %s %s", md5[1], "test2.txt");
+	if(FFTerm_Exec(g_pEnv->pConsole, buffer)) {
+		DO_FAIL;
+	}
+
+	return PASS;
+}
+
 static const TEST_ITEM tests[] = {
-	{test_5, 		"Testing wildcard algorithm."},
 	{test_1,		"Small repeated unaligned byte write access."},
 	{test_2,		"Re-arrange Text file."},
 	{test_3,		"Fill-up root dir!. (Test FAT16)."},
 	{test_4, 		"Testing wildcard searching."},
+	{test_5, 		"Testing wildcard algorithm."},
+	{test_6,		"Sequential append and seek of multiple files."},
 };
 
 static int exec_test(FF_IOMAN *pIoman, int testID) {
@@ -355,6 +438,8 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	int i;
 	int bFail = 0;
+
+	g_pEnv = pEnv;
 
 	printf("Thankyou for helping to verify FullFAT!\n\nStarting tests:\n\n");
 

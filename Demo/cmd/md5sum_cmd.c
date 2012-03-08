@@ -50,7 +50,7 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv);
 int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	int option;
 	FFT_GETOPT_CONTEXT	optionContext;
-	FF_T_BOOL			bBinary = FF_FALSE, bCheck = FF_FALSE, bWarn = FF_FALSE;
+	FF_T_BOOL			bBinary = FF_FALSE, bCheck = FF_FALSE, bWarn = FF_FALSE, bVerify = FF_FALSE, bString = FF_FALSE;
 	FF_DIRENT			findData;
 	FF_FILE				*pfOut;
 
@@ -66,6 +66,9 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	const char			*szargPath;
 	const char			*szargOutputFile = NULL;
+	const char			*verifysum = NULL;
+	const char			*string = NULL;
+	
 	
 	char				hash[33];
 
@@ -73,7 +76,7 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));
 
-	option = FFTerm_getopt(argc, (const char **) argv, "bctwo:", &optionContext);
+	option = FFTerm_getopt(argc, (const char **) argv, "bctwo:v:s:", &optionContext);
 
 	if(option != EOF) {
 		do {
@@ -96,9 +99,17 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 				case 'o':
 					szargOutputFile = optionContext.optarg;
 					break;
+
+			case 'v':
+				verifysum = optionContext.optarg;
+				bVerify = FF_TRUE;
+				break;
+			case 's':
+				string = optionContext.optarg;
+				break;
 			}
 
-			option = FFTerm_getopt(argc, (const char ** ) argv, "bctwo:", &optionContext);
+			option = FFTerm_getopt(argc, (const char ** ) argv, "bctwo:v:s:", &optionContext);
 		} while(option != EOF);
 	}
 
@@ -112,7 +123,7 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 #else
 		ProcessPath(path, szargPath, pEnv);
 #endif
-		
+
 		RetVal = FF_FindFirst(pEnv->pIoman, &findData, path);
 
 		if(RetVal) {
@@ -147,7 +158,8 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 #else
 				AppendFilename(path, findData.FileName);
 #endif
-				if(!bCheck) {
+
+				if(!bCheck && !bVerify) {
 					if(!md5_getHash(path, hash, pEnv)) {
 #ifdef FF_UNICODE_SUPPORT
 						printf("%s  %ls\n", hash, findData.FileName);
@@ -174,7 +186,16 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 						FF_PutC(pfOut, '\n'); // Nextline!
 					}
 
-				} else {
+					} else if(bVerify && !pfOut) {
+						if(!md5_getHash(path, hash, pEnv)) {
+							//printf("%s : %s  $s", hash, verifysum, findData.FileName);
+							if(!strcmp(hash, verifysum)) {
+								return 0;
+							} else {
+								return 1;
+							}
+						}
+					} else {
 					md5_checkHash(path, pEnv);
 				}
 			}
@@ -306,3 +327,9 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
 
 	return 0;
 }
+
+
+static int md5_verify() {
+
+}
+
