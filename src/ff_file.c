@@ -205,6 +205,7 @@ FF_FILE *FF_Open(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT8 Mode, FF_ER
 		FF_FREE(pFile);
 		return (FF_FILE *)NULL;
 	}
+	memset(pFile->pBuf, 0, pIoman->BlkSize);
 #endif
 
 #ifdef FF_UNICODE_SUPPORT
@@ -1541,7 +1542,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 		// HT: Only read if we access existing data
-		if(pFile->FilePointer < pFile->Filesize && !(pFile->ucState & FF_BUFSTATE_VALID)) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
+		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {// && pFile->FilePointer < pFile->Filesize) { // Only bother reading if were writing within the file.
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
