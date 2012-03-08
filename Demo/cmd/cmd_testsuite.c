@@ -361,6 +361,12 @@ int test_6(FF_IOMAN *pIoman) {
 	char md5[2][64];
 	char buffer[2048];
 
+	Error = FF_RmFile(pIoman, "\\test1.txt");
+	CHECK_ERR(Error);
+
+	Error = FF_RmFile(pIoman, "\\test2.txt");
+	CHECK_ERR(Error);
+
 	for(i = 0; i < 20; i++) {
 		pFile = FF_Open(pIoman, "\\test1.txt", FF_GetModeBits("a+"), &Error);
 		if(!pFile) { CHECK_ERR(Error); }
@@ -383,7 +389,6 @@ int test_6(FF_IOMAN *pIoman) {
 	for(i = 0; i < 20; i++) {
 		sprintf(buffer, "%s%s", buffer, buf1);	// The contents of file 1 should be this.
 	}
-	printf("BUF1:\n%s\n", buffer);
 
 	get_md5(buffer, 20 * strlen(buf1), md5[0], 33);
 
@@ -397,7 +402,6 @@ int test_6(FF_IOMAN *pIoman) {
 
 	// Verify with md5sum commandlet.
 	sprintf(buffer, "md5sum -v %s %s", md5[0], "test1.txt");
-	printf("%s\n", buffer);
 	if(FFTerm_Exec(g_pEnv->pConsole, buffer)) {
 		DO_FAIL;
 	}

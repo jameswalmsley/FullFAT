@@ -184,19 +184,7 @@ int main(void) {
 //				FFTerm_SetConsoleMode(pConsole, 0);
 				//---------- Add Commands to the console.
 
-				FFTerm_AddExCmd(pConsole, "cd",		(FFT_FN_COMMAND_EX) cd_cmd, 	cdInfo,			&Env);
-				FFTerm_AddExCmd(pConsole, "cp",		(FFT_FN_COMMAND_EX) cp_cmd, 	cpInfo,			&Env);
-				FFTerm_AddExCmd(pConsole, "geterror", (FFT_FN_COMMAND_EX) geterror_cmd, geterrorInfo, &Env);
-				FFTerm_AddExCmd(pConsole, "ls", 	(FFT_FN_COMMAND_EX) ls_cmd, 	lsInfo, 		&Env);
-				FFTerm_AddExCmd(pConsole, "md5sum", (FFT_FN_COMMAND_EX) md5sum_cmd, md5sumInfo, 	&Env);
-				FFTerm_AddExCmd(pConsole, "mkdir", 	(FFT_FN_COMMAND_EX) mkdir_cmd, 	mkdirInfo,		&Env);
-				FFTerm_AddExCmd(pConsole, "mv",		(FFT_FN_COMMAND_EX) mv_cmd,		mvInfo,			&Env);
-				//FFTerm_AddExCmd(pConsole, "more", 	(FFT_FN_COMMAND_EX) more_cmd,	moreInfo, 		&Env);
-				FFTerm_AddExCmd(pConsole, "prompt", (FFT_FN_COMMAND_EX) cmd_prompt, cmdpromptInfo, 	&Env);
-				FFTerm_AddExCmd(pConsole, "pwd", 	(FFT_FN_COMMAND_EX)	pwd_cmd,	pwdInfo,		&Env);
-				FFTerm_AddCmd(pConsole, "version",	(FFT_FN_COMMAND) version, versionInfo);
-
-				FFTerm_AddExCmd(pConsole, "testsuite", (FFT_FN_COMMAND_EX) cmd_testsuite, NULL, &Env);
+				hook_commands(&Env);
 
 				FFTerm_AddExCmd(pConsole, "test", (FFT_FN_COMMAND_EX) test, NULL, &Env);
 

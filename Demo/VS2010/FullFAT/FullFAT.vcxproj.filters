@@ -147,6 +147,21 @@
     <ClCompile Include="..\..\cmd\cmd_testsuite.c">
       <Filter>Source Files\commands</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cmd\hook.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\hexview_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\mkfile_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\more_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\cmd\fsinfo_cmd.c">
+      <Filter>Source Files\commands</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\ffterm\src\FFTerm-Commands.h">

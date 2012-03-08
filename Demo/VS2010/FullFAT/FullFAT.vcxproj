@@ -104,10 +104,15 @@
     <ClCompile Include="..\..\cmd\cmd_testsuite.c" />
     <ClCompile Include="..\..\cmd\cp_cmd.c" />
     <ClCompile Include="..\..\cmd\dir.c" />
+    <ClCompile Include="..\..\cmd\fsinfo_cmd.c" />
     <ClCompile Include="..\..\cmd\geterror_cmd.c" />
+    <ClCompile Include="..\..\cmd\hexview_cmd.c" />
+    <ClCompile Include="..\..\cmd\hook.c" />
     <ClCompile Include="..\..\cmd\ls_cmd.c" />
     <ClCompile Include="..\..\cmd\md5sum_cmd.c" />
     <ClCompile Include="..\..\cmd\mkdir_cmd.c" />
+    <ClCompile Include="..\..\cmd\mkfile_cmd.c" />
+    <ClCompile Include="..\..\cmd\more_cmd.c" />
     <ClCompile Include="..\..\cmd\mv_cmd.c" />
     <ClCompile Include="..\..\cmd\pwd_cmd.c" />
     <ClCompile Include="..\..\VS2008\FullFAT\fullfat.c" />
