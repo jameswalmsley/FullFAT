@@ -1336,6 +1336,10 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 		return (FF_ERR_NULL_POINTER | FF_GETC);	// Ensure this is a signed error.
 	}
 
+	if(pFile->FilePointer == 0x13FF) {
+		printf("OhShit\n");
+	}
+
 	if(!(pFile->Mode & FF_MODE_READ)) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_READ_MODE | FF_GETC);
 	}
@@ -1716,6 +1720,10 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 		return (FF_ERR_NULL_POINTER | FF_PUTC);
 	}
 
+	if((pFile->FilePointer % (1024-1)) == 0) {
+		printf("OhShit\n");
+	}
+
 	if(!(pFile->Mode & FF_MODE_WRITE)) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE | FF_PUTC);
 	}
@@ -1864,6 +1872,11 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 			return -3;
 		
 	}
+
+	if(pFile->FilePointer == pFile->Filesize) {
+		pFile->CurrentCluster = pFile->CurrentCluster - 1;
+	}
+
 	return 0;
 }
 
