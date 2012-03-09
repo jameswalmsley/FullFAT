@@ -825,9 +825,10 @@ FF_ERROR FF_UnlinkClusterChain(FF_IOMAN *pIoman, FF_T_UINT32 StartCluster, FF_T_
 	if (pIoman->pPartition->LastFreeCluster > lastFree) {
 		pIoman->pPartition->LastFreeCluster = lastFree;
 	}
-	Error = FF_IncreaseFreeClusters(pIoman, iLen);
 out:
 	FF_ReleaseFatBuffer(pIoman, &FatBuf);
+
+	Error = FF_IncreaseFreeClusters(pIoman, iLen);
 	return Error;
 }
 
