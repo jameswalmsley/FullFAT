@@ -265,7 +265,14 @@ int test_4(FF_IOMAN *pIoman) {
 
 	Error = FF_Close(pFile);
 	CHECK_ERR(Error);
-	
+
+	Error = FF_RmFile(pIoman, "/wildcard/test1.dat"); 	CHECK_ERR(Error);
+	Error = FF_RmFile(pIoman, "/wildcard/test2.dat"); 	CHECK_ERR(Error);
+	Error = FF_RmFile(pIoman, "/wildcard/test1.bat"); 	CHECK_ERR(Error);
+	Error = FF_RmFile(pIoman, "/wildcard/test2.bat"); 	CHECK_ERR(Error);
+	Error = FF_RmFile(pIoman, "/wildcard/test1"); 		CHECK_ERR(Error);
+	Error = FF_RmFile(pIoman, "/wildcard/test2"); 		CHECK_ERR(Error);
+	Error = FF_RmDir(pIoman, "/wildcard");				CHECK_ERR(Error);
 
 	return PASS;
 }
