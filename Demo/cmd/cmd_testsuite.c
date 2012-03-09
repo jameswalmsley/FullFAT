@@ -437,6 +437,7 @@ int test_7(FF_IOMAN *pIoman) {
 	}
 
 	Error = FF_Close(pFile);
+
 	CHECK_ERR(Error);
 
 	return PASS;

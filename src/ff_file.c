@@ -1061,9 +1061,15 @@ static FF_T_UINT32 FF_FileLBA (FF_FILE *pFile) {
 static FF_T_UINT32 FF_SetCluster (FF_FILE *pFile, FF_ERROR  *pError) {
 	FF_IOMAN	*pIoman = pFile->pIoman;
 	FF_T_UINT32 nNewCluster = FF_getClusterChainNumber(pIoman, pFile->FilePointer, 1);
+	int bTraverse = 0;
 
 	*pError = FF_ERR_NONE;
-	if(nNewCluster > pFile->CurrentCluster) {
+
+	if(pFile->CurrentCluster == (pFile->iChainLength-1) && pFile->iEndOfChain != pFile->AddrCurrentCluster) {
+		bTraverse = 1;
+	}
+
+	if(nNewCluster > pFile->CurrentCluster || bTraverse) {
 		pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nNewCluster - pFile->CurrentCluster, pError);
 	} else if(nNewCluster < pFile->CurrentCluster) {
 		pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->ObjectCluster, nNewCluster, pError);
@@ -1873,9 +1879,9 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		
 	}
 
-	if(pFile->FilePointer == pFile->Filesize) {
+	/*if(pFile->FilePointer == pFile->Filesize) {
 		pFile->CurrentCluster = pFile->CurrentCluster - 1;
-	}
+	}*/
 
 	return 0;
 }
