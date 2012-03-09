@@ -226,7 +226,7 @@ int test_4(FF_IOMAN *pIoman) {
 	Error = FF_Close(pFile);
 	CHECK_ERR(Error);
 
-	/*pFile = FF_Open(pIoman, "/wildcard/test2.dat", FF_MODE_CREATE, &Error);
+	pFile = FF_Open(pIoman, "/wildcard/test2.dat", FF_MODE_CREATE, &Error);
 	if(!pFile) {
 		CHECK_ERR(Error);
 	}
@@ -265,7 +265,7 @@ int test_4(FF_IOMAN *pIoman) {
 
 	Error = FF_Close(pFile);
 	CHECK_ERR(Error);
-	*/
+	
 
 	return PASS;
 }
@@ -414,6 +414,27 @@ int test_6(FF_IOMAN *pIoman) {
 	return PASS;
 }
 
+int test_7(FF_IOMAN *pIoman) {
+	FF_FILE *pFile;
+	FF_ERROR Error;
+	int i;
+	unsigned long size = pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize;
+	char test[] = "Another simple sentence.";
+	
+
+	pFile = FF_Open(pIoman, "\\test.7.dat", FF_GetModeBits("a+"), &Error);
+	if(!pFile) { CHECK_ERR(Error) }
+
+	for(i = 0; i < size * 3; i++) {
+		Error = FF_PutC(pFile, test[i % (sizeof(test))]);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	return PASS;
+}
+
 static const TEST_ITEM tests[] = {
 	{test_1,		"Small repeated unaligned byte write access."},
 	{test_2,		"Re-arrange Text file."},
@@ -421,6 +442,7 @@ static const TEST_ITEM tests[] = {
 	{test_4, 		"Testing wildcard searching."},
 	{test_5, 		"Testing wildcard algorithm."},
 	{test_6,		"Sequential append and seek of multiple files."},
+	{test_7,		"Testing FF_PutC() writing across sectors/clusters."},
 };
 
 static int exec_test(FF_IOMAN *pIoman, int testID) {

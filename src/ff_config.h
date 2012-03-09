@@ -113,7 +113,7 @@
 
 
 //---------- FREE SPACE CALCULATION
-#define FF_MOUNT_FIND_FREE				// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
+//#define FF_MOUNT_FIND_FREE				// Uncomment this option to check for Freespace on a volume mount. (Performance Penalty while mounting).
 										// If not done in the mount, it will be done on the first call to FF_GetFreeSize() function.
 
 
