@@ -1674,7 +1674,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		}
 		
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+		if(pFile->FilePointer < pFile->Filesize && !(pFile->ucState & FF_BUFSTATE_VALID)) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1758,7 +1758,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	}
 
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-	if(!(pFile->ucState & FF_BUFSTATE_WRITTEN)) {
+	if(!(pFile->ucState & FF_BUFSTATE_WRITTEN) && iRelPos) {
 		Error = FF_BlockRead(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
 		if(FF_isERR(Error)) return Error;
 	}

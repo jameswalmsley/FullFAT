@@ -437,9 +437,6 @@ int test_7(FF_IOMAN *pIoman) {
 	startSize = pFile->Filesize;
 
 	for(i = startSize; i < (size * 3)+startSize; i++) {
-		if(i == 5121) {
-			printf("Damn\n");
-		}
 		Error = FF_PutC(pFile, test[i % (sizeof(test)-1)]);
 	}
 
@@ -503,8 +500,8 @@ int cmd_testsuite(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	printf("Thankyou for helping to verify FullFAT!\n\nStarting tests:\n\n");
 
 	if(argc == 1 || argc == 2) {
-		printf("  ID : Description                                               : Execution Message\n");
-		printf("------------------------------------------------------------------------------------\n");
+		printf("  ID : Description                                     : Execution Message\n");
+		printf("--------------------------------------------------------------------------\n");
 	}
 
 	if(argc == 1) {	   
