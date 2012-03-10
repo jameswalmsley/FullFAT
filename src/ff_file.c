@@ -1509,7 +1509,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	// Handle file-space allocation
 
 	// HT: + 1 byte because the code assumes there is always a next cluster
-	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes);
+	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes + 1);
 	if(FF_isERR(Error)) {
 		return Error;	
 	}
@@ -1524,7 +1524,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 		// HT: Only read if we access existing data
-		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+		if(!(pFile->ucState & FF_BUFSTATE_VALID) && nRelBlockPos) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1558,7 +1558,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 		// HT: Only read if we access existing data
-		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+		if(!(pFile->ucState & FF_BUFSTATE_VALID) && nRelBlockPos) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1674,7 +1674,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		}
 		
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		if(pFile->FilePointer < pFile->Filesize && !(pFile->ucState & FF_BUFSTATE_VALID)) {
+		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1747,7 +1747,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	
 	// Handle File Space Allocation.
 	// We'll write 1 byte and always have a next cluster reserved.
-	Error = FF_ExtendFile(pFile, pFile->FilePointer + 1);
+	Error = FF_ExtendFile(pFile, pFile->FilePointer + 2);
 	if(FF_isERR(Error)) {
 		return Error;
 	}
@@ -2147,14 +2147,14 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	if(!(pFile->ValidFlags & FF_VALID_FLAG_DELETED) && (pFile->Mode & (FF_MODE_WRITE | FF_MODE_APPEND | FF_MODE_CREATE))) {
 		// Update the Dirent!
 
-		/*if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
+		if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
 			/*
 			 *	The file meets the conditions, because it is of either 0 size, or is a perfect multiple
 			 *	of the size of 1 cluster.
 			 */
 			// Calculate how many cluster we should require:
 
-			/*FF_T_UINT32 nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);			
+			FF_T_UINT32 nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);			
 			FF_T_UINT32 chainLen = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster, NULL, &Error);
 			// Unlink the chain!		
 			if(chainLen > nClusters) {
@@ -2172,7 +2172,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 				FF_unlockFAT(pFile->pIoman);
 			}
 			//:D
-		}*/
+		}
 
 		Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 
