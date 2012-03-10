@@ -1674,7 +1674,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		}
 		
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
+		if(!(pFile->ucState & FF_BUFSTATE_VALID) && pFile->FilePointer < pFile->Filesize) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
