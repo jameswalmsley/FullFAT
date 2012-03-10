@@ -465,14 +465,56 @@ int test_7(FF_IOMAN *pIoman) {
 	return PASS;
 }
 
+int test_8(FF_IOMAN *pIoman) {
+	FF_FILE *pFile;
+	FF_ERROR Error;
+	int i;
+
+	char *p;
+
+	char *testString = "This is a test string 012345678\n";
+
+	pFile = FF_Open(pIoman, "\\test.8.dat", FF_GetModeBits("wb"), &Error);
+	if(!pFile) { CHECK_ERR(Error) }
+
+	/*p = malloc(1024*1024*1024);
+	if(p) {
+		free(p);
+	}*/
+
+	for(i = 0; i < 16*5; i++) {
+		Error = FF_Write(pFile, 1, strlen(testString), testString);
+		CHECK_ERR(Error);
+	}
+
+	Error = FF_Close(pFile);
+	CHECK_ERR(Error);
+
+	// Now attempt to open in r+ mode.
+
+	pFile = FF_Open(pIoman, "\\test.8.dat", FF_GetModeBits("r+"), &Error);
+	if(!pFile) { CHECK_ERR(Error) }
+
+	for(i = 0; i < 513; i++) {
+		FF_GetC(pFile);
+	}
+
+	Error = FF_PutC(pFile, '*');
+
+	FF_Close(pFile);
+
+	return PASS;
+}
+
 static const TEST_ITEM tests[] = {
 	{test_1,		"Small repeated unaligned byte write access."},
 	{test_2,		"Re-arrange Text file."},
 	{test_3,		"Fill-up root dir!. (Test FAT16)."},
-	{test_4, 		"Testing wildcard searching."},
-	{test_5, 		"Testing wildcard algorithm."},
+	{test_4,		"Testing wildcard searching."},
+	{test_5,		"Testing wildcard algorithm."},
 	{test_6,		"Sequential append and seek of multiple files."},
 	{test_7,		"Testing FF_PutC() writing across sectors/clusters."},
+	{test_8,		"Write a file, and then re-open validate pbuf."},
 };
 
 static int exec_test(FF_IOMAN *pIoman, int testID) {

@@ -1903,10 +1903,6 @@ FF_ERROR FF_Seek(FF_FILE *pFile, FF_T_SINT32 Offset, FF_T_INT8 Origin) {
 		
 	}
 
-	/*if(pFile->FilePointer == pFile->Filesize) {
-		pFile->CurrentCluster = pFile->CurrentCluster - 1;
-	}*/
-
 	return 0;
 }
 
