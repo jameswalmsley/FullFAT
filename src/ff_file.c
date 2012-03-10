@@ -1523,8 +1523,18 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	
 	if((nRelBlockPos + nBytes) < pIoman->BlkSize) {	// Bytes to write are within a block and less than a block size.
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+		/**
+		 * In this case we are within a block, and the write finishes within the block.
+		 * We only need to read in the case that the buffer is invalid, and we are starting somewhere within the middle
+		 * of a block.
+		 *
+		 * Also the case that the file pointer is less than the filesize, we must ensure that we read the block
+		 * otherwise we might overwrite valid data.
+		 *
+		 * We always leave here with a written valid sector, where the file pointer is within a block.
+		 **/
 		// HT: Only read if we access existing data
-		if(!(pFile->ucState & FF_BUFSTATE_VALID) && nRelBlockPos) {
+		if(!(pFile->ucState & FF_BUFSTATE_VALID) && (nRelBlockPos || pFile->FilePointer < pFile->Filesize)) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1557,8 +1567,13 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	if(nRelBlockPos != 0) {	// Not on a sector boundary, at this point the LBA is known.
 		nBytesToWrite = pIoman->BlkSize - nRelBlockPos;
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
+		/**
+		 * Here we must only check that the buffer is valid. If not we must read in the block.
+		 * If the buffer is valid (From the previous case), we will then write up to the end
+		 * of the block, write the buffer to disk and invalidate the buffer.
+		 **/
 		// HT: Only read if we access existing data
-		if(!(pFile->ucState & FF_BUFSTATE_VALID) && nRelBlockPos) {
+		if(!(pFile->ucState & FF_BUFSTATE_VALID)) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1584,7 +1599,6 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	}
 
 	//---------- Write to a Cluster Boundary
-	
 	nRelClusterPos = FF_getClusterPosition(pIoman, pFile->FilePointer, 1);
 	if(nRelClusterPos != 0 && nRelClusterPos + nBytes >= nBytesPerCluster) { // Need to get to cluster boundary
 		
@@ -1623,7 +1637,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		if(slRetVal < 0) {
 			return slRetVal;
 		}
-		
+
 		nBytesToWrite = (nBytesPerCluster *  nClusters);
 		
 		pFile->FilePointer	+= nBytesToWrite;
@@ -1647,12 +1661,12 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 				sSectors = ucRemain;
 			}
 		}
-		
+
 		nItemLBA = FF_SetCluster (pFile, &Error);
 		if(FF_isERR(Error)) {
 			return Error;
 		}
-		
+
 		slRetVal = FF_BlockWrite(pFile->pIoman, nItemLBA, sSectors, buffer, FF_FALSE);
 		if(slRetVal < 0) {
 			return slRetVal;
@@ -1674,7 +1688,17 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 		}
 		
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-		if(!(pFile->ucState & FF_BUFSTATE_VALID) && pFile->FilePointer <= pFile->Filesize) {
+		/**
+		 * Here we only read in the block, is the buffer is invalid AND the file-pointer is < filesize.
+		 * This is safe because we are already on a sector boundary, so if we the end of the file, there
+		 * is no data to load into the buffer.
+		 *
+		 * In all other cases, we might be on a sector boundary but inside a file, in which case data already exists.
+		 * Or the buffer is valid, and so the buffer contains the data for this sector.
+		 *
+		 * It is almost certain that the buffer is invalid here.
+		 **/
+		if(!(pFile->ucState & FF_BUFSTATE_VALID) && pFile->FilePointer < pFile->Filesize) {
 			Error = FF_BlockRead(pIoman, nItemLBA, 1, pFile->pBuf, FF_FALSE);
 			if(FF_isERR(Error)) return Error;
 		}
@@ -1758,7 +1782,8 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	}
 
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
-	if(!(pFile->ucState & FF_BUFSTATE_WRITTEN) && iRelPos) {
+	//if(!(pFile->ucState & FF_BUFSTATE_VALID) && (iRelPos || pFile->FilePointer < pFile->Filesize) {
+	if(!(pFile->ucState & FF_BUFSTATE_VALID) && iRelPos) {
 		Error = FF_BlockRead(pFile->pIoman, iItemLBA, 1, pFile->pBuf, FF_FALSE);
 		if(FF_isERR(Error)) return Error;
 	}
