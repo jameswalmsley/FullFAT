@@ -70,6 +70,68 @@ int lin_ls(int argc, char **argv) {
 	return 0;
 }
 
+int totalReads	= 0;
+int totalWrites = 0;
+
+void read_inc(void) {
+	totalReads += 1;
+}
+
+void write_inc(void) {
+	totalWrites += 1;
+}
+
+int test(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
+
+	FF_FILE* ftestHandle;
+	FF_ERROR fError;
+	long bw = 0;
+	int i, di;
+	int secNumber = 0;
+	md5_state_t 		state;
+	md5_byte_t			digest[16];
+	char szpHash[255];
+	char				temp[3];
+
+	FF_T_UINT8 SdCardBuf[1000];
+	FF_T_UINT8	buf2[1000];
+
+	for(i = 0; i < 1000; i++) {
+		SdCardBuf[i] = (unsigned char) i;
+	}
+
+	md5_init(&state);
+	
+	ftestHandle = FF_Open(pEnv->pIoman,"\\test.dat", FF_GetModeBits("a+"), &fError);
+	totalReads = 0;
+	totalWrites = 0;
+	for (secNumber = 0; secNumber < 1048; secNumber++)
+	{
+		bw += FF_Write(ftestHandle, 1, 1000, (FF_T_UINT8*) SdCardBuf);
+
+		md5_append(&state, (const md5_byte_t *)SdCardBuf, 1000);
+	}
+
+	printf("reads: %d, writes %d\n", totalReads, totalWrites);
+
+	FF_Close(ftestHandle);
+
+	md5_finish(&state, digest);
+
+	strcpy(szpHash, "");
+
+	for (di = 0; di < 16; ++di) {
+		sprintf(temp, "%02x", digest[di]);
+		strcat(szpHash, temp);
+	}
+
+	printf("HASH: %s\n", szpHash);
+
+	
+
+	return 0;
+}
+
 
 int main(void) {
 	
@@ -146,7 +208,9 @@ int main(void) {
 				//---------- Add Platform Specific commands.
 				FFTerm_AddCmd(pConsole, "lslin", 	(FFT_FN_COMMAND) lin_ls, NULL);
 				FFTerm_AddCmd(pConsole, "md5lin",	(FFT_FN_COMMAND)	md5sum_lin_cmd, md5sum_lin_Info);
-				
+
+				FFTerm_AddExCmd(pConsole, "test", (FFT_FN_COMMAND_EX) test, NULL, &Env);
+
 				//---------- Start the console.
 				FFTerm_StartConsole(pConsole);						// Start the console (looping till exit command).
 				FF_UnmountPartition(pIoman);						// Unmount the mounted partition from FullFAT.

@@ -91,6 +91,8 @@ signed int fnRead(unsigned char *buffer, unsigned long sector, unsigned short se
 	}
 	FF_ReleaseSemaphore(pDevice->AccessSem);
 
+	read_inc();
+
 	return Read / pDevice->BlockSize;
 }
 
@@ -108,6 +110,8 @@ signed int fnWrite(unsigned char *buffer, unsigned long sector, unsigned short s
 
 	}
 	FF_ReleaseSemaphore(pDevice->AccessSem);
+
+	write_inc();
 
 	return Written / pDevice->BlockSize;
 }
