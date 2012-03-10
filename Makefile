@@ -34,7 +34,6 @@ testsuite:
 	make image; make fullfat; echo "testsuite; exit;" | make demo
 	make demo
 
-
 clean:
 	make -C src/ clean
 

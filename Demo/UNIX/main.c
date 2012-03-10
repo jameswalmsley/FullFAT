@@ -107,7 +107,12 @@ int test(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	totalWrites = 0;
 	for (secNumber = 0; secNumber < 1048; secNumber++)
 	{
-		bw += FF_Write(ftestHandle, 1, 1000, (FF_T_UINT8*) SdCardBuf);
+		fError = FF_Write(ftestHandle, 1, 1000, (FF_T_UINT8*) SdCardBuf);
+		if(FF_isERR(fError)) {
+			printf("Error: %s\n", FF_GetErrMessage(fError));
+			break;
+		}
+		bw += fError;
 
 		md5_append(&state, (const md5_byte_t *)SdCardBuf, 1000);
 	}

@@ -1,4 +1,6 @@
 MAKEFLAGS += -rR --no-print-directory
+CFLAGS += -pg
+
 
 OBJS := main.o
 OBJS += ../../Drivers/Linux/blkdev_linux.o
@@ -31,7 +33,7 @@ DEPFOLDER = .deps
 # link
 FullFAT: $(OBJS) $(LIBS)
 	@echo "  [CC]\tFullFAT"
-	@gcc $(OBJS) $(LIBS) -o FullFAT
+	@gcc $(OBJS) $(LIBS) -pg -o FullFAT
 
 # pull in dependency info for *existing* .o files
 -include $(OBJS:.o=.d)
@@ -62,13 +64,13 @@ clean:
 	@make -C ../../../ffterm/src clean
 
 libfullfat.a:
-	@make -C ../../src/
+	@make -C ../../src/ CFLAGS=$(CFLAGS)
 	@cp ../../src/libfullfat.a .
 
 libffterm.a:
-	@make -C ../../../ffterm/src/
+	@make -C ../../../ffterm/src/ CFLAGS=$(CFLAGS)
 	@cp ../../../ffterm/src/libffterm.a .
 
 image:
 	@dd if=/dev/zero of=ffimage.img bs=512 count=200000
-	@mkfs.vfat -s 2 -F 32 ffimage.img
+	@mkfs.vfat -s 4 ffimage.img
