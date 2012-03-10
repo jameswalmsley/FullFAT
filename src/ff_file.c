@@ -976,6 +976,17 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 		if(FF_isERR(Error)) {
 			return Error;
 		}
+
+		/**
+		 *	We must ensure that the AddrCurrentCluster is not out-of-sync with the CurrentCluster number.
+		 *	This could have occured in append mode, where the file was opened with a filesize % clustersize == 0
+		 *	because of a seek, where the AddrCurrentCluster was not updated after extending. This caused the data to
+		 *	be written to the previous cluster(s).
+		 **/
+		if(pFile->CurrentCluster == pFile->iChainLength-1 && pFile->AddrCurrentCluster != pFile->iEndOfChain) {
+			pFile->AddrCurrentCluster = pFile->iEndOfChain;
+		}
+
 		Error = FF_FlushCache(pIoman);
 		if (Error) {
 			return Error;
@@ -1064,10 +1075,6 @@ static FF_T_UINT32 FF_SetCluster (FF_FILE *pFile, FF_ERROR  *pError) {
 	int bTraverse = 0;
 
 	*pError = FF_ERR_NONE;
-
-	if(pFile->CurrentCluster == (pFile->iChainLength-1) && pFile->iEndOfChain != pFile->AddrCurrentCluster) {
-		bTraverse = 1;
-	}
 
 	if(nNewCluster > pFile->CurrentCluster || bTraverse) {
 		pFile->AddrCurrentCluster = FF_TraverseFAT(pIoman, pFile->AddrCurrentCluster, nNewCluster - pFile->CurrentCluster, pError);
@@ -1342,10 +1349,6 @@ FF_T_SINT32 FF_GetC(FF_FILE *pFile) {
 		return (FF_ERR_NULL_POINTER | FF_GETC);	// Ensure this is a signed error.
 	}
 
-	if(pFile->FilePointer == 0x13FF) {
-		printf("OhShit\n");
-	}
-
 	if(!(pFile->Mode & FF_MODE_READ)) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_READ_MODE | FF_GETC);
 	}
@@ -1506,7 +1509,7 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 	// Handle file-space allocation
 
 	// HT: + 1 byte because the code assumes there is always a next cluster
-	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes + 1);
+	Error = FF_ExtendFile(pFile, pFile->FilePointer + nBytes);
 	if(FF_isERR(Error)) {
 		return Error;	
 	}
@@ -1726,10 +1729,6 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 		return (FF_ERR_NULL_POINTER | FF_PUTC);
 	}
 
-	if((pFile->FilePointer % (1024-1)) == 0) {
-		printf("OhShit\n");
-	}
-
 	if(!(pFile->Mode & FF_MODE_WRITE)) {
 		return (FF_ERR_FILE_NOT_OPENED_IN_WRITE_MODE | FF_PUTC);
 	}
@@ -1748,7 +1747,7 @@ FF_T_SINT32 FF_PutC(FF_FILE *pFile, FF_T_UINT8 pa_cValue) {
 	
 	// Handle File Space Allocation.
 	// We'll write 1 byte and always have a next cluster reserved.
-	Error = FF_ExtendFile(pFile, pFile->FilePointer + 2);
+	Error = FF_ExtendFile(pFile, pFile->FilePointer + 1);
 	if(FF_isERR(Error)) {
 		return Error;
 	}
@@ -2148,14 +2147,14 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 	if(!(pFile->ValidFlags & FF_VALID_FLAG_DELETED) && (pFile->Mode & (FF_MODE_WRITE | FF_MODE_APPEND | FF_MODE_CREATE))) {
 		// Update the Dirent!
 
-		if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
+		/*if(pFile->Filesize % (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster) == 0) {
 			/*
 			 *	The file meets the conditions, because it is of either 0 size, or is a perfect multiple
 			 *	of the size of 1 cluster.
 			 */
 			// Calculate how many cluster we should require:
 
-			FF_T_UINT32 nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);			
+			/*FF_T_UINT32 nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);			
 			FF_T_UINT32 chainLen = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster, NULL, &Error);
 			// Unlink the chain!		
 			if(chainLen > nClusters) {
@@ -2165,14 +2164,15 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 					if(!pFile->Filesize) {					
 						FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster, 0);		
 					} else {
-						FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster + nClusters-1, 1);
+						unsigned long truncateCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, nClusters-1, &Error);
+						FF_UnlinkClusterChain(pFile->pIoman, truncateCluster, 1);
 						FF_DecreaseFreeClusters(pFile->pIoman, 1);
-					}		   
+					}
 				}
 				FF_unlockFAT(pFile->pIoman);
 			}
 			//:D
-		}
+		}*/
 
 		Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 

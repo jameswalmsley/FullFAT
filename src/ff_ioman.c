@@ -405,6 +405,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
 					// Process the suitable candidate.
 					if(pBufLRU->Modified == FF_TRUE) {
 						// Along with the FF_TRUE parameter to indicate semapahore has been claimed
+
 						RetVal = FF_BlockWrite(pIoman, pBufLRU->Sector, 1, pBufLRU->pBuffer, FF_TRUE);
 						if (RetVal < 0) {
 							pBufMatch = NULL;
