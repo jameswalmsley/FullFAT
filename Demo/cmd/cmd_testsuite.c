@@ -495,7 +495,7 @@ int test_8(FF_IOMAN *pIoman) {
 	pFile = FF_Open(pIoman, "\\test.8.dat", FF_GetModeBits("r+"), &Error);
 	if(!pFile) { CHECK_ERR(Error) }
 
-	for(i = 0; i < 513; i++) {
+	for(i = 0; i < 512; i++) {
 		FF_GetC(pFile);
 	}
 

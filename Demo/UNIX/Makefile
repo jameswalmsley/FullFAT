@@ -73,4 +73,4 @@ libffterm.a:
 
 image:
 	@dd if=/dev/zero of=ffimage.img bs=512 count=200000
-	@mkfs.vfat -s 4 ffimage.img
+	@mkfs.vfat -s 2 -F32 ffimage.img
