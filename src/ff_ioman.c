@@ -463,6 +463,12 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
 		} else {
 			//printf ("FF_ReleaseBuffer: buffer not claimed\n");
 		}
+#ifdef FF_CACHE_WRITE_THROUGH
+		if(pBuffer->Modified == FF_TRUE) {
+			FF_BlockWrite(pIoman, pBuffer->Sector, 1, pBuffer->pBuffer, FF_TRUE);
+			pBuffer->Modified = FF_FALSE;
+		}
+#endif
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
 }
