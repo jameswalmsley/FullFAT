@@ -209,13 +209,13 @@ static FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, 
 #endif
 
 	*pError = FF_InitEntryFetch(pIoman, ulDirCluster, &FetchContext);
-	if(*pError) {
+	if(FF_isERR(*pError)) {
 		return FF_FALSE;
 	}
 
 	for(i = 0; i < 0xFFFF; i++) {
 		*pError = FF_FetchEntryWithContext(pIoman, i, &FetchContext, EntryBuffer);
-		if(*pError) {
+		if(FF_isERR(*pError)) {
 			break;
 		}
 		Attrib = FF_getChar(EntryBuffer, FF_FAT_DIRENT_ATTRIB);
@@ -229,7 +229,7 @@ static FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, 
 				FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
 #endif
 				if(FF_isEndOfDir(EntryBuffer)) {
-					FF_CleanupEntryFetch(pIoman, &FetchContext);
+					*pError = FF_CleanupEntryFetch(pIoman, &FetchContext);
 					return FF_FALSE;
 				}
 #ifdef FF_UNICODE_SUPPORT
@@ -237,14 +237,14 @@ static FF_T_BOOL FF_ShortNameExists(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, 
 #else
 				if(strcmp(szShortName, (FF_T_INT8 *)EntryBuffer) == 0) {
 #endif
-					FF_CleanupEntryFetch(pIoman, &FetchContext);
+					*pError = FF_CleanupEntryFetch(pIoman, &FetchContext);
 					return FF_TRUE;
 				}
 			}
 		}
 	}
 
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
+	*pError = FF_CleanupEntryFetch(pIoman, &FetchContext);
     return FF_FALSE;
 }
 
@@ -301,7 +301,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 		lastSrc = FetchContext.pBuffer->pBuffer + pIoman->BlkSize;
 		for (src = FetchContext.pBuffer->pBuffer; src < lastSrc; src += 32, pDirent->CurrentItem++) {
 			if (FF_isEndOfDir(src)) {	// 0x00: end-of-dir
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				*pError = FF_CleanupEntryFetch(pIoman, &FetchContext);
 				return 0;
 			}
 			if (src[0] == 0xE5) {	// Entry not used
@@ -432,7 +432,11 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 					// Finally get the complete information
 #ifdef FF_LFN_SUPPORT
 					if (totalLFNs) {
-						FF_PopulateLongDirent(pIoman, pDirent, lfnItem, &FetchContext);
+						*pError = FF_PopulateLongDirent(pIoman, pDirent, lfnItem, &FetchContext);
+						if(FF_isERR(*pError)) {
+							FF_CleanupEntryFetch(pIoman, &FetchContext);
+							return 0;
+						}
 					} else
 #endif
 					{
@@ -441,7 +445,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 						pDirent->CurrentItem += 1;
 					}
 					// Object found!
-					FF_CleanupEntryFetch(pIoman, &FetchContext);
+					*pError = FF_CleanupEntryFetch(pIoman, &FetchContext);
 					return pDirent->ObjectCluster;	// Return the cluster number
 				}
 			}
@@ -451,7 +455,7 @@ FF_T_UINT32 FF_FindEntryInDir(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, const FF
 		}
 	}	// for (src = FetchContext.pBuffer->pBuffer; src < lastSrc; src += 32, pDirent->CurrentItem++)
 
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
+	*pError = FF_CleanupEntryFetch(pIoman, &FetchContext);
 
 	return 0;
 }
@@ -518,8 +522,7 @@ FF_T_UINT32 FF_FindDir(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_T_UINT16 path
      do{
             MyDir.CurrentItem = 0;
             dirCluster = FF_FindEntryInDir(pIoman, dirCluster, token, FF_FAT_ATTR_DIR, &MyDir, pError);
-
-			if(*pError) {
+			if(FF_isERR(*pError)) {
 				return 0;
 			}
 
@@ -793,11 +796,13 @@ FF_ERROR FF_InitEntryFetch(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_
 	return FF_ERR_NONE;
 }
 
-void FF_CleanupEntryFetch(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext) {
+FF_ERROR FF_CleanupEntryFetch(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext) {
+	FF_ERROR Error = FF_ERR_NONE;
 	if(pContext->pBuffer) {
-		FF_ReleaseBuffer(pIoman, pContext->pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pContext->pBuffer);
 		pContext->pBuffer = NULL;
 	}
+	return Error;
 }
 
 /**
@@ -882,7 +887,10 @@ FF_ERROR FF_FetchEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETC
 		(pContext->pBuffer->Sector != ulItemLBA) ||
 		(pContext->pBuffer->Mode & FF_MODE_WRITE)) {
 		if(pContext->pBuffer) {
-			FF_ReleaseBuffer(pIoman, pContext->pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pContext->pBuffer);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 		}
 		pContext->pBuffer = FF_GetBuffer(pIoman, ulItemLBA, FF_MODE_READ);
 		if(!pContext->pBuffer) {
@@ -924,7 +932,10 @@ FF_ERROR FF_PushEntryWithContext(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH
 		(pContext->pBuffer->Sector != ulItemLBA) ||
 		!(pContext->pBuffer->Mode & FF_MODE_WRITE)) {
 		if(pContext->pBuffer) {
-			FF_ReleaseBuffer(pIoman, pContext->pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pContext->pBuffer);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 		}
 		pContext->pBuffer = FF_GetBuffer(pIoman, ulItemLBA, FF_MODE_WRITE);
 		if(!pContext->pBuffer) {
@@ -961,12 +972,15 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 
 	Error = FF_FetchEntryWithContext(pIoman, nEntry, &FetchContext, EntryBuffer);
 	if(FF_isERR(Error)) {
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		FF_CleanupEntryFetch(pIoman, &FetchContext);	// Error already, skip error checking.
 		return Error;
 	}
 	if(EntryBuffer[0] != 0xE5) {
 		if(FF_isEndOfDir(EntryBuffer)){
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			return FF_ERR_DIR_END_OF_DIR | FF_GETENTRY;
 		}
 
@@ -975,10 +989,16 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 		if((pDirent->Attrib & FF_FAT_ATTR_LFN) == FF_FAT_ATTR_LFN) {
 	#ifdef FF_LFN_SUPPORT
 			Error = FF_PopulateLongDirent(pIoman, pDirent, nEntry, &FetchContext);
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Returning error dont check here.
+				return Error;
+			}
+
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
 			if(FF_isERR(Error)) {
 				return Error;
 			}
+
 			return FF_ERR_NONE;
 	#else
 			// LFN Processing
@@ -991,13 +1011,15 @@ FF_ERROR FF_GetEntry(FF_IOMAN *pIoman, FF_T_UINT16 nEntry, FF_T_UINT32 DirCluste
 		} else {
 			FF_PopulateShortDirent(pIoman, pDirent, EntryBuffer);
 			pDirent->CurrentItem += 1;
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			return 0;
 		}
 	}
 
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
-	return FF_ERR_NONE;
+	return FF_CleanupEntryFetch(pIoman, &FetchContext);
 }
 
 FF_T_BOOL FF_isEndOfDir(FF_T_UINT8 *EntryBuffer) {
@@ -1057,6 +1079,7 @@ FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
 	FF_FETCH_CONTEXT	FetchContext;
 	FF_T_UINT8			EntryBuffer[32], ucAttrib;
 	FF_T_UINT32			ulHash;
+	FF_ERROR			Error;
 
 	if(FF_DirHashed(pIoman, ulDirCluster)) {
 		return FF_ERR_NONE;			// Don't wastefully re-hash a dir!
@@ -1096,7 +1119,10 @@ FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
 					FF_ProcessShortName((FF_T_INT8 *)EntryBuffer);
 					if(FF_isEndOfDir(EntryBuffer)) {
 						// HT uncommented
-						FF_CleanupEntryFetch(pIoman, &FetchContext);
+						Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+						if(FF_isERR(Error)) {
+							return Error;
+						}
 						return FF_ERR_NONE;
 					}
 
@@ -1112,7 +1138,10 @@ FF_ERROR FF_HashDir(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster) {
 			}
 		}
 
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 
 		return FF_ERR_NONE;
 	}
@@ -1642,7 +1671,7 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	for(; pDirent->CurrentItem < 0xFFFF; pDirent->CurrentItem += 1) {
 		Error = FF_FetchEntryWithContext(pIoman, pDirent->CurrentItem, &pDirent->FetchContext, EntryBuffer);
 		if(FF_isERR(Error)) {
-			FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+			FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);	// Don't check errors, already passing an error.
 			return Error;
 		}
 		if(EntryBuffer[0] != FF_FAT_DELETED) {
@@ -1686,17 +1715,26 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 							b = !b;
 						}
 						if(b) {
-							FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+							Error = FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+							if(FF_isERR(Error)) {
+								return Error;
+							}
 							return FF_ERR_NONE;
 						}
 
 						pDirent->CurrentItem -= 1;
 					} else {
-						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						Error = FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						if(FF_isERR(Error)) {
+							return Error;
+						}
 						return FF_ERR_NONE;
 					}
 #else
-					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+					Error = FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+					if(FF_isERR(Error)) {
+						return Error;
+					}
 					return FF_ERR_NONE;
 #endif
 				}
@@ -1719,26 +1757,37 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 						b = !b;
 					}
 					if(b) {
-						FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 						pDirent->CurrentItem += 1;
+						Error = FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+						if(FF_isERR(Error)) {
+							return Error;
+						}
 						return FF_ERR_NONE;
 					}
 				} else {
-					FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 					pDirent->CurrentItem += 1;
+					Error = FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+					if(FF_isERR(Error)) {
+						return Error;
+					}
 					return FF_ERR_NONE;
 				}
 #else
 
-				FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
 				pDirent->CurrentItem += 1;
+				FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+				if(FF_isERR(Error)) {
+					return Error;
+				}
 				return FF_ERR_NONE;
 #endif
 			}
 		}
 	}
-
-	FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+	Error = FF_CleanupEntryFetch(pIoman, &pDirent->FetchContext);
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	return FF_ERR_DIR_END_OF_DIR | FF_FINDNEXT;
 }
@@ -1775,8 +1824,12 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 		if(FF_GETERROR(Error) == FF_ERR_DIR_END_OF_DIR) {
 
 			Error = FF_ExtendDirectory(pIoman, DirCluster);
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				return Error;
+			}
 
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
 			if(FF_isERR(Error)) {
 				return Error;
 			}
@@ -1784,7 +1837,7 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 			return nEntry;
 		} else {
 			if(FF_isERR(Error)) {
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext); // Dont override the current error!
 				return Error;
 			}
 		}
@@ -1794,9 +1847,12 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 			if((nEntry + Sequential) > ((DirLength * ((FF_T_UINT)pIoman->pPartition->SectorsPerCluster * pIoman->pPartition->BlkSize)) / 32)) {
 				Error = FF_ExtendDirectory(pIoman, DirCluster);
 			}
+			if(FF_isERR(Error)) {
+				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				return Error;
+			}
 
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
-
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
 			if(FF_isERR(Error)) {
 				return Error;
 			}
@@ -1810,12 +1866,18 @@ static FF_T_SINT32 FF_FindFreeDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, F
 		}
 
 		if(freeCount == Sequential) {
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			return (nEntry - (Sequential - 1));// Return the beginning entry in the sequential sequence.
 		}
 	}
 
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
+	Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	return FF_ERR_DIR_DIRECTORY_FULL | FF_FINDFREEDIRENT;
 }
@@ -1831,7 +1893,11 @@ FF_ERROR FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster
 		if(!FF_isERR(Error)) {
 			// Cleanup probably not necessary here?
 			// FF_PushEntryWithContext checks for R/W flag
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				goto cleanup;
+			}
+		
 			FF_putChar(EntryBuffer,  FF_FAT_DIRENT_ATTRIB,    pDirent->Attrib);
 			FF_putShort(EntryBuffer, FF_FAT_DIRENT_CLUS_HIGH, (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
 			FF_putShort(EntryBuffer, FF_FAT_DIRENT_CLUS_LOW,  (FF_T_UINT16)(pDirent->ObjectCluster));
@@ -1849,6 +1915,7 @@ FF_ERROR FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster
 		}
 	}
 
+cleanup:
 	FF_CleanupEntryFetch(pIoman, &FetchContext);
 	return Error;
 }
@@ -1975,6 +2042,9 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 	FF_ProcessShortName(MyShortName);
 	if(FitsShort && SizeOk) {
 		if (!FF_FindEntryInDir(pIoman, DirCluster, MyShortName, 0x00, &MyDir, &Error)) {
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			return caseAttrib | 0x01;
 		}
 		return FF_ERR_DIR_OBJECT_EXISTS | FF_CREATESHORTNAME;
@@ -2007,7 +2077,11 @@ FF_T_SINT32 FF_CreateShortName(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_IN
 #endif
 #endif
 */
-			return 0;
+
+			if(FF_isERR(Error)) {
+				return Error;
+			}
+			return FF_ERR_NONE;
 		}
 	}
 	// Add a tail and special number until we're happy :D
@@ -2078,58 +2152,6 @@ static FF_T_SINT8 FF_CreateLFNEntry(FF_T_UINT8 *EntryBuffer, FF_T_UINT8 *Name, F
 	return FF_ERR_NONE;
 }
 #endif
-
-/*
-#ifdef FF_UNICODE_SUPPORT
-static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_WCHAR *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
-#else
-static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *Name, FF_T_UINT8 CheckSum, FF_T_UINT16 nEntry) {
-#endif
-	FF_T_UINT8	EntryBuffer[32];
-#ifdef FF_UNICODE_SUPPORT
-	FF_T_UINT16 NameLen = (FF_T_UINT16) wcslen(Name);
-#else
-	FF_T_UINT16 NameLen = (FF_T_UINT16) strlen(Name);
-#endif
-	FF_T_UINT8	NumLFNs = (FF_T_UINT8)	(NameLen / 13);
-	FF_T_UINT8	i;
-	FF_T_UINT8	EndPos = (NameLen % 13);
-	FF_ERROR	Error;
-
-	FF_FETCH_CONTEXT FetchContext;
-
-	if(EndPos) {
-		NumLFNs ++;
-	} else {
-		EndPos = 13;
-	}
-
-	Error = FF_InitEntryFetch(pIoman, DirCluster, &FetchContext);
-	if(FF_isERR(Error)) {
-		return Error;
-	}
-
-	for(i = NumLFNs; i > 0; i--) {
-		if(i == NumLFNs) {
-			FF_CreateLFNEntry(EntryBuffer, (Name + (13 * (i - 1))), EndPos, i, CheckSum);
-			EntryBuffer[0] |= 0x40;
-		} else {
-			FF_CreateLFNEntry(EntryBuffer, (Name + (13 * (i - 1))), 13, i, CheckSum);
-		}
-
-		Error = FF_PushEntryWithContext(pIoman, nEntry + (NumLFNs - i), &FetchContext, EntryBuffer);
-		if(FF_isERR(Error)) {
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
-			return Error;
-		}
-	}
-
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
-
-	return FF_ERR_NONE;
-}
-#endif
-*/
 
 #ifdef FF_LFN_SUPPORT
 #ifdef FF_UNICODE_SUPPORT
@@ -2250,12 +2272,15 @@ static FF_ERROR FF_CreateLFNs(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT
 #endif
 		Error = FF_PushEntryWithContext(pIoman, nEntry + (uiNumLFNs - i), &FetchContext, EntryBuffer);
 		if(FF_isERR(Error)) {
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			FF_CleanupEntryFetch(pIoman, &FetchContext);	// Dont override error!
 			return Error;
 		}
 	}
 
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
+	Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	return FF_ERR_NONE;
 }
@@ -2302,7 +2327,7 @@ FF_ERROR FF_ExtendDirectory(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster) {
 		if(!FF_isERR(Error)) {
 			Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF, &FatBuf);
 		}
-		FF_ReleaseFatBuffer(pIoman, &FatBuf);
+		Error = FF_ReleaseFatBuffer(pIoman, &FatBuf);
 		if(FF_isERR(Error)) {
 			FF_unlockFAT(pIoman);
 			return Error;
@@ -2457,7 +2482,13 @@ FF_ERROR FF_CreateDirent(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_DIRENT *pD
 					return RetVal;
 				}
 				RetVal = FF_PushEntryWithContext(pIoman, (FF_T_UINT16) (FreeEntry + numLFNs), &FetchContext, EntryBuffer);
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				if(FF_isERR(RetVal)) {
+					FF_CleanupEntryFetch(pIoman, &FetchContext);
+					FF_unlockDIR(pIoman);
+					return RetVal;
+				}
+
+				RetVal = FF_CleanupEntryFetch(pIoman, &FetchContext);
 				if(FF_isERR(RetVal)) {
 					FF_unlockDIR(pIoman);
 					return RetVal;
@@ -2508,7 +2539,7 @@ FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *F
 #endif
 
 	MyFile.ObjectCluster = FF_CreateClusterChain(pIoman, pError);
-	if(*pError) {
+	if(FF_isERR(*pError)) {
 		// HT: TODO: can we unlink what we didn't create?
 		// JW: This is ok, because if the item item has a 0 in it, the no unlinking will occur.
 		// JW: I added the if statement, to ensure we don't unlink with 0.
@@ -2519,22 +2550,22 @@ FF_T_UINT32 FF_CreateFile(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_INT8 *F
 			}
 			FF_unlockFAT(pIoman);
 		}
-		FF_FlushCache(pIoman);
+		FF_FlushCache(pIoman);	// Don't override error;
 		return 0;
 	}
 
 	*pError = FF_CreateDirent(pIoman, DirCluster, &MyFile);
-	if(*pError) {
+	if(FF_isERR(*pError)) {
 		FF_lockFAT(pIoman);
 		{
 			FF_UnlinkClusterChain(pIoman, MyFile.ObjectCluster, 0);
 		}
 		FF_unlockFAT(pIoman);
-		FF_FlushCache(pIoman);
+		FF_FlushCache(pIoman);	// Don't override error;
 		return 0;
 	}
 
-	FF_FlushCache(pIoman);
+	*pError = FF_FlushCache(pIoman);
 
 	if(pDirent) {
 		memcpy(pDirent, &MyFile, sizeof(FF_DIRENT));
@@ -2615,10 +2646,13 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 	memset (&MyDir, '\0', sizeof MyDir);
 
 	if(FF_FindEntryInDir(pIoman, DirCluster, DirName, 0x00, &MyDir, &Error)) {
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 		return FF_ERR_DIR_OBJECT_EXISTS | FF_MKDIR;
 	}
 
-	if(Error && FF_GETERROR (Error) != FF_ERR_DIR_END_OF_DIR) {
+	if((FF_isERR(Error)) && FF_GETERROR (Error) != FF_ERR_DIR_END_OF_DIR) {
 		return Error;
 	}
 
@@ -2644,7 +2678,7 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 			FF_UnlinkClusterChain(pIoman, MyDir.ObjectCluster, 0);
 		}
 		FF_unlockFAT(pIoman);
-		FF_FlushCache(pIoman);
+		FF_FlushCache(pIoman);	// Don't override error;
 		return Error;
 	}
 
@@ -2656,7 +2690,7 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 			FF_UnlinkClusterChain(pIoman, MyDir.ObjectCluster, 0);
 		}
 		FF_unlockFAT(pIoman);
-		FF_FlushCache(pIoman);
+		FF_FlushCache(pIoman);	// Don't override error;
 		return Error;
 	}
 
@@ -2676,7 +2710,7 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 			FF_UnlinkClusterChain(pIoman, MyDir.ObjectCluster, 0);
 		}
 		FF_unlockFAT(pIoman);
-		FF_FlushCache(pIoman);
+		FF_FlushCache(pIoman);	// Don't override error;
 		return Error;
 	}
 
@@ -2687,8 +2721,8 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 			FF_UnlinkClusterChain(pIoman, MyDir.ObjectCluster, 0);
 		}
 		FF_unlockFAT(pIoman);
-		FF_FlushCache(pIoman);
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		FF_FlushCache(pIoman);	// Don't override error;
+		FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 		return Error;
 	}
 
@@ -2716,13 +2750,20 @@ FF_ERROR FF_MkDir(FF_IOMAN *pIoman, const FF_T_INT8 *Path) {
 			FF_UnlinkClusterChain(pIoman, MyDir.ObjectCluster, 0);
 		}
 		FF_unlockFAT(pIoman);
-		FF_FlushCache(pIoman);
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		FF_FlushCache(pIoman);	// Don't override error;
+		FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 		return Error;
 	}
-	FF_CleanupEntryFetch(pIoman, &FetchContext);
+	Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+	if(FF_isERR(Error)) {
+		FF_FlushCache(pIoman);	// Ensure dir was flushed to the disk!	// Don't override error;
+		return Error;
+	}
 
-	FF_FlushCache(pIoman);	// Ensure dir was flushed to the disk!
+	Error = FF_FlushCache(pIoman);	// Ensure dir was flushed to the disk!
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	return FF_ERR_NONE;
 }

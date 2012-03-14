@@ -257,7 +257,7 @@ FF_T_SINT32 FF_BlockWrite			(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UIN
 FF_ERROR	FF_IncreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_ERROR	FF_DecreaseFreeClusters	(FF_IOMAN *pIoman, FF_T_UINT32 Count);
 FF_BUFFER	*FF_GetBuffer			(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode);
-void		FF_ReleaseBuffer		(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
+FF_ERROR	FF_ReleaseBuffer		(FF_IOMAN *pIoman, FF_BUFFER *pBuffer);
 
 // PRIVATE (For this module only!):
 

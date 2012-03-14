@@ -454,7 +454,9 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
  *	@param	pBuffer	Pointer to an FF_BUFFER object.
  *
  **/
-void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
+FF_ERROR FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
+	FF_ERROR Error = FF_ERR_NONE;
+	
 	// Protect description changes with a semaphore.
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
@@ -465,12 +467,16 @@ void FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
 		}
 #ifdef FF_CACHE_WRITE_THROUGH
 		if(pBuffer->Modified == FF_TRUE) {
-			FF_BlockWrite(pIoman, pBuffer->Sector, 1, pBuffer->pBuffer, FF_TRUE);
-			pBuffer->Modified = FF_FALSE;
+			Error = FF_BlockWrite(pIoman, pBuffer->Sector, 1, pBuffer->pBuffer, FF_TRUE);
+			if(!FF_isERR(Error)) {				// Ensure if an error occurs its still possible to write the block again.
+				pBuffer->Modified = FF_FALSE;
+			}
 		}
 #endif
 	}
 	FF_ReleaseSemaphore(pIoman->pSemaphore);
+
+	return Error;
 }
 
 /**
@@ -546,8 +552,9 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
 			FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
-		if(FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY)
+		if(!FF_isERR(slRetVal) && FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY) {
 			break;
+		}
 		FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 	} while (FF_TRUE);
 
@@ -573,8 +580,9 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
 			FF_ReleaseSemaphore(pIoman->pBlkDevSemaphore);
 #endif
-		if(FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY)
+		if(!FF_isERR(slRetVal) && FF_GETERROR(slRetVal) != FF_ERR_DRIVER_BUSY) {
 			break;
+		}
 		FF_Sleep(FF_DRIVER_BUSY_SLEEP);
 	} while (FF_TRUE);
 
@@ -590,6 +598,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 	FF_PARTITION	*pPart;
 	FF_BUFFER		*pBuffer;
 	FF_T_UINT32		testLong;
+	FF_ERROR Error;
 	if(pIoman) {
 		pPart = pIoman->pPartition;
 
@@ -605,7 +614,10 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pBuffer);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			if((testLong & 0x3FF) != 0x3F8) {
 				return FF_ERR_IOMAN_NOT_FAT_FORMATTED | FF_DETERMINEFATTYPE;
 			}
@@ -627,7 +639,10 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 				}
 				testLong = (FF_T_UINT32) FF_getShort(pBuffer->pBuffer, 0x0000);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pBuffer);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			
 			if(testLong == 0xFFF8)
 				return FF_ERR_NONE;
@@ -644,7 +659,11 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 				}
 				testLong = FF_getLong(pBuffer->pBuffer, 0x0000);
 			}
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pBuffer);
+			if(FF_isERR(Error)) {
+				return Error;
+			}
+
 			if((testLong & 0x0FFFFFF8) != 0x0FFFFFF8 && (testLong & 0x0FFFFFF8) != 0x0FFFFFF0) {
 				// HT:
 				// I had an SD-card which worked well in Linux/W32
@@ -709,6 +728,8 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	FF_T_UINT32		ulPartitionEntrySize;
 	FF_T_UINT32		ulGPTHeadCRC, ulGPTCrcCheck, ulGPTHeadLength;
 
+	FF_ERROR Error;
+
 	if(ulPartitionNumber >= 128) {
 		return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_GETEFIPARTITIONENTRY;
 	}
@@ -721,7 +742,10 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 
 		// Verify this is an EFI header
 		if(memcmp(pBuffer->pBuffer, "EFI PART", 8) != 0) {
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pBuffer);	// Already returning an error, but this error would override the current one.
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			return FF_ERR_IOMAN_INVALID_FORMAT | FF_GETEFIPARTITIONENTRY;
 		}
 
@@ -742,7 +766,10 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 		// Restore The CRC field
 		FF_putLong(pBuffer->pBuffer, FF_GPT_HEAD_CRC, ulGPTHeadCRC);
 	}
-	FF_ReleaseBuffer(pIoman, pBuffer);
+	Error = FF_ReleaseBuffer(pIoman, pBuffer);
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	// Check CRC
 	if(ulGPTHeadCRC != ulGPTCrcCheck) {
@@ -762,7 +789,10 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 
 		pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, ulSectorOffset + FF_GPT_ENTRY_FIRST_SECTOR_LBA);
 	}
-	FF_ReleaseBuffer(pIoman, pBuffer);
+	Error = FF_ReleaseBuffer(pIoman, pBuffer);
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	if(!pPart->BeginLBA) {
 		return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_GETEFIPARTITIONENTRY;
@@ -841,15 +871,20 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		if(ucPartitionType != 0xEE) {
 
 			if(PartitionNumber > 3) {
-				FF_ReleaseBuffer(pIoman, pBuffer);
+				Error = FF_ReleaseBuffer(pIoman, pBuffer);	// Already returning an error, but an error from ReleaseBuf would override it.
+				if(FF_isERR(Error)) {
+					return Error;
+				}
 				return FF_ERR_IOMAN_INVALID_PARTITION_NUM | FF_MOUNTPARTITION;
 			}
 
 			// Primary Partitions to deal with!
 			pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA + (16 * PartitionNumber));
 		}
-
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 
 		if(ucPartitionType == 0xEE) {
 			pPart->BeginLBA = FF_getLong(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_LBA);
@@ -870,7 +905,10 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		}
 		pPart->BlkSize = FF_getShort(pBuffer->pBuffer, FF_FAT_BYTES_PER_SECTOR);
 		if((pPart->BlkSize % 512) != 0 || pPart->BlkSize == 0) {
-			FF_ReleaseBuffer(pIoman, pBuffer);
+			Error = FF_ReleaseBuffer(pIoman, pBuffer);	// An error here should override the current error, as its likely fatal.
+			if(FF_isERR(Error)) {
+				return Error;
+			}
 			return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 		}
 	}
@@ -908,7 +946,10 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	pPart->FSInfoLBA = pPart->BeginLBA + FF_getShort(pBuffer->pBuffer, 48);
 #endif
 
-	FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
+	Error = FF_ReleaseBuffer(pIoman, pBuffer);	// Release the buffer finally!
+	if(FF_isERR(Error)) {
+		return Error;
+	}
 
 	if(!pPart->BlkSize) {
 		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
@@ -1033,7 +1074,10 @@ FF_ERROR FF_UnmountPartition(FF_IOMAN *pIoman) {
 			if(pIoman->FirstFile == NULL) {
 				// Release Semaphore to call this function!
 				FF_ReleaseSemaphore(pIoman->pSemaphore);
-				FF_FlushCache(pIoman);			// Flush any unwritten sectors to disk.
+				RetVal = FF_FlushCache(pIoman);			// Flush any unwritten sectors to disk.
+				if(FF_isERR(RetVal)) {
+					return RetVal;
+				}
 				// Reclaim Semaphore
 				FF_PendSemaphore(pIoman->pSemaphore);
 				pIoman->pPartition->PartitionMounted = FF_FALSE;
@@ -1097,7 +1141,10 @@ FF_ERROR FF_IncreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 					FF_putLong(pBuffer->pBuffer, 492, pIoman->pPartition->LastFreeCluster);
 			  }
 		 }
-		 FF_ReleaseBuffer(pIoman, pBuffer);
+		 Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		 if(FF_isERR(Error)) {
+			 return Error;
+		 }
 	}
 #endif
 
@@ -1136,7 +1183,10 @@ FF_ERROR FF_DecreaseFreeClusters(FF_IOMAN *pIoman, FF_T_UINT32 Count) {
 					FF_putLong(pBuffer->pBuffer, 492, pIoman->pPartition->LastFreeCluster);
 			  }
 		 }
-		 FF_ReleaseBuffer(pIoman, pBuffer);
+		 Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		 if(FF_isERR(Error)) {
+			 return Error;
+		 }
 	}
 #endif
 	return FF_ERR_NONE;

@@ -461,14 +461,14 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			// Edit the Directory Entry! (So it appears as deleted);
 			Error = FF_RmLFNs(pIoman, pFile->DirEntry, &FetchContext);
 			if(FF_isERR(Error)) {
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
 			}
 			Error = FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 			if(FF_isERR(Error)) {
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
@@ -476,7 +476,7 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			EntryBuffer[0] = 0xE5;
 			Error = FF_PushEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 			if(FF_isERR(Error)) {
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
@@ -501,13 +501,18 @@ FF_ERROR FF_RmDir(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 			
 			Error = FF_IncreaseFreeClusters(pIoman, pFile->iChainLength);
 			if(FF_isERR(Error)) {
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				FF_unlockDIR(pIoman);
 				FF_Close(pFile);
 				return Error;
 			}
 
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				FF_unlockDIR(pIoman);
+				FF_Close(pFile);
+				return Error;
+			}
 
 			Error = FF_FlushCache(pIoman);
 			if(FF_isERR(Error)) {
@@ -571,14 +576,14 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 		}
 		Error = FF_RmLFNs(pIoman, (FF_T_UINT16)pFile->DirEntry, &FetchContext);
 		if(FF_isERR(Error)) {
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
 			return Error;
 		}
 		Error = FF_FetchEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 		if(FF_isERR(Error)) {
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
 			return Error;
@@ -587,13 +592,18 @@ FF_ERROR FF_RmFile(FF_IOMAN *pIoman, const FF_T_INT8 *path) {
 		
 		Error = FF_PushEntryWithContext(pIoman, pFile->DirEntry, &FetchContext, EntryBuffer);
 		if(FF_isERR(Error)) {
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 			FF_unlockDIR(pIoman);
 			FF_Close(pFile);
 			return Error;
 		}
 
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+		if(FF_isERR(Error)) {
+			FF_unlockDIR(pIoman);
+			FF_Close(pFile);
+			return Error;
+		}
 	}
 	FF_unlockDIR(pIoman);
 
@@ -671,7 +681,7 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 	Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
 	if(FF_isERR(Error)) {
 		FF_Close(pSrcFile);
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 		return Error;
 	}
 	//FF_FetchEntry(pIoman, pSrcFile->DirCluster, pSrcFile->DirEntry, EntryBuffer);
@@ -707,18 +717,22 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 	DirCluster = FF_FindDir(pIoman, szDestinationFile, i, &Error);
 	if(FF_isERR(Error)) {
 		FF_Close(pSrcFile);
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 		return Error;
 	}
 	
 	if(DirCluster) {
 		// HT: Cleaup because FF_CreateDirent might want to write the same sector
-		FF_CleanupEntryFetch(pIoman, &FetchContext);
+		Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+		if(FF_isERR(Error)) {
+			FF_Close(pSrcFile);
+			return Error;
+		}
 		// Destination Dir was found, we can now create the new entry.
 		Error = FF_CreateDirent(pIoman, DirCluster, &MyFile);
 		if(FF_isERR(Error)) {
 			FF_Close(pSrcFile);
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			FF_CleanupEntryFetch(pIoman, &FetchContext);	// TODO: Is this required??
 			return Error;	// FAILED
 		}
 
@@ -730,14 +744,14 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				return Error;
 			}
 			Error = FF_FetchEntryWithContext(pIoman, pSrcFile->DirEntry, &FetchContext, EntryBuffer);
 			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				return Error;
 			}
 			EntryBuffer[0] = 0xE5;
@@ -746,15 +760,23 @@ FF_ERROR FF_Move(FF_IOMAN *pIoman, const FF_T_INT8 *szSourceFile, const FF_T_INT
 			if(FF_isERR(Error)) {
 				FF_unlockDIR(pIoman);
 				FF_Close(pSrcFile);
-				FF_CleanupEntryFetch(pIoman, &FetchContext);
+				FF_CleanupEntryFetch(pIoman, &FetchContext);	// Don't override error!
 				return Error;
 			}
-			FF_CleanupEntryFetch(pIoman, &FetchContext);
+			Error = FF_CleanupEntryFetch(pIoman, &FetchContext);
+			if(FF_isERR(Error)) {
+				FF_unlockDIR(pIoman);
+				FF_Close(pSrcFile);
+				return Error;
+			}
 		}
 		FF_unlockDIR(pIoman);
 		FF_Close(pSrcFile);
 
-		FF_FlushCache(pIoman);
+		Error = FF_FlushCache(pIoman);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 
 		return FF_ERR_NONE;
 	}
@@ -821,7 +843,7 @@ static FF_T_UINT32 FF_GetSequentialClusters(FF_IOMAN *pIoman, FF_T_UINT32 StartC
 	do {
 		CurrentCluster = NextCluster;
 		NextCluster = FF_getFatEntry(pIoman, CurrentCluster, pError, &FatBuf);
-		if(*pError) {
+		if(FF_isERR(*pError)) {
 			i = 0;
 			break;
 		}
@@ -837,7 +859,7 @@ static FF_T_UINT32 FF_GetSequentialClusters(FF_IOMAN *pIoman, FF_T_UINT32 StartC
 			}
 		}
 	}while(NextCluster == (CurrentCluster + 1));
-	FF_ReleaseFatBuffer(pIoman, &FatBuf);
+	*pError = FF_ReleaseFatBuffer(pIoman, &FatBuf);
 
 	return i;
 }
@@ -953,7 +975,7 @@ static FF_ERROR FF_ExtendFile(FF_FILE *pFile, FF_T_UINT32 Size) {
 				if(!FF_isERR(Error)) {
 					Error = FF_putFatEntry(pIoman, NextCluster, 0xFFFFFFFF, &FatBuf);
 				}
-				FF_ReleaseFatBuffer(pIoman, &FatBuf);
+				Error = FF_ReleaseFatBuffer(pIoman, &FatBuf);
 				if(FF_isERR(Error))
 					break;
 			}
@@ -1160,7 +1182,10 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			}
 			memcpy(buffer, (pBuffer->pBuffer + nRelBlockPos), nBytes);
 		}
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 
 #endif	
 		pFile->FilePointer += nBytes;
@@ -1196,7 +1221,10 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			// Here we copy to the sector boudary.
 			memcpy(buffer, (pBuffer->pBuffer + nRelBlockPos), nBytesToRead);
 		}
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 #endif
 		nBytes				-= nBytesToRead;
 		nBytesRead			+= nBytesToRead;
@@ -1308,7 +1336,10 @@ FF_T_SINT32 FF_Read(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count, 
 			}
 			memcpy(buffer, pBuffer->pBuffer, nBytes);
 		}
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 #endif
 		nBytesToRead = nBytes;
 		pFile->FilePointer	+= nBytesToRead;
@@ -1552,7 +1583,10 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			}
 			memcpy((pBuffer->pBuffer + nRelBlockPos), buffer, nBytes);
 		}
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 #endif
 		pFile->FilePointer += nBytes;
 		nBytesWritten = nBytes;
@@ -1590,7 +1624,10 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			// Here we copy to the sector boudary.
 			memcpy((pBuffer->pBuffer + nRelBlockPos), buffer, nBytesToWrite);
 		}
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 #endif
 		nBytes				-= nBytesToWrite;
 		nBytesWritten		+= nBytesToWrite;
@@ -1712,7 +1749,10 @@ FF_T_SINT32 FF_Write(FF_FILE *pFile, FF_T_UINT32 ElementSize, FF_T_UINT32 Count,
 			}
 			memcpy(pBuffer->pBuffer, buffer, nBytes);
 		}
-		FF_ReleaseBuffer(pIoman, pBuffer);
+		Error = FF_ReleaseBuffer(pIoman, pBuffer);
+		if(FF_isERR(Error)) {
+			return Error;
+		}
 #endif
 
 		nBytesToWrite = nBytes;
@@ -2012,8 +2052,9 @@ FF_ERROR FF_SetFileTime(FF_FILE *pFile, FF_SYSTEMTIME *pTime, FF_T_UINT aWhat) {
 		if (aWhat & ETimeAccess) OriginalEntry.AccessedTime = *pTime;	///< Date of Last Access.
 		Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 	}
-	if (!FF_isERR(Error))
+	if (!FF_isERR(Error)) {
 		Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
+	}
 	return Error;
 }
 
@@ -2076,8 +2117,9 @@ FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTim
 		return FF_ERR_FILE_NOT_FOUND | FF_SETTIME;
 	}
 	FileCluster = FF_FindEntryInDir(pIoman, DirCluster, filename, 0, &OriginalEntry, &Error);
-	if (Error)
+	if (Error) {
 		return Error;
+	}
 
 	if (!FileCluster) {
 		//logPrintf ("FF_SetTime: Can not find '%s'\n", filename);
@@ -2090,8 +2132,9 @@ FF_ERROR FF_SetTime(FF_IOMAN *pIoman, const FF_T_INT8 *path, FF_SYSTEMTIME *pTim
 	if (aWhat & ETimeAccess) OriginalEntry.AccessedTime = *pTime;	///< Date of Last Access.
 	Error = FF_PutEntry(pIoman, OriginalEntry.CurrentItem-1, DirCluster, &OriginalEntry);
 
-	if (!FF_isERR(Error))
+	if (!FF_isERR(Error)) {
 		Error = FF_FlushCache(pIoman);		// Ensure all modfied blocks are flushed to disk!
+	}
 	return Error;
 }
 
@@ -2177,17 +2220,23 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 
 			FF_T_UINT32 nClusters = pFile->Filesize / (pFile->pIoman->pPartition->BlkSize * pFile->pIoman->pPartition->SectorsPerCluster);			
 			FF_T_UINT32 chainLen = FF_GetChainLength(pFile->pIoman, pFile->ObjectCluster, NULL, &Error);
+			if(Error) {
+				goto skip_truncate;
+			}
 			// Unlink the chain!		
 			if(chainLen > nClusters) {
 
 				FF_lockFAT(pFile->pIoman);
 				{
 					if(!pFile->Filesize) {					
-						FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster, 0);		
+						Error = FF_UnlinkClusterChain(pFile->pIoman, pFile->ObjectCluster, 0);		
 					} else {
 						unsigned long truncateCluster = FF_TraverseFAT(pFile->pIoman, pFile->ObjectCluster, nClusters-1, &Error);
-						FF_UnlinkClusterChain(pFile->pIoman, truncateCluster, 1);
-						FF_DecreaseFreeClusters(pFile->pIoman, 1);
+						
+						if(!FF_isERR(Error)) {
+							Error = FF_UnlinkClusterChain(pFile->pIoman, truncateCluster, 1);
+							FF_DecreaseFreeClusters(pFile->pIoman, 1);
+						}
 					}
 				}
 				FF_unlockFAT(pFile->pIoman);
@@ -2195,7 +2244,11 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 			//:D
 		}
 
-		Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+skip_truncate:
+
+		if(!FF_isERR(Error)) {
+			Error = FF_GetEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
+		}
 
 		// Error might be non-zero, but don't forget to remove handle from list
 		// and to free the pFile pointer
@@ -2208,7 +2261,7 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 			Error = FF_PutEntry(pFile->pIoman, pFile->DirEntry, pFile->DirCluster, &OriginalEntry);
 		}
 	}
-	if (!FF_GETERROR (Error)) {
+	if (!FF_isERR(Error)) {
 		Error = FF_FlushCache(pFile->pIoman);		// Ensure all modfied blocks are flushed to disk!
 	}
 
@@ -2233,7 +2286,11 @@ FF_ERROR FF_Close(FF_FILE *pFile) {
 #ifdef FF_OPTIMISE_UNALIGNED_ACCESS
 	// Ensure any unaligned points are pushed to the disk!
 	if(pFile->ucState & FF_BUFSTATE_WRITTEN) {
-		FF_BlockWrite(pFile->pIoman, FF_FileLBA(pFile), 1, pFile->pBuf, FF_FALSE);
+		if(!FF_isERR(Error)) {
+			Error = FF_BlockWrite(pFile->pIoman, FF_FileLBA(pFile), 1, pFile->pBuf, FF_FALSE);
+		} else {
+			FF_BlockWrite(pFile->pIoman, FF_FileLBA(pFile), 1, pFile->pBuf, FF_FALSE);
+		}
 	}
 
 	FF_FREE(pFile->pBuf);

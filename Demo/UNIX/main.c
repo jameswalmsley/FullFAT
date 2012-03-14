@@ -174,7 +174,7 @@ int main(void) {
 		if(pIoman) {
 			//---------- Register a Block Device with FullFAT.
 			Error = FF_RegisterBlkDevice(pIoman, GetBlockSize(hDisk), (FF_WRITE_BLOCKS) fnWrite, (FF_READ_BLOCKS) fnRead, hDisk);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				printf("Error Registering Device\nFF_RegisterBlkDevice() function returned with Error %ld.\nFullFAT says: %s\n", Error, FF_GetErrMessage(Error));
 			}
 
@@ -184,7 +184,7 @@ int main(void) {
 
 			//---------- Try to Mount the Partition with FullFAT.
 			Error = FF_MountPartition(pIoman, PARTITION_NUMBER);
-			if(Error) {
+			if(FF_isERR(Error)) {
 				if(hDisk) {
 					fnClose(hDisk);
 				}

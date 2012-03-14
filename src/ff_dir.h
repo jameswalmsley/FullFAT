@@ -131,7 +131,7 @@ FF_ERROR	FF_PopulateLongDirent		(FF_IOMAN *pIoman, FF_DIRENT *pDirent, FF_T_UINT
 FF_ERROR	FF_InitEntryFetch			(FF_IOMAN *pIoman, FF_T_UINT32 ulDirCluster, FF_FETCH_CONTEXT *pContext);
 FF_ERROR	FF_FetchEntryWithContext	(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer);
 FF_ERROR	FF_PushEntryWithContext		(FF_IOMAN *pIoman, FF_T_UINT32 ulEntry, FF_FETCH_CONTEXT *pContext, FF_T_UINT8 *pEntryBuffer);
-void		FF_CleanupEntryFetch		(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext);
+FF_ERROR	FF_CleanupEntryFetch		(FF_IOMAN *pIoman, FF_FETCH_CONTEXT *pContext);
 		
 FF_T_SINT8	FF_PushEntry				(FF_IOMAN *pIoman, FF_T_UINT32 DirCluster, FF_T_UINT16 nEntry, FF_T_UINT8 *buffer, void *pParam);
 FF_T_BOOL	FF_isEndOfDir				(FF_T_UINT8 *EntryBuffer);
