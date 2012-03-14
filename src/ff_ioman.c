@@ -930,6 +930,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		return Error;
 	}
 	pPart->PartitionMounted = FF_TRUE;
+	pPart->LastFreeCluster	= 0;
 #ifdef FF_MOUNT_FIND_FREE
 	pPart->LastFreeCluster	= FF_FindFreeCluster(pIoman, &Error);
 	if(FF_isERR(Error)) {
@@ -940,7 +941,6 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		 return Error;
 	}
 #else
-	pPart->LastFreeCluster	= 0;
 	pPart->FreeClusterCount = 0;
 #endif
 
