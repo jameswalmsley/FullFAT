@@ -12,6 +12,7 @@ int test_5(FF_IOMAN *pIoman, TEST_PARAMS *pParams);
 int test_6(FF_IOMAN *pIoman, TEST_PARAMS *pParams);
 int test_7(FF_IOMAN *pIoman, TEST_PARAMS *pParams);
 int test_8(FF_IOMAN *pIoman, TEST_PARAMS *pParams);
+int test_9(FF_IOMAN *pIoman, TEST_PARAMS *pParams);
 
 static const VERIFICATION_TEST tests[] = {
 	{
@@ -61,6 +62,12 @@ static const VERIFICATION_TEST tests[] = {
 		"Validating pBuf problem",
 		"James Walmsley <james@fullfat-fs.co.uk>",
 		test_8,
+	},
+	{
+		"Directory Filler",
+		"Verify non-root directory fill",
+		"James Walmsley <james@fullfat-fs.co.uk>",
+		test_9,
 	},
 };
 
