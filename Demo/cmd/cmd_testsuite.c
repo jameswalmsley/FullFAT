@@ -34,7 +34,7 @@ char				temp[3];
 
 char errBuf[1024];
 
-static bPrintDebug = 0;
+static int bPrintDebug = 0;
 
 static char *message = NULL;
 
@@ -56,7 +56,7 @@ char *get_md5(unsigned char *data, size_t len, char *hashbuf, size_t hashlen) {
 
 	md5_finish(&state, digest);
 
-	sprintf(hashbuf,"");
+	strcpy(hashbuf,"");
 
 	for(i = 0; i < 16; i++) {
 		sprintf(temp, "%02x", digest[i]);
@@ -69,7 +69,7 @@ char *get_md5(unsigned char *data, size_t len, char *hashbuf, size_t hashlen) {
 int test_1(FF_IOMAN *pIoman) {
 	FF_FILE *pFile;
 	FF_ERROR Error;
-	char buffer[8192];
+	unsigned char buffer[8192];
 	int i,y;
 
 	for(y = 0; y < 2; y++) {
@@ -128,13 +128,13 @@ int test_1(FF_IOMAN *pIoman) {
 int test_2(FF_IOMAN *pIoman) {
 	FF_FILE *pFile;
 	FF_ERROR Error;
-	char buffer[8192];
-	char buffer2[8192];
+	unsigned char buffer[8192];
+	unsigned char buffer2[8192];
 
 	memset(buffer, 0, 8192);
 	memset(buffer2, 0, 8192);
 
-	sprintf(buffer, "Hello World\n");
+	sprintf((char *)buffer, "Hello World\n");
 
 	Error = FF_RmFile(pIoman, "\\test.dat");
 	CHECK_ERR(Error);
@@ -142,7 +142,7 @@ int test_2(FF_IOMAN *pIoman) {
 	pFile = FF_Open(pIoman, "\\test.dat", FF_MODE_READ|FF_MODE_WRITE|FF_MODE_CREATE, &Error);
 	CHECK_ERR(Error);
 
-	Error = FF_Write(pFile, 1, strlen(buffer), buffer);
+	Error = FF_Write(pFile, 1, strlen((char *)buffer), buffer);
 	CHECK_ERR(Error);
 
 	Error = FF_Close(pFile);
@@ -366,7 +366,7 @@ int test_6(FF_IOMAN *pIoman) {
 	char *buf2 = "Another simple test sentence for FF.";
 
 	char md5[2][64];
-	char buffer[2048];
+	unsigned char buffer[2048];
 
 	Error = FF_RmFile(pIoman, "\\test1.txt");
 	//CHECK_ERR(Error);
@@ -394,27 +394,27 @@ int test_6(FF_IOMAN *pIoman) {
 	
 	memset(buffer, 0, sizeof(buffer));
 	for(i = 0; i < 20; i++) {
-		sprintf(buffer, "%s%s", buffer, buf1);	// The contents of file 1 should be this.
+		sprintf((char *)buffer, "%s%s", buffer, buf1);	// The contents of file 1 should be this.
 	}
 
 	get_md5(buffer, 20 * strlen(buf1), md5[0], 33);
 
 	memset(buffer, 0, sizeof(buffer));
 	for(i = 0; i < 20; i++) {
-		sprintf(buffer, "%s%s", buffer, buf2);
+		sprintf((char *)buffer, "%s%s", buffer, buf2);
 	}
 
 	get_md5(buffer, 20 * strlen(buf2), md5[1], 33);
 
 
 	// Verify with md5sum commandlet.
-	sprintf(buffer, "md5sum -v %s %s", md5[0], "test1.txt");
-	if(FFTerm_Exec(g_pEnv->pConsole, buffer)) {
+	sprintf((char *)buffer, "md5sum -v %s %s", md5[0], "test1.txt");
+	if(FFTerm_Exec(g_pEnv->pConsole, (char *)buffer)) {
 		DO_FAIL;
 	}
 
-	sprintf(buffer, "md5sum -v %s %s", md5[1], "test2.txt");
-	if(FFTerm_Exec(g_pEnv->pConsole, buffer)) {
+	sprintf((char *)buffer, "md5sum -v %s %s", md5[1], "test2.txt");
+	if(FFTerm_Exec(g_pEnv->pConsole, (char *)buffer)) {
 		DO_FAIL;
 	}
 
@@ -470,8 +470,6 @@ int test_8(FF_IOMAN *pIoman) {
 	FF_ERROR Error;
 	int i;
 
-	char *p;
-
 	char *testString = "This is a test string 012345678\n";
 
 	pFile = FF_Open(pIoman, "\\test.8.dat", FF_GetModeBits("wb"), &Error);
@@ -483,7 +481,7 @@ int test_8(FF_IOMAN *pIoman) {
 	}*/
 
 	for(i = 0; i < 16*5; i++) {
-		Error = FF_Write(pFile, 1, strlen(testString), testString);
+		Error = FF_Write(pFile, 1, strlen(testString), (unsigned char *)testString);
 		CHECK_ERR(Error);
 	}
 

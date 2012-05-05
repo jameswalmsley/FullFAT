@@ -37,12 +37,12 @@
 #include "mv_cmd.h"
 
 int mv_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
-	const char			*szpSource, *szpDestination, *szpWildCard;
+	const char			*szpSource, *szpDestination;//, *szpWildCard;
 	char				szsrcPath[FF_MAX_PATH], szdestPath[FF_MAX_PATH];
 	//FF_DIRENT			findData;
 	
 	FFT_GETOPT_CONTEXT	optionContext;	// CommandLine processing
-	FF_T_BOOL			bRecursive = FF_FALSE, bVerbose = FF_FALSE;	// Option Flags.
+//	FF_T_BOOL			bRecursive = FF_FALSE, bVerbose = FF_FALSE;	// Option Flags.
 	int 				option;
 
 	memset(&optionContext, 0, sizeof(FFT_GETOPT_CONTEXT));			// Initialise the option context to zero.
@@ -53,11 +53,11 @@ int mv_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		switch(option) {
 			case 'r':
 			case 'R':
-				bRecursive = FF_TRUE;								// Set recursive flag if -r or -R appears on the commandline.
+//				bRecursive = FF_TRUE;								// Set recursive flag if -r or -R appears on the commandline.
 				break;
 
 			case 'v':
-				bVerbose = FF_TRUE;									// Set verbose flag if -v appears on the commandline.
+//				bVerbose = FF_TRUE;									// Set verbose flag if -v appears on the commandline.
 				break;
 
 			default:
@@ -83,7 +83,7 @@ int mv_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	ProcessPath(szsrcPath, szpSource, pEnv);						// Process the paths into absolute paths.
 	ProcessPath(szdestPath, szpDestination, pEnv);
 
-	szpWildCard = GetWildcard(szpSource);							// Get the last token of the source path. (This may include a wildCard).
+	//szpWildCard = GetWildcard(szpSource);							// Get the last token of the source path. (This may include a wildCard).
 
 	FF_Move(pEnv->pIoman, szsrcPath, szdestPath);					// Now move the file/directory.
 	
