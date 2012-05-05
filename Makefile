@@ -3,6 +3,9 @@
 #
 
 MAKEFLAGS += -rR --no-print-directory
+BASE=$(shell pwd)/
+
+include $(BASE).vebuild/pretty.mk
 
 default:
 	@echo "###################################################"
