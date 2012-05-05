@@ -5,7 +5,22 @@
 MAKEFLAGS += -rR --no-print-directory
 BASE=$(shell pwd)/
 
-include $(BASE).vebuild/pretty.mk
+MODULE_NAME="FullFAT"
+MODULE_TARGET="libfullfat.a"
+
+include $(BASE).vebuild/vebuild.mk
+include objects.mk
+
+CC=gcc
+CXX=g++
+CFLAGS=-c -Wall -Werror
+
+
+all: $(MODULE_TARGET) $(SUBDIRS)
+
+$(MODULE_TARGET): $(OBJECTS)
+
+$(SUBDIRS):MODULE_NAME=$@
 
 default:
 	@echo "###################################################"
@@ -37,9 +52,13 @@ testsuite:
 	make image; make fullfat; echo "testsuite; exit;" | make demo
 	make demo
 
-clean:
-	make -C src/ clean
+verify: $(SUBDIRS)
+	$(Q) cd testsuite/verification && ./ffverify
+
 
 config:                                           # Enable/Disable FullFAT features (interactively)
 	@echo "Not yet implemented."
 
+$(MODULE_TARGET):
+	$(Q)$(PRETTY) "AR" $(MODULE_NAME) $(MODULE_TARGET) 
+	$(Q)ar rvs $@ $(OBJECTS) | $(PAR) $(MODULE_TARGET)

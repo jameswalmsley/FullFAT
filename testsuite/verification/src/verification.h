@@ -24,6 +24,6 @@ typedef struct {
 	const VERIFICATION_TEST *pTests;	///< Pointer to an array of tests.
 } VERIFICATION_INTERFACE;
 
-const VERIFICATION_INTERFACE *(*FN_GET_VERIFICATION_IF)();
+typedef const VERIFICATION_INTERFACE *(*FN_GET_VERIFICATION_IF)();
 
 #endif
