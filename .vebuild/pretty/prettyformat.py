@@ -4,7 +4,7 @@ def prettyformat(command = "??", module="Unknown", description="Somebody please 
     else:
         pretty_command = " [%s]" % (command[:5])
     
-    pretty_module =  "[%s]" % (module[:10])
+    pretty_module =  "[%s]" % (module[:15])
     
-    print " %-7s %-12s %s" % (pretty_command, pretty_module, description)
+    print " %-8s %-17s %s" % (pretty_command, pretty_module, description)
 
