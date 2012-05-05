@@ -1,7 +1,9 @@
 #include <verification.h>
+#include <fullfat.h>
 
-static int test_1(FF_IOMAN *pIoman, char **pszpMessage) {
-	*pszpMessage = "UNIMPLEMENTED!";
+static int test_1(FF_IOMAN *pIoman, const char **pszpMessage) {
+	*pszpMessage = FF_GetErrMessage(0);
+
 	return FAIL;
 }
 

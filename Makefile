@@ -50,7 +50,7 @@ testsuite:
 	make image; make fullfat; echo "testsuite; exit;" | make demo
 	make demo
 
-verify: $(SUBDIRS)
+verify: $(TARGETS) $(SUBDIRS)
 	$(Q) cd testsuite/verification && ./ffverify
 
 
@@ -61,3 +61,6 @@ libfullfat.a: $(OBJECTS)
 
 libfullfat.so: $(OBJECTS)
 libfullfat.so: LDFLAGS += -shared -Wl,-soname,libfullfat.so
+
+install:
+	@sudo cp libfullfat.so /usr/lib/
