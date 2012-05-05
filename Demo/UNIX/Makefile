@@ -64,8 +64,7 @@ clean:
 	@make -C ../../../ffterm/src clean
 
 libfullfat.a:
-	@make -C ../../src/ CFLAGS=$(CFLAGS)
-	@cp ../../src/libfullfat.a .
+	@cp ../../libfullfat.a .
 
 libffterm.a:
 	@make -C ../../../ffterm/src/ CFLAGS=$(CFLAGS)

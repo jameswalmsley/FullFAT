@@ -1,0 +1,1 @@
+OBJECTS += src/verification.o

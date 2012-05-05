@@ -1,0 +1,14 @@
+OBJECTS += src/ff_blk.o
+OBJECTS += src/ff_crc.o
+OBJECTS += src/ff_dir.o
+OBJECTS += src/ff_error.o
+OBJECTS += src/ff_fat.o
+OBJECTS += src/ff_file.o
+OBJECTS += src/ff_format.o
+OBJECTS += src/ff_hash.o
+OBJECTS += src/ff_ioman.o
+OBJECTS += src/ff_memory.o
+OBJECTS += src/ff_safety.o
+OBJECTS += src/ff_string.o
+OBJECTS += src/ff_time.o
+OBJECTS += src/ff_unicode.o
