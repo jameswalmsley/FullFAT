@@ -1,6 +1,7 @@
 #include <verification.h>
 
 static int test_1(FF_IOMAN *pIoman, char **pszpMessage) {
+	*pszpMessage = "UNIMPLEMENTED!";
 	return FAIL;
 }
 
