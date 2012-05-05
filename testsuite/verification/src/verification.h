@@ -6,7 +6,7 @@
 #define FAIL 0
 #define PASS 1
 
-typedef int (*TEST_FUNCTION) (FF_IOMAN *pIoman, char **pszpMessage);
+typedef int (*TEST_FUNCTION) (FF_IOMAN *pIoman, const char **pszpMessage);
 
 typedef struct {
 	const char 		*szpTestName;			///< Name of the test.

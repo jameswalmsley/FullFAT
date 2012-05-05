@@ -11,7 +11,7 @@ include objects.mk
 
 CC=gcc
 CXX=g++
-CFLAGS = -c -Wall -Werror -I $(BASE)src/
+CFLAGS = -c -Wall -Werror -I $(BASE)src/ -I $(BASE)
 
 
 all: $(SUBDIRS) $(MODULE_TARGET)
@@ -20,3 +20,5 @@ $(SUBDIRS:%=%.clean):MODULE_NAME=verify.$(@:%.clean=%)
 
 ffverify:$(OBJECTS)
 ffverify:LDFLAGS += -ldl
+ffverify:LDLIBS +=  $(BASE)libfullfat.so
+
