@@ -5,7 +5,6 @@
 MODULE_NAME="verify.fs.misc"
 
 TARGETS := verify.fs.misc.so
-TARGETS += verify.fs.dynamic.so
 
 BASE=$(shell pwd)/../../../../../
 
@@ -19,5 +18,5 @@ CFLAGS=-Wall -Werror -fPIC -c -I $(BASE)src/ -I $(BASE)testsuite/verification/sr
 
 verify.fs.misc.so: $(OBJECTS)
 verify.fs.misc.so: LDFLAGS += -shared -Wl,-soname,verify.fs.misc.so
-verify.fs.dynamic.so: $(OBJECTS)
-verify.fs.dynamic.so: LDFLAGS += -shared -Wl,-soname,verify.fs.dynamic.so
+verify.fs.misc.so: LDLIBS += $(BASE)libfullfat.so
+

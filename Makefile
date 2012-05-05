@@ -6,19 +6,17 @@ MAKEFLAGS += -rR --no-print-directory
 BASE=$(shell pwd)/
 
 MODULE_NAME="FullFAT"
-MODULE_TARGET="libfullfat.a"
+TARGETS = libfullfat.so libfullfat.a
 
 include $(BASE).vebuild/vebuild.mk
 include objects.mk
 
 CC=gcc
 CXX=g++
-CFLAGS=-c -Wall -Werror
+CFLAGS=-c -Wall -Werror -fPIC
 
 
-all: $(MODULE_TARGET) $(SUBDIRS)
-
-$(MODULE_TARGET): $(OBJECTS)
+all: $(TARGETS) $(SUBDIRS) libfullfat.a
 
 $(SUBDIRS):MODULE_NAME=$@
 
@@ -59,6 +57,7 @@ verify: $(SUBDIRS)
 config:                                           # Enable/Disable FullFAT features (interactively)
 	@echo "Not yet implemented."
 
-$(MODULE_TARGET):
-	$(Q)$(PRETTY) "AR" $(MODULE_NAME) $(MODULE_TARGET) 
-	$(Q)ar rvs $@ $(OBJECTS) | $(PAR) $(MODULE_TARGET)
+libfullfat.a: $(OBJECTS)
+
+libfullfat.so: $(OBJECTS)
+libfullfat.so: LDFLAGS += -shared -Wl,-soname,libfullfat.so

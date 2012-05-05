@@ -46,9 +46,37 @@ void load_module(const char *path) {
 	printf("Loaded module: %s\n", pIf->szpModuleName);
 }
 
+static int exec_test(FF_IOMAN *pIoman, const VERIFICATION_TEST *pTest) {
+	char *pMessage = "";
+	char *pf = "FAIL";
+	int bFail = 1;
+	if(pTest->pfnTest(pIoman, &pMessage)) {
+		pf = "PASS";
+		bFail = 0;
+	}
+
+	printf("%s : %-50s : %s\n", pf, pTest->szpTestDescription, pMessage);
+	return bFail;
+}
 
 int main(int argc, char **argv) {
-	printf("Verifying FullFAT\n");
+	int i;
+	int y;
+	const VERIFICATION_INTERFACE *pIf;
+
+	printf("\n");
+	printf("Thanks for helping to verify FullFAT\n");
+	
 	load_module("tests/fs/misc/verify.fs.misc.so");
+	printf("\n\n");
+
+	for(i = 0; i < nModules; i++) {
+		pIf = pModules[i].pIf;
+		printf("Verifying : %s\n\n", pIf->szpModuleName);
+		for(y = 0; y < pIf->nTests; y++) {
+			exec_test(NULL, &pIf->pTests[y]);
+		}
+	}
+
 	return 0;
 }
