@@ -50,7 +50,7 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv);
 int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	int option;
 	FFT_GETOPT_CONTEXT	optionContext;
-	FF_T_BOOL			bBinary = FF_FALSE, bCheck = FF_FALSE, bWarn = FF_FALSE, bVerify = FF_FALSE, bString = FF_FALSE;
+	FF_T_BOOL			bCheck = FF_FALSE, bVerify = FF_FALSE;
 	FF_DIRENT			findData;
 	FF_FILE				*pfOut = NULL;
 
@@ -67,7 +67,6 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 	const char			*szargPath;
 	const char			*szargOutputFile = NULL;
 	const char			*verifysum = NULL;
-	const char			*string = NULL;
 	
 	
 	char				hash[33];
@@ -82,18 +81,18 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 		do {
 			switch(option) {
 				case 'b':
-					bBinary = FF_TRUE;
+					//bBinary = FF_TRUE;
 					break;
 				case 'c':
 					bCheck = FF_TRUE;
 					break;
 
 				case 't':
-					bBinary = FF_FALSE;
+					//bBinary = FF_FALSE;
 					break;
 
 				case 'w':
-					bWarn = FF_TRUE;
+//					bWarn = FF_TRUE;
 					break;
 
 				case 'o':
@@ -105,7 +104,7 @@ int md5sum_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 				bVerify = FF_TRUE;
 				break;
 			case 's':
-				string = optionContext.optarg;
+				//string = optionContext.optarg;
 				break;
 			}
 
@@ -325,10 +324,5 @@ static int md5_checkHash(const char *path, FF_ENVIRONMENT *pEnv) {
 	}
 
 	return 0;
-}
-
-
-static int md5_verify() {
-
 }
 

@@ -11,7 +11,7 @@ include objects.mk
 
 CC=gcc
 CXX=g++
-CFLAGS = -c -Wall -Werror -I $(BASE)src/ -I $(BASE)
+CFLAGS = -fPIC -c -Wall -Werror -I $(BASE)src/ -I $(BASE) -I$(BASE)../ffterm/src/
 
 
 all: $(SUBDIRS) $(MODULE_TARGET)
@@ -20,5 +20,6 @@ $(SUBDIRS:%=%.clean):MODULE_NAME=verify.$(@:%.clean=%)
 
 ffverify:$(OBJECTS)
 ffverify:LDFLAGS += -ldl
-ffverify:LDLIBS +=  $(BASE)libfullfat.so
+ffverify:LDLIBS += $(BASE)libfullfat.so $(BASE)../ffterm/src/libffterm.so
+
 

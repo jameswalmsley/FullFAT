@@ -29,7 +29,7 @@ int hexview_cmd(int argc, char **argv, FF_ENVIRONMENT *pEnv) {
 			return -1;
 		}
 		do{
-			read = FF_Read(f, 1, HEX_BUF, buffer);
+			read = FF_Read(f, 1, HEX_BUF, (unsigned char *)buffer);
 			for(i = 0; i < read; i++) {
 				printf("%02X ", buffer[i]);
 			}
