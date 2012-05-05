@@ -14,7 +14,8 @@ include objects.mk
 CC=gcc
 CXX=g++
 
-CFLAGS=-Wall -Werror -fPIC -c -I $(BASE)src/ -I $(BASE)testsuite/verification/src/
+CFLAGS := -Wall -Werror -fPIC -c -I $(BASE)src/ -I $(BASE)testsuite/verification/src/
+CFLAGS += -I $(BASE)Demo/cmd/
 
 verify.fs.misc.so: $(OBJECTS)
 verify.fs.misc.so: LDFLAGS += -shared -Wl,-soname,verify.fs.misc.so
