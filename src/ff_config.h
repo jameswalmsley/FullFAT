@@ -40,6 +40,10 @@
 #ifndef _FF_CONFIG_H_
 #define _FF_CONFIG_H_
 
+#ifdef FF_BITTHUNDER_CONFIG
+#include <fs/fullfat/ff.config.h>
+#else
+
 #ifdef WIN32
 #define snprintf _snprintf
 #endif
@@ -181,7 +185,7 @@
 										// Further calls to FF_GetErrMessage() are safe, and simply returns a pointer to a NULL string. ("").
 										// This should be disabled to reduce code-size dramatically.
 
-
+#endif
 //---------- AUTOMATIC SETTINGS DO NOT EDIT -- These configure your options from above, and check sanity!
 
 #ifdef FF_LFN_SUPPORT
