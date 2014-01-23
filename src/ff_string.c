@@ -441,7 +441,7 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
 			return FF_FALSE;	// False when the string is ended, yet a ? charachter is demanded.
 		}
 #ifdef FF_WILDCARD_CASE_INSENSITIVE
-        if (*pszWildCard != '?' && tolower(*pszWildCard) != tolower(*pszString)) {
+        if (*pszWildCard != '?' && tolower((FF_T_INT32)*pszWildCard) != tolower((FF_T_INT32)*pszString)) {
 #else
 		if (*pszWildCard != '?' && *pszWildCard != *pszString) {
 #endif
