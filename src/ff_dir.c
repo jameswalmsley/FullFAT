@@ -1662,7 +1662,9 @@ FF_ERROR FF_FindNext(FF_IOMAN *pIoman, FF_DIRENT *pDirent) {
 	FF_ERROR	Error;
 	FF_T_UINT8	numLFNs;
 	FF_T_UINT8	EntryBuffer[32];
+#ifdef FF_FINDAPI_ALLOW_WILDCARDS
 	FF_T_BOOL	b;
+#endif
 
 	if(!pIoman) {
 		return FF_ERR_NULL_POINTER | FF_FINDNEXT;
