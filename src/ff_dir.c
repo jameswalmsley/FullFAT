@@ -63,6 +63,7 @@
 #else
 #define wcsicmp wcscasecmp
 #include <ctype.h>  // tolower()
+#ifndef FF_NOSTRCASECMP
 int strcasecmp(const char *s1, const char *s2)
 {
   unsigned char c1,c2;
@@ -75,6 +76,7 @@ int strcasecmp(const char *s1, const char *s2)
   while((c1 == c2) && (c1 != '\0'));
   return (int) c1-c2;
 }
+#endif
 #endif
 
 
