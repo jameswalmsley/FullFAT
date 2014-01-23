@@ -110,7 +110,7 @@ void FF_toupper(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	for(i = 0; i < strLen; i++) {
 		if(string[i] >= 'a' && string[i] <= 'z')
 			string[i] -= 32;
-		if(string[i] == '\0') 
+		if(string[i] == '\0')
 			break;
 	}
 }
@@ -119,7 +119,7 @@ void FF_tolower(FF_T_INT8 *string, FF_T_UINT32 strLen) {
 	for(i = 0; i < strLen; i++) {
 		if(string[i] >= 'A' && string[i] <= 'Z')
 			string[i] += 32;
-		if(string[i] == '\0') 
+		if(string[i] == '\0')
 			break;
 	}
 }
@@ -160,7 +160,7 @@ FF_T_BOOL FF_strmatch(const FF_T_INT8 *str1, const FF_T_INT8 *str2, FF_T_UINT16 
 		}
 		len = (FF_T_UINT16) strlen(str1);
 	}
-	
+
 	for(i = 0; i < len; i++) {
 		char1 = str1[i];
 		char2 = str2[i];
@@ -190,7 +190,7 @@ FF_T_BOOL FF_strmatch(const FF_T_WCHAR *str1, const FF_T_WCHAR *str2, FF_T_UINT1
 		}
 		len = (FF_T_UINT16) wcslen(str1);
 	}
-	
+
 	for(i = 0; i < len; i++) {
 		char1 = towlower(str1[i]);
 		char2 = towlower(str2[i]);
@@ -255,7 +255,7 @@ FF_T_INT8 *FF_strtok(const FF_T_INT8 *string, FF_T_INT8 *token, FF_T_UINT16 *tok
 	//token[tokenEnd - tokenStart] = '\0';
 	*tokenNumber += 1;
 
-	return token;	
+	return token;
 }
 
 #else
@@ -304,7 +304,7 @@ FF_T_WCHAR *FF_strtok(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *
 	//token[tokenEnd - tokenStart] = '\0';
 	*tokenNumber += 1;
 
-	return token;	
+	return token;
 }
 #endif
 
@@ -315,7 +315,7 @@ FF_T_WCHAR *FF_strtok(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *
 */
 #ifdef FF_FINDAPI_ALLOW_WILDCARDS
 /*FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszString) {
-    // Check to see if the string contains the wild card 
+    // Check to see if the string contains the wild card
     if (!memchr(pszWildCard, '*', strlen(pszWildCard)))
     {
         // if it does not then do a straight string compare
@@ -329,10 +329,10 @@ FF_T_WCHAR *FF_strtok(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *
         while ((*pszWildCard)
         &&     (*pszString))
         {
-            // Test for the wild card 
+            // Test for the wild card
             if (*pszWildCard == '*')
             {
-                // Eat more than one 
+                // Eat more than one
                 while (*pszWildCard == '*')
                 {
                     pszWildCard++;
@@ -347,14 +347,14 @@ FF_T_WCHAR *FF_strtok(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *
                     {
                         return FF_FALSE;
                     }
-                    
+
                 }
                 else
                 {
                     if (*pszWildCard)
                     {
                         // continue
-                        break;      
+                        break;
                     }
                     else
                     {
@@ -362,9 +362,9 @@ FF_T_WCHAR *FF_strtok(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *
                     }
                 }
             }
-            else 
+            else
             {
-                // Fail if they don't match 
+                // Fail if they don't match
                 if (*pszWildCard != *pszString)
                 {
                     return FF_FALSE;
@@ -374,7 +374,7 @@ FF_T_WCHAR *FF_strtok(const FF_T_WCHAR *string, FF_T_WCHAR *token, FF_T_UINT16 *
             pszWildCard++;
             pszString++;
         }
-        // fail if different lengths 
+        // fail if different lengths
         if (*pszWildCard != *pszString)
         {
             return FF_FALSE;
@@ -456,7 +456,7 @@ FF_T_BOOL FF_wildcompare(const FF_T_INT8 *pszWildCard, const FF_T_INT8 *pszStrin
 			break;
 		}
 	} while ( *pszWildCard++ && *pszString++ );
-		
+
 	while(*pszWildCard == '*') {
 		pszWildCard++;
 	}

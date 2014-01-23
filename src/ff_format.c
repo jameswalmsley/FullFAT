@@ -45,8 +45,8 @@
  *	@defgroup	FORMAT Independent FAT Formatter
  *	@brief		Provides an interface to format a partition with FAT.
  *
- *	
- *	
+ *
+ *
  **/
 
 
@@ -99,7 +99,7 @@ FF_ERROR FF_CreatePartitionTable(FF_IOMAN *pIoman, FF_T_UINT32 ulTotalDeviceBloc
 
 
 FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_T_UINT32 ulClusterSize) {
-	
+
 	FF_BUFFER *pBuffer;
   	FF_T_SINT8	scPartitionCount;
 	FF_T_UINT32 maxClusters, f16MaxClusters, f32MaxClusters;
@@ -129,7 +129,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 			return FF_ERR_DEVICE_DRIVER_FAILED | FF_FORMATPARTITION;
 		}
 
-		
+
 		scPartitionCount = FF_PartitionCount(pBuffer->pBuffer);
 
 		if(!scPartitionCount) {
@@ -149,7 +149,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 		} else {
 			// Get partition Geom from the partition table entry.
-			
+
 		}
 
 		// Calculate the max possiblenumber of clusters based on clustersize.
@@ -194,7 +194,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 			fatSize = 32;
 			finalFatSize = newFat32Size;
 		}
-		
+
 		FF_ReleaseBuffer(pIoman, pBuffer);
 		for(i = 0; i < finalFatSize*2; i++) { // Ensure the FAT table is clear.
 			if(i == 0) {
@@ -202,7 +202,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 				if(!pBuffer) {
 					return FF_ERR_DEVICE_DRIVER_FAILED;
 				}
-				
+
 				memset(pBuffer->pBuffer, 0, pIoman->BlkSize);
 			} else {
 				FF_BlockWrite(pIoman, partitionGeom.ulStartLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
@@ -228,8 +228,8 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 		}
 
 		FF_ReleaseBuffer(pIoman, pBuffer);
-			
-				
+
+
 		// Clear and initialise the root dir.
 		ulClusterBeginLBA = partitionGeom.ulStartLBA + (finalFatSize*2);
 
@@ -240,11 +240,11 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 			} else  {
 				FF_BlockWrite(pIoman, ulClusterBeginLBA+i, 1, pBuffer->pBuffer, FF_FALSE);
 			}
-			
+
 		}
 
 		FF_ReleaseBuffer(pIoman, pBuffer);
-				
+
 		// Correctly modify the second FAT item again.
 		pBuffer = FF_GetBuffer(pIoman, partitionGeom.ulStartLBA + finalFatSize, FF_MODE_WRITE);
 		{
@@ -270,7 +270,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 			// -- First section Common vars to Fat12/16 and 32.
 			memset(pBuffer->pBuffer, 0, pIoman->BlkSize); 				// Clear the boot record.
-			
+
 			FF_putChar(pBuffer->pBuffer, 0, 0xEB);						// Place the Jump to bootstrap x86 instruction.
 			FF_putChar(pBuffer->pBuffer, 1, 0x3C);						// Even though we won't populate the bootstrap code.
 			FF_putChar(pBuffer->pBuffer, 2, 0x90);						// Some devices look for this as a signature.
@@ -279,11 +279,11 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 
 			FF_putShort(pBuffer->pBuffer, 11, pIoman->BlkSize);
 			FF_putChar(pBuffer->pBuffer, 13, (FF_T_UINT8) sectorsPerCluster);
-			
+
 			FF_putShort(pBuffer->pBuffer, FF_FAT_RESERVED_SECTORS, (FF_T_UINT16)partitionGeom.ulStartLBA); 	// Number of reserved sectors. (1 for fat12/16, 32 for f32).
 			FF_putShort(pBuffer->pBuffer, FF_FAT_NUMBER_OF_FATS, 2); 	// Always 2 copies.
 
-			
+
 			//FF_putShort(pBuffer->pBuffer, 19, 0);						// Number of sectors in partition if size < 32mb.
 
 			FF_putChar(pBuffer->pBuffer, 21, 0xF8);             		// Media type -- HDD.
@@ -299,7 +299,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 				FF_putShort(pBuffer->pBuffer, 50, 6);					// 0 for no backup boot sector.
 				FF_putChar(pBuffer->pBuffer, 66, 0x29);					// Indicate extended signature is present.
 				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+71), "FullFAT2-V", 10); // Volume name.
-				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+81), "FAT32   ", 8);				
+				memcpy(((FF_T_UINT8 *)pBuffer->pBuffer+81), "FAT32   ", 8);
 
 				// Put backup boot sector.
 				FF_BlockWrite(pIoman, 6, 1, pBuffer->pBuffer, FF_FALSE);
@@ -331,7 +331,7 @@ FF_ERROR FF_FormatPartition(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitionNumber, FF_
 	}
 
 	FF_FlushCache(pIoman);
-				
+
 	return Error;
 }
 

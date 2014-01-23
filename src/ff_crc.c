@@ -97,9 +97,9 @@
 };
 
 FF_T_UINT32 FF_GetCRC32(FF_T_UINT8 *pbyData, FF_T_UINT32 stLength) {
-	
+
 	register FF_T_UINT32 crc = 0xFFFFFFFF;
-	
+
 	while(stLength--) {
 		crc = ((crc >> 8) & 0x00FFFFFF) ^ crc32_table[(crc^*pbyData++) & 0x000000FF];
 	}

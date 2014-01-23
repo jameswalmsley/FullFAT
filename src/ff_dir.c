@@ -1897,7 +1897,7 @@ FF_ERROR FF_PutEntry(FF_IOMAN *pIoman, FF_T_UINT16 Entry, FF_T_UINT32 DirCluster
 			if(FF_isERR(Error)) {
 				goto cleanup;
 			}
-		
+
 			FF_putChar(EntryBuffer,  FF_FAT_DIRENT_ATTRIB,    pDirent->Attrib);
 			FF_putShort(EntryBuffer, FF_FAT_DIRENT_CLUS_HIGH, (FF_T_UINT16)(pDirent->ObjectCluster >> 16));
 			FF_putShort(EntryBuffer, FF_FAT_DIRENT_CLUS_LOW,  (FF_T_UINT16)(pDirent->ObjectCluster));

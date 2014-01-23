@@ -66,7 +66,7 @@
  *	@return	Always returns 0.
  **/
 FF_T_SINT32	FF_GetSystemTime(FF_SYSTEMTIME *pTime) {
-	
+
 	pTime->Hour		= 0;
 	pTime->Minute	= 0;
 	pTime->Second	= 0;

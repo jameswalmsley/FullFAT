@@ -456,7 +456,7 @@ FF_BUFFER *FF_GetBuffer(FF_IOMAN *pIoman, FF_T_UINT32 Sector, FF_T_UINT8 Mode) {
  **/
 FF_ERROR FF_ReleaseBuffer(FF_IOMAN *pIoman, FF_BUFFER *pBuffer) {
 	FF_ERROR Error = FF_ERR_NONE;
-	
+
 	// Protect description changes with a semaphore.
 	FF_PendSemaphore(pIoman->pSemaphore);
 	{
@@ -538,10 +538,10 @@ FF_T_SINT32 FF_BlockRead(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32 
 
 	if(pIoman->pPartition->TotalSectors) {
 		if((ulSectorLBA + ulNumSectors) > (pIoman->pPartition->TotalSectors + pIoman->pPartition->BeginLBA)) {
-			return (FF_ERR_IOMAN_OUT_OF_BOUNDS_READ | FF_BLOCKREAD);		
+			return (FF_ERR_IOMAN_OUT_OF_BOUNDS_READ | FF_BLOCKREAD);
 		}
 	}
-	
+
 	if(pIoman->pBlkDevice->fnpReadBlocks) do {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
 		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
@@ -569,7 +569,7 @@ FF_T_SINT32 FF_BlockWrite(FF_IOMAN *pIoman, FF_T_UINT32 ulSectorLBA, FF_T_UINT32
 			return (FF_ERR_IOMAN_OUT_OF_BOUNDS_WRITE | FF_BLOCKWRITE);
 		}
 	}
-	
+
 	if(pIoman->pBlkDevice->fnpWriteBlocks) do {	// Make sure we don't execute a NULL.
 #ifdef	FF_BLKDEV_USES_SEM
 		if (!aSemLocked || pIoman->pSemaphore != pIoman->pBlkDevSemaphore)
@@ -643,7 +643,7 @@ static FF_ERROR FF_DetermineFatType(FF_IOMAN *pIoman) {
 			if(FF_isERR(Error)) {
 				return Error;
 			}
-			
+
 			if(testLong == 0xFFF8)
 				return FF_ERR_NONE;
 #endif
@@ -750,7 +750,7 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 		}
 
 		ulBeginGPT					= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_PART_ENTRY_LBA);
-		
+
 		ulPartitionEntrySize		= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_ENTRY_SIZE);
 		ulGPTHeadCRC				= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_CRC);
 		ulGPTHeadLength				= FF_getLong(pBuffer->pBuffer, FF_GPT_HEAD_LENGTH);
@@ -775,12 +775,12 @@ static FF_ERROR FF_GetEfiPartitionEntry(FF_IOMAN *pIoman, FF_T_UINT32 ulPartitio
 	if(ulGPTHeadCRC != ulGPTCrcCheck) {
 		return FF_ERR_IOMAN_GPT_HEADER_CORRUPT | FF_GETEFIPARTITIONENTRY;
 	}
-	
+
 	// Calculate Sector Containing the Partition Entry we want to use.
 
 	ulEntrySector	= ((ulPartitionNumber * ulPartitionEntrySize) / pIoman->BlkSize) + ulBeginGPT;
 	ulSectorOffset	= (ulPartitionNumber % (pIoman->BlkSize / ulPartitionEntrySize)) * ulPartitionEntrySize;
-	
+
 	pBuffer = FF_GetBuffer(pIoman, ulEntrySector, FF_MODE_READ);
 	{
 		if(!pBuffer) {
@@ -865,7 +865,7 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 		// Volume is not partitioned (MBR Found)
 		pPart->BeginLBA = 0;
 	} else {
-		
+
 		ucPartitionType = FF_getChar(pBuffer->pBuffer, FF_FAT_PTBL + FF_FAT_PTBL_ID);	// Ensure its not an EFI partition!
 
 		if(ucPartitionType != 0xEE) {
@@ -962,11 +962,11 @@ FF_ERROR FF_MountPartition(FF_IOMAN *pIoman, FF_T_UINT8 PartitionNumber) {
 	if(!pPart->SectorsPerCluster) {
 		return FF_ERR_IOMAN_INVALID_FORMAT | FF_MOUNTPARTITION;
 	}
-	
+
 	pPart->NumClusters = pPart->DataSectors / pPart->SectorsPerCluster;
 
 	Error = FF_DetermineFatType(pIoman);
-	
+
 	if(FF_isERR(Error)) {
 		return Error;
 	}

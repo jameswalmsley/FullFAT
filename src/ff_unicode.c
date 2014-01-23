@@ -215,7 +215,7 @@ FF_T_SINT32 FF_Utf16ctoUtf8c(FF_T_UINT8 *utf8Dest, const FF_T_UINT16 *utf16Sourc
 // Converts a UTF-32 Charachter into its equivalent UTF-16 sequence.
 FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_T_UINT32 ulSize) {
 
-	// Check that its a valid UTF-32 wide-char!	
+	// Check that its a valid UTF-32 wide-char!
 
 	if(utf32char >= 0xD800 && utf32char <= 0xDFFF) {	// This range is not a valid Unicode code point.
 		return FF_ERR_UNICODE_INVALID_CODE | FF_UTF32CTOUTF16C; // Invalid charachter.
@@ -233,26 +233,26 @@ FF_T_SINT32 FF_Utf32ctoUtf16c(FF_T_UINT16 *utf16Dest, FF_T_UINT32 utf32char, FF_
 	if(utf32char < 0x00200000) {
 		// Conversion to a UTF-16 Surrogate pair!
 		//valueImage = utf32char - 0x10000;
-		
+
 		*(utf16Dest + 0) = (FF_T_UINT16) (((utf32char - 0x10000) & 0xFFC00) >> 10) | 0xD800;
 		*(utf16Dest + 1) = (FF_T_UINT16) (((utf32char - 0x10000) & 0x003FF) >> 00) | 0xDC00;
-		
+
 		return 2;	// Surrogate pair encoded value.
 	}
-	
+
 	return FF_ERR_UNICODE_INVALID_CODE | FF_UTF32CTOUTF16C;	// Invalid Charachter
 }
 
 // Converts a UTF-16 sequence into its equivalent UTF-32 code point.
 FF_T_SINT32 FF_Utf16ctoUtf32c(FF_T_UINT32 *utf32Dest, const FF_T_UINT16 *utf16Source) {
-	
+
 	if((*utf16Source & 0xFC00) != 0xD800) {	// Not a surrogate sequence.
 		*utf32Dest = (FF_T_UINT32) *utf16Source;
 		return 1;	// A single UTF-16 item was used to represent the charachter.
 	}
-	
+
 	*utf32Dest  = ((FF_T_UINT32) (*(utf16Source + 0) & 0x003FF) << 10) + 0x10000;
-	
+
 	if((*(utf16Source + 1) & 0xFC00) != 0xDC00) {
 		return FF_ERR_UNICODE_INVALID_SEQUENCE | FF_UTF16CTOUTF32C;	// Invalid UTF-16 sequence.
 	}
@@ -276,7 +276,7 @@ FF_T_UINT FF_Utf32GetUtf16Len(const FF_T_UINT32 *utf32String) {
 			utf16len += 2;
 		}
 	}
-	
+
 	return utf16len;
 }*/
 

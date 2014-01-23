@@ -216,7 +216,7 @@ const struct _FFERRTAB
 	{"The Root Dir is full, and cannot be extended on Fat12 or 16 volumes",			FF_ERR_DIR_CANT_EXTEND_ROOT_DIR},
 	{"Not enough space to extend the directory.",									FF_ERR_DIR_EXTEND_FAILED},
 	{"Name exceeds the number of allowed charachters for a filename",				FF_ERR_DIR_NAME_TOO_LONG},
-	
+
 #ifdef FF_UNICODE_SUPPORT
 	{"An invalid Unicode charachter was provided!",									FF_ERR_UNICODE_INVALID_CODE},
 	{"Not enough space in the UTF-16 buffer to encode the entire sequence",			FF_ERR_UNICODE_DEST_TOO_SMALL},
@@ -228,7 +228,7 @@ const struct _FFERRTAB
 /**
  *	@public
  *	@brief	Returns a pointer to a string relating to a FullFAT error code.
- *	
+ *
  *	@param	iErrorCode	The error code.
  *
  *	@return	Pointer to a string describing the error.
